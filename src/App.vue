@@ -13,6 +13,7 @@
       :edges="edges"
       @back="backToWelcome"
       @show-instructions="showInstructionsModal"
+      @show-matrix="showMatrixModal"
       @clear="confirmClearCanvas"
       @create-node="handleCreateNodeRequest"
       @create-edge="handleCreateEdgeRequest"
@@ -20,7 +21,13 @@
       @edit-edge="handleEditEdgeRequest"
     />
 
-
+    <!-- Matrix Modal -->
+    <MatrixModal
+      :show="showMatrix"
+      :nodes="nodes"
+      :edges="edges"
+      @close="showMatrix = false"
+    />
 
     <!-- General Purpose Custom Modal -->
     <CustomModal
@@ -42,6 +49,8 @@
 import { ref, reactive } from 'vue'
 import WelcomeView from './components/WelcomeView.vue'
 import GraphCanvas from './components/GraphCanvas.vue'
+
+import MatrixModal from './components/MatrixModal.vue'
 
 import CustomModal from './components/CustomModal.vue'
 
@@ -65,6 +74,9 @@ const modalConfig = reactive({
   onDeleteCallback: null
 })
 
+//agrega estado de la matriz de adyacencia
+const showMatrix = ref(false)
+
 const startSimulator = () => {
   currentView.value = 'canvas'
 }
@@ -75,6 +87,11 @@ const backToWelcome = () => {
 
 const showInstructionsModal = () => {
   window.open('/manual_grafos.pdf', '_blank')
+}
+
+//agrega manejador de la matriz de adyacencia
+const showMatrixModal = () => {
+  showMatrix.value = true
 }
 
 const closeModal = () => {

@@ -28,6 +28,10 @@
 
       <!-- Acciones de Cabecera -->
       <div class="header-actions">
+        <button @click="$emit('show-matrix')" class="btn-text btn-matrix">
+          <Grid3x3 class="btn-icon" />
+          <span>Matriz</span>
+        </button>
         <button @click="$emit('show-instructions')" class="btn-text">
           <BookOpen class="btn-icon" />
           <span>Manual</span>
@@ -218,7 +222,8 @@ import {
   Trash2,
   BookOpen,
   Info,
-  MousePointerClick
+  MousePointerClick,
+  Grid3x3
 } from '@lucide/vue'
 
 const props = defineProps({
@@ -235,6 +240,7 @@ const props = defineProps({
 const emit = defineEmits([
   'back',
   'show-instructions',
+  'show-matrix',
   'clear',
   'create-node',
   'create-edge',
@@ -779,6 +785,16 @@ const confirmClear = () => {
   justify-content: center;
   gap: 0.5rem;
   width: 100%;
+}
+
+.btn-matrix {
+  background-color: #eef2ff;
+  border-color: #c7d2fe;
+  color: #4f46e5;
+}
+
+.btn-matrix:active {
+  background-color: #e0e7ff;
 }
 
 @media (min-width: 640px) {
