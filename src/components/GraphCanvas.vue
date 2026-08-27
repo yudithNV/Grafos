@@ -28,6 +28,10 @@
 
       <!-- Acciones de Cabecera -->
       <div class="header-actions">
+        <button @click="$emit('save')" class="btn-text btn-save-graph">
+          <Save class="btn-icon" />
+          <span>Guardar</span>
+        </button>
         <button @click="$emit('show-matrix')" class="btn-text btn-matrix">
           <Grid3x3 class="btn-icon" />
           <span>Matriz</span>
@@ -223,7 +227,8 @@ import {
   BookOpen,
   Info,
   MousePointerClick,
-  Grid3x3
+  Grid3x3,
+  Save
 } from '@lucide/vue'
 
 const props = defineProps({
@@ -241,6 +246,7 @@ const emit = defineEmits([
   'back',
   'show-instructions',
   'show-matrix',
+  'save',
   'clear',
   'create-node',
   'create-edge',
@@ -795,6 +801,15 @@ const confirmClear = () => {
 
 .btn-matrix:active {
   background-color: #e0e7ff;
+}
+.btn-save-graph {
+  background-color: #dcfce7;
+  border-color: #86efac;
+  color: #16a34a;
+}
+
+.btn-save-graph:active {
+  background-color: #bbf7d0;
 }
 
 @media (min-width: 640px) {

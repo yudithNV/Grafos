@@ -2,7 +2,7 @@
   <Transition name="fade">
     <div v-if="show" class="matrix-backdrop" @mousedown.self="close">
       <Transition name="scale">
-        <div class="matrix-container" @mousedown.stop>
+        <div class="matrix-container" @mousedown.stop">
           <div class="matrix-header">
             <h3 class="matrix-title">Matriz de Adyacencia</h3>
             <button @click="close" class="btn-close">
@@ -18,7 +18,8 @@
                   <th v-for="node in nodes" :key="node.id" class="th-node">
                     {{ node.label }}
                   </th>
-                  <th class="th-sum">Salida</th>
+                  <th class="th-sum">Σ Pesos</th>
+                  <th class="th-count"># Cantidad</th>
                 </tr>
               </thead>
               <tbody>
@@ -33,9 +34,10 @@
                     {{ cell }}
                   </td>
                   <td class="td-sum">{{ rowSums[rowIndex] }}</td>
+                  <td class="td-count">{{ rowCounts[rowIndex] }}</td>
                 </tr>
                 <tr class="tr-sum">
-                  <td class="td-node-sum">Entrada</td>
+                  <td class="td-node-sum">Σ Pesos</td>
                   <td 
                     v-for="(colSum, colIndex) in colSums" 
                     :key="colIndex"
@@ -44,6 +46,19 @@
                     {{ colSum }}
                   </td>
                   <td class="td-sum-total">{{ totalSum }}</td>
+                  <td class="td-count-total">{{ totalCount }}</td>
+                </tr>
+                <tr class="tr-count">
+                  <td class="td-node-count"># Cantidad</td>
+                  <td 
+                    v-for="(colCount, colIndex) in colCounts" 
+                    :key="colIndex"
+                    class="td-count-col"
+                  >
+                    {{ colCount }}
+                  </td>
+                  <td class="td-count-total">{{ totalCount }}</td>
+                  <td class="td-count-total">{{ totalCount }}</td>
                 </tr>
               </tbody>
             </table>
@@ -51,8 +66,8 @@
 
           <div class="matrix-footer">
             <div class="matrix-legend">
-              <span class="legend-dot dot-out">●</span> Grado de Salida (fila)
-              <span class="legend-dot dot-in">●</span> Grado de Entrada (columna)
+              <span class="legend-dot dot-sum">●</span> Suma de Pesos
+              <span class="legend-dot dot-count">●</span> Cantidad de Conexiones
             </div>
             <button @click="close" class="btn-close-modal">Cerrar</button>
           </div>
@@ -96,14 +111,14 @@ const matrixData = computed(() => {
   return matrix
 })
 
-// Sumas por fila (grado de salida)
+// ✅ SUMA DE PESOS por fila
 const rowSums = computed(() => {
   return matrixData.value.map(row => 
     row.reduce((sum, val) => sum + val, 0)
   )
 })
 
-// Sumas por columna (grado de entrada)
+// ✅ SUMA DE PESOS por columna
 const colSums = computed(() => {
   const n = props.nodes.length
   const sums = Array(n).fill(0)
@@ -115,9 +130,32 @@ const colSums = computed(() => {
   return sums
 })
 
-// Suma total
+// ✅ CANTIDAD DE CONEXIONES por fila (NO ceros)
+const rowCounts = computed(() => {
+  return matrixData.value.map(row => 
+    row.filter(val => val !== 0).length
+  )
+})
+
+// ✅ CANTIDAD DE CONEXIONES por columna (NO ceros)
+const colCounts = computed(() => {
+  const n = props.nodes.length
+  const counts = Array(n).fill(0)
+  matrixData.value.forEach(row => {
+    row.forEach((val, colIdx) => {
+      if (val !== 0) counts[colIdx] += 1
+    })
+  })
+  return counts
+})
+
+// Totales
 const totalSum = computed(() => {
   return rowSums.value.reduce((sum, val) => sum + val, 0)
+})
+
+const totalCount = computed(() => {
+  return rowCounts.value.reduce((sum, val) => sum + val, 0)
 })
 
 const close = () => {
@@ -229,20 +267,21 @@ const close = () => {
 .matrix-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   min-width: 200px;
 }
 
 @media (min-width: 640px) {
   .matrix-table {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
   }
 }
 
 .th-corner,
 .th-node,
-.th-sum {
-  padding: 0.4rem 0.3rem;
+.th-sum,
+.th-count {
+  padding: 0.3rem 0.2rem;
   text-align: center;
   font-weight: 600;
   border: 1px solid #cbd5e1;
@@ -254,7 +293,8 @@ const close = () => {
 @media (min-width: 640px) {
   .th-corner,
   .th-node,
-  .th-sum {
+  .th-sum,
+  .th-count {
     padding: 0.5rem 0.6rem;
   }
 }
@@ -262,7 +302,7 @@ const close = () => {
 .th-node {
   background-color: #eef2ff;
   color: #4f46e5;
-  min-width: 30px;
+  min-width: 25px;
 }
 
 @media (min-width: 640px) {
@@ -276,8 +316,13 @@ const close = () => {
   color: #d97706;
 }
 
+.th-count {
+  background-color: #dbeafe;
+  color: #2563eb;
+}
+
 .td-node {
-  padding: 0.3rem 0.2rem;
+  padding: 0.2rem 0.1rem;
   text-align: center;
   font-weight: 600;
   border: 1px solid #cbd5e1;
@@ -293,13 +338,13 @@ const close = () => {
 }
 
 .td-cell {
-  padding: 0.3rem 0.2rem;
+  padding: 0.2rem 0.1rem;
   text-align: center;
   border: 1px solid #cbd5e1;
   background-color: #ffffff;
   color: #1e293b;
   font-weight: 500;
-  min-width: 25px;
+  min-width: 20px;
 }
 
 @media (min-width: 640px) {
@@ -314,7 +359,7 @@ const close = () => {
 }
 
 .td-sum {
-  padding: 0.3rem 0.2rem;
+  padding: 0.2rem 0.1rem;
   text-align: center;
   font-weight: 700;
   border: 1px solid #cbd5e1;
@@ -322,18 +367,29 @@ const close = () => {
   color: #d97706;
 }
 
+.td-count {
+  padding: 0.2rem 0.1rem;
+  text-align: center;
+  font-weight: 700;
+  border: 1px solid #cbd5e1;
+  background-color: #dbeafe;
+  color: #2563eb;
+}
+
 @media (min-width: 640px) {
-  .td-sum {
+  .td-sum,
+  .td-count {
     padding: 0.4rem 0.5rem;
   }
 }
 
-.tr-sum {
+.tr-sum,
+.tr-count {
   background-color: #f1f5f9;
 }
 
 .td-node-sum {
-  padding: 0.3rem 0.2rem;
+  padding: 0.2rem 0.1rem;
   text-align: center;
   font-weight: 600;
   border: 1px solid #cbd5e1;
@@ -342,14 +398,25 @@ const close = () => {
   white-space: nowrap;
 }
 
+.td-node-count {
+  padding: 0.2rem 0.1rem;
+  text-align: center;
+  font-weight: 600;
+  border: 1px solid #cbd5e1;
+  background-color: #dbeafe;
+  color: #2563eb;
+  white-space: nowrap;
+}
+
 @media (min-width: 640px) {
-  .td-node-sum {
+  .td-node-sum,
+  .td-node-count {
     padding: 0.4rem 0.5rem;
   }
 }
 
 .td-sum-col {
-  padding: 0.3rem 0.2rem;
+  padding: 0.2rem 0.1rem;
   text-align: center;
   font-weight: 700;
   border: 1px solid #cbd5e1;
@@ -357,14 +424,24 @@ const close = () => {
   color: #d97706;
 }
 
+.td-count-col {
+  padding: 0.2rem 0.1rem;
+  text-align: center;
+  font-weight: 700;
+  border: 1px solid #cbd5e1;
+  background-color: #dbeafe;
+  color: #2563eb;
+}
+
 @media (min-width: 640px) {
-  .td-sum-col {
+  .td-sum-col,
+  .td-count-col {
     padding: 0.4rem 0.5rem;
   }
 }
 
 .td-sum-total {
-  padding: 0.3rem 0.2rem;
+  padding: 0.2rem 0.1rem;
   text-align: center;
   font-weight: 700;
   border: 1px solid #cbd5e1;
@@ -372,8 +449,18 @@ const close = () => {
   color: #b45309;
 }
 
+.td-count-total {
+  padding: 0.2rem 0.1rem;
+  text-align: center;
+  font-weight: 700;
+  border: 1px solid #cbd5e1;
+  background-color: #93c5fd;
+  color: #1d4ed8;
+}
+
 @media (min-width: 640px) {
-  .td-sum-total {
+  .td-sum-total,
+  .td-count-total {
     padding: 0.4rem 0.5rem;
   }
 }
@@ -402,13 +489,13 @@ const close = () => {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.75rem;
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   color: #475569;
 }
 
 @media (min-width: 640px) {
   .matrix-legend {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     gap: 1rem;
   }
 }
@@ -423,12 +510,12 @@ const close = () => {
   }
 }
 
-.dot-out {
+.dot-sum {
   color: #d97706;
 }
 
-.dot-in {
-  color: #4f46e5;
+.dot-count {
+  color: #2563eb;
 }
 
 .btn-close-modal {
