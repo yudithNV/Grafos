@@ -204,7 +204,7 @@
                 {{ edge.weight }}
               </text>
             </g>
-          </g>
+          </g> 
 
           <!-- Dibujo de los Nodos (Círculos Planos) -->
           <g
