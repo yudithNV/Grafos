@@ -137,9 +137,20 @@ onMounted(() => {
 // ============ FUNCIONES DE GUARDADO ============
 
 // Guardar grafo actual
+// Guardar grafo actual
 const saveGraph = (name = null) => {
+  // Si no se proporciona nombre, usar el existente o crear uno nuevo
+  let finalName = name
+  if (!finalName) {
+    if (currentGraphIndex.value >= 0 && currentGraphIndex.value < savedGraphs.value.length) {
+      finalName = savedGraphs.value[currentGraphIndex.value].name
+    } else {
+      finalName = `Grafo ${new Date().toLocaleString()}`
+    }
+  }
+  
   const data = {
-    name: name || `Grafo ${new Date().toLocaleString()}`,
+    name: finalName,
     date: new Date().toLocaleString(),
     nodes: nodes.value,
     edges: edges.value
@@ -381,12 +392,18 @@ const handleSaveGraph = () => {
     return
   }
   
-  // Primero pedir nombre
+  // Obtener el nombre actual del grafo
+  let currentName = 'Grafo sin nombre'
+  if (currentGraphIndex.value >= 0 && currentGraphIndex.value < savedGraphs.value.length) {
+    currentName = savedGraphs.value[currentGraphIndex.value].name || currentName
+  }
+  
+  // Pedir nombre con el valor actual
   modalConfig.title = '💾 Guardar Grafo'
   modalConfig.labelText = 'Nombre del grafo:'
   modalConfig.placeholder = 'Ej. Grafo Clase, Red Social...'
   modalConfig.type = 'input'
-  modalConfig.initialValue = `Grafo ${new Date().toLocaleString()}`
+  modalConfig.initialValue = currentName  // ← Usa el nombre actual
   modalConfig.deleteButtonText = ''
   modalConfig.onSubmitCallback = (name) => {
     const graphName = String(name).trim() || 'Grafo sin nombre'
