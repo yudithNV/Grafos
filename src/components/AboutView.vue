@@ -3,7 +3,6 @@
     <div class="about-content">
       <h1 class="about-title">Quiénes somos</h1>
       <p class="about-text">
-        <!-- TODO: reemplaza este texto con la descripción real del proyecto -->
         GraphFlow es un proyecto académico desarrollado para la materia de Analisis de Algoritmos. Nace como una herramienta interactiva para
         visualizar, construir y comprender el comportamiento de distintos algoritmos
         aplicados a redes de nodos y conexiones.
@@ -12,7 +11,6 @@
       <div class="about-team">
         <h2 class="about-subtitle">Integrantes</h2>
         <ul class="team-list">
-          <!-- TODO: agrega aquí a los integrantes del equipo -->
           <li>Cano Poma, Yerko</li>
           <li>Flores Gutierrez, Jorge</li>
           <li>Noa Vargas, Yudith</li>
@@ -31,7 +29,7 @@
   min-height: calc(100vh - 65px);
   display: flex;
   justify-content: center;
-  padding: 3rem 1.5rem 4rem;
+  padding: 6rem 1.5rem 4rem; /* <-- AUMENTA EL PADDING TOP para compensar el navbar fijo */
   background-color: var(--bg-body);
 }
 

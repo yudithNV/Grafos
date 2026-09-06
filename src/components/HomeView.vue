@@ -57,14 +57,18 @@
           </p>
         </div>
 
-        <AlgorithmCarousel @select="(id) => $emit('select', id)" />
+        <div id="algorithms-carousel" class="algorithms-anchor">
+          <AlgorithmCarousel @select="(id) => $emit('select', id)" />
+        </div>
       </div>
     </section>
 
     <section class="content-section" v-else>
         <CanvasBackground />
       <div class="content-container">
-        <AlgorithmCarousel @select="(id) => $emit('select', id)" />
+        <div id="algorithms-carousel" class="algorithms-anchor">
+          <AlgorithmCarousel @select="(id) => $emit('select', id)" />
+        </div>
       </div>
     </section>
   </div>
@@ -113,6 +117,10 @@ defineEmits(['select'])
 
 /* ===== TÍTULO CON ÓRBITAS DENTRO (como en el ejemplo) ===== */
 .home-title {
+     background: linear-gradient(135deg, #a855f7, #d946ef, #ec4899);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 30px rgba(168, 85, 247, 0.3));
   font-size: 3.5rem;
   font-weight: 800;
   letter-spacing: -0.03em;
@@ -123,6 +131,7 @@ defineEmits(['select'])
   margin: 0;
   padding: 0.5rem 1rem;
   z-index: 2;
+  
 }
 
 @media (min-width: 768px) {
@@ -481,6 +490,11 @@ defineEmits(['select'])
   flex-direction: column;
   align-items: center;
   text-align: center;
+}
+
+.algorithms-anchor {
+  width: 100%;
+  scroll-margin-top: 5.5rem;
 }
 
 .explainer {

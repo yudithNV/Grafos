@@ -59,16 +59,35 @@ const navItems = [
   justify-content: space-between;
   gap: 1rem;
   padding: 0.75rem 1.5rem;
-  background-color: var(--bg-surface);
-  border-bottom: 1px solid var(--border-color);
   
-  /* CAMBIOS PARA FIJAR EL NAVBAR */
+  /* ===== EFECTO GLASSMORPHISM ===== */
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
+  
+  /* ===== NAVBAR FIJO ===== */
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
-  box-sizing: border-box; /* Vital para que el padding no rompa el ancho del 100% */
-  z-index: 1000; /* Asegura que siempre esté por encima del contenido y las órbitas */
+  box-sizing: border-box;
+  z-index: 1000;
+}
+
+/* Modo oscuro */
+[data-theme='dark'] .navbar {
+  background: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+}
+
+/* Modo claro más visible */
+[data-theme='light'] .navbar {
+  background: rgba(255, 255, 255, 0.5);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.03);
 }
 
 .navbar-brand {
@@ -104,11 +123,33 @@ const navItems = [
 .brand-node-b { fill: #ec4899; }
 .brand-node-c { fill: var(--accent-end); }
 
+/* ===== NOMBRE DEL SISTEMA CON BRILLO ===== */
 .brand-name {
   font-size: 1.15rem;
   font-weight: 800;
   letter-spacing: -0.03em;
   color: var(--text-primary);
+  transition: all 0.3s ease;
+}
+
+/* El nombre brilla SIEMPRE (efecto neón sutil) */
+.brand-name {
+  text-shadow: 
+    0 0 5px rgba(168, 85, 247, 0.1),
+    0 0 10px rgba(168, 85, 247, 0.05);
+}
+
+[data-theme='dark'] .brand-name {
+  text-shadow: 
+    0 0 10px rgba(168, 85, 247, 0.2),
+    0 0 20px rgba(168, 85, 247, 0.1),
+    0 0 30px rgba(168, 85, 247, 0.05);
+}
+
+[data-theme='light'] .brand-name {
+  text-shadow: 
+    0 0 8px rgba(168, 85, 247, 0.15),
+    0 0 15px rgba(168, 85, 247, 0.08);
 }
 
 .navbar-links {
@@ -128,18 +169,57 @@ const navItems = [
   font-weight: 500;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.3s ease;
+  position: relative;
 }
 
 .nav-link:hover {
-  background-color: var(--bg-surface-2);
   color: var(--text-primary);
+  transform: translateY(-1px);
 }
 
+/* ===== BOTÓN ACTIVO - SOLO LAS LETRAS BRILLAN ===== */
 .nav-link-active {
-  background-color: var(--accent-soft-bg);
   color: var(--accent-solid);
   font-weight: 600;
+  
+  /* EFECTO BRILLO NEÓN EN EL TEXTO (SIN FONDO) */
+  text-shadow: 
+    0 0 10px rgba(168, 85, 247, 0.4),
+    0 0 20px rgba(168, 85, 247, 0.2);
+  
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Brillo en modo oscuro (más intenso) */
+[data-theme='dark'] .nav-link-active {
+  text-shadow: 
+    0 0 15px rgba(168, 85, 247, 0.6),
+    0 0 30px rgba(168, 85, 247, 0.3),
+    0 0 45px rgba(168, 85, 247, 0.15);
+}
+
+/* Brillo en modo claro (más suave) */
+[data-theme='light'] .nav-link-active {
+  text-shadow: 
+    0 0 10px rgba(168, 85, 247, 0.5),
+    0 0 20px rgba(168, 85, 247, 0.25);
+}
+
+/* Línea indicadora debajo del texto activo (opcional, más elegante) */
+.nav-link-active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent-solid), transparent);
+  border-radius: 2px;
+  box-shadow: 0 0 10px var(--accent-solid);
 }
 
 .theme-toggle {
@@ -149,16 +229,24 @@ const navItems = [
   width: 2.4rem;
   height: 2.4rem;
   border-radius: 50%;
-  border: 1px solid var(--border-color);
-  background-color: var(--bg-surface-2);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.05);
   color: var(--text-primary);
   cursor: pointer;
   transition: all 0.15s ease;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+[data-theme='dark'] .theme-toggle {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.05);
 }
 
 .theme-toggle:hover {
   border-color: var(--accent-solid);
   color: var(--accent-solid);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .theme-icon {

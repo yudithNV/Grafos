@@ -111,7 +111,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, watch } from 'vue'
+import { ref, onMounted, nextTick, watch } from 'vue'
 import Navbar from './components/Navbar.vue'
 import HomeView from './components/HomeView.vue'
 import AboutView from './components/AboutView.vue'
@@ -122,7 +122,25 @@ import Footer from './components/Footer.vue'
 
 // Routing
 const currentView = ref('home')
-const goTo = (view) => { currentView.value = view }
+const scrollToAlgorithms = () => {
+  const carousel = document.getElementById('algorithms-carousel')
+  carousel?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+const goTo = async (view) => {
+  if (view === 'algoritmos') {
+    currentView.value = 'home'
+    await nextTick()
+    scrollToAlgorithms()
+    return
+  }
+
+  currentView.value = view
+  if (view === 'home') {
+    await nextTick()
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+}
 
 watch(currentView, (view) => {
   document.body.classList.toggle('canvas-lock', view === 'canvas')
