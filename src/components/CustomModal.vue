@@ -1,48 +1,43 @@
 <template>
   <Transition name="fade">
-    <div v-if="show" class="modal-backdrop" @mousedown.self="onCancel">
+    <div v-if="modelValue" class="modal-backdrop" @mousedown.self="close">
       <Transition name="scale">
-        <div class="modal-container" @mousedown.stop>
-          <!-- Barra superior plana - MORADO/ROSA -->
-          <div class="modal-accent-line"></div>
+        <div class="modal-container" @mousedown.stop">
+          <!-- Barra superior con color según tipo -->
+          <div class="modal-accent-line" :class="type === 'confirm' ? 'modal-accent-danger' : 'modal-accent-primary'"></div>
 
           <!-- Cabecera -->
           <h3 class="modal-title">{{ title }}</h3>
 
           <!-- Formulario -->
-          <form @submit.prevent="onSubmit" class="modal-form">
-            <div v-if="type !== 'confirm'">
-              <label v-if="labelText" class="modal-label">
-                {{ labelText }}
-              </label>
+          <form @submit.prevent="submit">
+            <!-- Modo Confirmación -->
+            <div v-if="type === 'confirm'" class="modal-confirm-text">
+              <div class="confirm-icon-wrapper">
+                <Trash2 class="confirm-icon" />
+              </div>
+              <p>{{ message || '¿Estás seguro?' }}</p>
+            </div>
+
+            <!-- Modo Edición -->
+            <div v-else>
+              <label v-if="label" class="modal-label">{{ label }}</label>
               <input
                 ref="inputRef"
-                :type="inputType"
-                v-model="localValue"
+                :type="type === 'number' ? 'number' : 'text'"
+                v-model="inputValue"
                 :placeholder="placeholder"
                 class="modal-input"
-                :required="type !== 'confirm'"
+                required
               />
             </div>
-            <div v-else class="modal-confirm-text">
-              {{ labelText }}
-            </div>
 
-            <!-- Botones de Acción -->
+            <!-- Botones -->
             <div class="modal-btn-group">
-              <button type="submit" class="btn btn-save">
-                Aceptar
+              <button type="submit" class="btn" :class="type === 'confirm' ? 'btn-danger' : 'btn-save'">
+                {{ type === 'confirm' ? 'Eliminar' : 'Guardar' }}
               </button>
-              <button type="button" @click="onCancel" class="btn btn-cancel">
-                Cancelar
-              </button>
-            </div>
-
-            <!-- Borrado para Edición -->
-            <div v-if="showDelete" class="modal-delete-section">
-              <button type="button" @click="onDelete" class="btn btn-delete">
-                {{ deleteButtonText || 'Eliminar' }}
-              </button>
+              <button type="button" @click="close" class="btn btn-cancel">Cancelar</button>
             </div>
           </form>
         </div>
@@ -52,86 +47,65 @@
 </template>
 
 <script setup>
-import { ref, watch, nextTick, computed } from 'vue'
+import { ref, watch, nextTick } from 'vue'
+import { Trash2 } from '@lucide/vue'
 
 const props = defineProps({
-  show: Boolean,
-  title: String,
-  labelText: String,
-  placeholder: String,
-  type: {
-    type: String,
-    default: 'input' // 'input' | 'number' | 'edit-node' | 'edit-edge' | 'confirm'
-  },
-  initialValue: [String, Number],
-  deleteButtonText: String
+  modelValue: Boolean,
+  title: { type: String, default: '' },
+  label: { type: String, default: '' },
+  placeholder: { type: String, default: '' },
+  type: { type: String, default: 'input' }, // 'input' | 'number' | 'confirm'
+  message: { type: String, default: '' },
+  initialValue: { type: [String, Number], default: '' }
 })
 
-const emit = defineEmits(['close', 'submit', 'delete'])
+const emit = defineEmits(['update:modelValue', 'submit'])
 
-const localValue = ref('')
+const inputValue = ref('')
 const inputRef = ref(null)
 
-const inputType = computed(() => {
-  return props.type === 'number' || props.type === 'edit-edge' ? 'number' : 'text'
-})
-
-const showDelete = computed(() => {
-  return props.type === 'edit-node' || props.type === 'edit-edge'
-})
-
-// Escucha cambios de visibilidad
-watch(
-  () => props.show,
-  (newVal) => {
-    if (newVal) {
-      localValue.value = props.initialValue !== undefined ? props.initialValue : ''
-      nextTick(() => {
-        if (inputRef.value) {
-          inputRef.value.focus()
-          if (inputType.value === 'text') {
-            inputRef.value.select()
-          }
+watch(() => props.modelValue, (val) => {
+  if (val) {
+    inputValue.value = props.initialValue ?? ''
+    nextTick(() => {
+      if (inputRef.value && props.type !== 'confirm') {
+        inputRef.value.focus()
+        if (props.type === 'input') {
+          inputRef.value.select()
         }
-      })
-    }
-  },
-  { immediate: true }
-)
+      }
+    })
+  }
+})
 
-const onSubmit = () => {
-  let val = localValue.value
-  if (inputType.value === 'number') {
+const close = () => {
+  emit('update:modelValue', false)
+}
+
+const submit = () => {
+  let val = inputValue.value
+  if (props.type === 'number') {
     val = Number(val)
   }
   emit('submit', val)
+  close()
 }
 
-const onCancel = () => {
-  emit('close')
-}
-
-const onDelete = () => {
-  emit('delete')
-}
-
-// Atajo Escape
+// Escape para cerrar
 const handleKeyDown = (e) => {
-  if (e.key === 'Escape' && props.show) {
-    onCancel()
+  if (e.key === 'Escape' && props.modelValue) {
+    close()
   }
 }
 
-watch(
-  () => props.show,
-  (isActive) => {
-    if (isActive) {
-      window.addEventListener('keydown', handleKeyDown)
-    } else {
-      window.removeEventListener('keydown', handleKeyDown)
-    }
+watch(() => props.modelValue, (isActive) => {
+  if (isActive) {
+    window.addEventListener('keydown', handleKeyDown)
+  } else {
+    window.removeEventListener('keydown', handleKeyDown)
   }
-)
+})
 </script>
 
 <style scoped>
@@ -143,12 +117,12 @@ watch(
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  background-color: rgba(0, 0, 0, 0.15); /* Fondo oscuro translúcido suave */
+  background-color: rgba(0, 0, 0, 0.15);
   backdrop-filter: blur(3px);
 }
 
 .modal-container {
-  background-color: #ffffff; /* Blanco limpio */
+  background-color: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 1rem;
   padding: 1.5rem;
@@ -164,9 +138,16 @@ watch(
   left: 0;
   right: 0;
   height: 4px;
-  background: linear-gradient(90deg, #a855f7 0%, #d946ef 50%, #ec4899 100%); /* Morado → Rosa */
   border-top-left-radius: 1rem;
   border-top-right-radius: 1rem;
+}
+
+.modal-accent-primary {
+  background: linear-gradient(90deg, #a855f7 0%, #d946ef 50%, #ec4899 100%);
+}
+
+.modal-accent-danger {
+  background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
 }
 
 .modal-title {
@@ -196,7 +177,7 @@ watch(
 .modal-input {
   width: 100%;
   padding: 0.75rem 1rem;
-  background-color: #f8fafc; /* Gris muy claro */
+  background-color: #f8fafc;
   border: 1.5px solid #e2e8f0;
   border-radius: 0.75rem;
   color: #1e293b;
@@ -206,7 +187,7 @@ watch(
 }
 
 .modal-input:focus {
-  border-color: #d946ef; /* Rosa en focus */
+  border-color: #d946ef;
   background-color: #ffffff;
   box-shadow: 0 0 0 3px rgba(217, 70, 239, 0.1);
 }
@@ -216,13 +197,37 @@ watch(
 }
 
 .modal-confirm-text {
-  font-size: 0.875rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 1rem 0;
   color: #475569;
-  line-height: 1.5;
-  padding: 0.5rem 0;
+  font-size: 0.95rem;
+  line-height: 1.6;
 }
 
-/* Botones */
+.confirm-icon-wrapper {
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  background-color: #fef2f2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.75rem;
+}
+
+.confirm-icon {
+  width: 1.8rem;
+  height: 1.8rem;
+  color: #ef4444;
+}
+
+.modal-confirm-text p {
+  margin: 0;
+}
+
 .modal-btn-group {
   display: flex;
   flex-direction: column;
@@ -255,7 +260,7 @@ watch(
 }
 
 .btn-save {
-  background: linear-gradient(135deg, #a855f7 0%, #d946ef 100%); /* Morado a Rosa */
+  background: linear-gradient(135deg, #a855f7 0%, #d946ef 100%);
   color: #ffffff;
   font-weight: 600;
   border: none;
@@ -264,6 +269,18 @@ watch(
 .btn-save:hover {
   background: linear-gradient(135deg, #9333ea 0%, #be185d 100%);
   box-shadow: 0 4px 12px rgba(217, 70, 239, 0.3);
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: #ffffff;
+  font-weight: 600;
+  border: none;
+}
+
+.btn-danger:hover {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
 }
 
 .btn-cancel {
@@ -279,27 +296,6 @@ watch(
   color: #1e293b;
 }
 
-.modal-delete-section {
-  border-top: 1px solid #e2e8f0;
-  padding-top: 0.75rem;
-  margin-top: 0.5rem;
-}
-
-.btn-delete {
-  background-color: rgba(239, 68, 68, 0.08);
-  border-color: rgba(239, 68, 68, 0.2);
-  color: #dc2626;
-  width: 100%;
-  font-weight: 500;
-}
-
-.btn-delete:hover {
-  background-color: rgba(239, 68, 68, 0.12);
-  border-color: rgba(239, 68, 68, 0.3);
-  color: #b91c1c;
-}
-
-/* Transiciones */
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.2s ease;

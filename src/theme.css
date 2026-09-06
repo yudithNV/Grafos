@@ -1,0 +1,52 @@
+/* theme.css — variables de color para modo claro/oscuro
+   Importar DESPUÉS de style.css en main.js:
+   import './style.css'
+   import './theme.css'
+*/
+
+:root {
+  --bg-body: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-surface-2: #f1f5f9;
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --border-color: #e2e8f0;
+  --accent-start: #a855f7;
+  --accent-end: #d946ef;
+  --accent-solid: #7c3aed;
+  --accent-soft-bg: #eef2ff;
+  --shadow-color: rgba(15, 23, 42, 0.08);
+}
+
+[data-theme='dark'] {
+  --bg-body: #0b0f19;
+  --bg-surface: #151223;
+  --bg-surface-2: #1e1b33;
+  --text-primary: #f1f5f9;
+  --text-secondary: #a1a1c2;
+  --border-color: #2d2a45;
+  --accent-start: #a855f7;
+  --accent-end: #ec4899;
+  --accent-solid: #9333ea;
+  --accent-soft-bg: #241f3d;
+  --shadow-color: rgba(0, 0, 0, 0.4);
+}
+
+/* Transición suave al cambiar de tema */
+body, .navbar, .home-view, .about-view, .algo-card {
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+/* Scroll: permitido por defecto (Inicio/Algoritmos/Quiénes somos),
+   bloqueado solo cuando el lienzo de grafos está activo (usa pan/gestos propios) */
+html, body {
+  margin: 0;
+  height: auto;
+  min-height: 100%;
+  overflow-y: auto;
+}
+
+body.canvas-lock {
+  height: 100vh;
+  overflow: hidden;
+}

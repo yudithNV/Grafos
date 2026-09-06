@@ -1,12 +1,29 @@
 <template>
-  <div class="app-root">
-    <!-- View Switcher -->
-    <WelcomeView
-      v-if="currentView === 'welcome'"
-      @start="startSimulator"
-      @show-instructions="showInstructionsModal"
+  <div class="app-root" :class="{ 'app-root-fixed': currentView === 'canvas' }">
+    <!-- Navbar -->
+    <Navbar
+      v-if="currentView !== 'canvas'"
+      :current="currentView"
+      :theme="theme"
+      @navigate="goTo"
+      @toggle-theme="toggleTheme"
     />
-    
+
+    <!-- Views -->
+    <HomeView
+      v-if="currentView === 'home'"
+      mode="home"
+      @select="onSelectAlgorithm"
+    />
+
+    <HomeView
+      v-else-if="currentView === 'algoritmos'"
+      mode="algoritmos"
+      @select="onSelectAlgorithm"
+    />
+
+    <AboutView v-else-if="currentView === 'about'" />
+
     <GraphCanvas
       v-else-if="currentView === 'canvas'"
       :nodes="nodes"
@@ -20,20 +37,20 @@
       @create-edge="handleCreateEdgeRequest"
       @edit-node="handleEditNodeRequest"
       @edit-edge="handleEditEdgeRequest"
+      @delete-node="handleDeleteNodeRequest"
+      @delete-edge="handleDeleteEdgeRequest"
     />
 
-    <!-- General Purpose Custom Modal -->
+    <!-- Custom Modal -->
     <CustomModal
-      :show="modalConfig.show"
-      :title="modalConfig.title"
-      :label-text="modalConfig.labelText"
-      :placeholder="modalConfig.placeholder"
-      :type="modalConfig.type"
-      :initial-value="modalConfig.initialValue"
-      :delete-button-text="modalConfig.deleteButtonText"
-      @close="closeModal"
+      v-model="showModal"
+      :title="modalTitle"
+      :label="modalLabel"
+      :placeholder="modalPlaceholder"
+      :type="modalType"
+      :message="modalMessage"
+      :initial-value="modalInitialValue"
       @submit="handleModalSubmit"
-      @delete="handleModalDelete"
     />
 
     <!-- Matrix Modal -->
@@ -44,7 +61,9 @@
       @close="showMatrix = false"
     />
 
-    <!-- Selector de Grafos Guardados -->
+    <Footer v-if="currentView !== 'canvas'" />
+
+    <!-- Graph Selector -->
     <div v-if="showGraphSelector" class="graph-selector-overlay" @click.self="showGraphSelector = false">
       <div class="graph-selector-modal">
         <div class="graph-selector-header">
@@ -69,10 +88,7 @@
             <button @click.stop="deleteSavedGraph(index)" class="btn-delete-graph">🗑️</button>
           </div>
           
-          <div 
-            class="graph-item graph-item-new"
-            @click="createNewGraph"
-          >
+          <div class="graph-item graph-item-new" @click="createNewGraph">
             <div class="graph-item-info">
               <span class="graph-item-name" style="color: #4f46e5; font-size: 1rem;">
                 ➕ Crear Nuevo Grafo
@@ -95,51 +111,214 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
-import WelcomeView from './components/WelcomeView.vue'
+import { ref, reactive, onMounted, watch } from 'vue'
+import Navbar from './components/Navbar.vue'
+import HomeView from './components/HomeView.vue'
+import AboutView from './components/AboutView.vue'
 import GraphCanvas from './components/GraphCanvas.vue'
 import CustomModal from './components/CustomModal.vue'
 import MatrixModal from './components/MatrixModal.vue'
+import Footer from './components/Footer.vue'
 
-// Routing State
-const currentView = ref('welcome')
+// Routing
+const currentView = ref('home')
+const goTo = (view) => { currentView.value = view }
+
+watch(currentView, (view) => {
+  document.body.classList.toggle('canvas-lock', view === 'canvas')
+}, { immediate: true })
+
+// Tema
+const theme = ref(localStorage.getItem('theme') || 'light')
+const applyTheme = (value) => {
+  document.documentElement.setAttribute('data-theme', value)
+}
+const toggleTheme = () => {
+  theme.value = theme.value === 'light' ? 'dark' : 'light'
+}
+
+watch(theme, (value) => {
+  localStorage.setItem('theme', value)
+  applyTheme(value)
+}, { immediate: true })
 
 // Graph State
 const nodes = ref([])
 const edges = ref([])
 
-// Modal Controller State
-const modalConfig = reactive({
-  show: false,
-  title: '',
-  labelText: '',
-  placeholder: '',
-  type: 'input',
-  initialValue: '',
-  deleteButtonText: '',
-  onSubmitCallback: null,
-  onDeleteCallback: null
-})
+// Modal State
+const showModal = ref(false)
+const modalTitle = ref('')
+const modalLabel = ref('')
+const modalPlaceholder = ref('')
+const modalType = ref('input')
+const modalMessage = ref('')
+const modalInitialValue = ref('')
+let modalCallback = null
 
-// Matrix Modal State
+// Matrix Modal
 const showMatrix = ref(false)
 
-// Graph Selector State
+// Graph Selector
 const showGraphSelector = ref(false)
 const savedGraphs = ref([])
 const currentGraphIndex = ref(-1)
 
-// Cargar lista de grafos guardados al iniciar
 onMounted(() => {
   loadSavedGraphsList()
 })
 
-// ============ FUNCIONES DE GUARDADO ============
+// ============ FUNCIONES DEL MODAL ============
 
-// Guardar grafo actual
-// Guardar grafo actual
+const openModal = ({ title, label, placeholder, type, initialValue, message, callback }) => {
+  modalTitle.value = title || ''
+  modalLabel.value = label || ''
+  modalPlaceholder.value = placeholder || ''
+  modalType.value = type || 'input'
+  modalMessage.value = message || ''
+  modalInitialValue.value = initialValue ?? ''
+  modalCallback = callback
+  showModal.value = true
+}
+
+const handleModalSubmit = (value) => {
+  if (modalCallback) {
+    modalCallback(value)
+    modalCallback = null
+  }
+}
+
+// ============ FUNCIONES DEL CANVAS ============
+
+const handleCreateNodeRequest = ({ x, y }) => {
+  openModal({
+    title: 'Crear Nuevo Nodo',
+    label: 'Etiqueta / Nombre del Nodo',
+    placeholder: 'Ej. A, V1, Terminal...',
+    type: 'input',
+    callback: (value) => {
+      const label = String(value).trim()
+      if (!label) return
+      nodes.value.push({
+        id: 'node_' + Date.now(),
+        label,
+        x,
+        y
+      })
+    }
+  })
+}
+
+const handleCreateEdgeRequest = ({ sourceId, targetId }) => {
+  const existingEdge = edges.value.find(e => e.sourceId === sourceId && e.targetId === targetId)
+  if (existingEdge) {
+    handleEditEdgeRequest(existingEdge)
+    return
+  }
+
+  openModal({
+    title: 'Crear Nueva Conexión',
+    label: 'Peso / Valor numérico de la arista',
+    placeholder: 'Ej. 5, 20, -2',
+    type: 'number',
+    initialValue: 1,
+    callback: (value) => {
+      const weight = Number(value)
+      if (isNaN(weight)) return
+      edges.value.push({
+        id: 'edge_' + Date.now(),
+        sourceId,
+        targetId,
+        weight
+      })
+    }
+  })
+}
+
+const handleEditNodeRequest = (node) => {
+  openModal({
+    title: 'Editar Nodo',
+    label: 'Nombre / Etiqueta',
+    placeholder: 'Ej. A, V1...',
+    type: 'input',
+    initialValue: node.label,
+    callback: (value) => {
+      const label = String(value).trim()
+      if (!label) return
+      const index = nodes.value.findIndex(n => n.id === node.id)
+      if (index !== -1) {
+        nodes.value[index] = { ...nodes.value[index], label }
+      }
+    }
+  })
+}
+
+const handleEditEdgeRequest = (edge) => {
+  openModal({
+    title: 'Editar Peso de Conexión',
+    label: 'Peso Numérico de la Arista',
+    placeholder: 'Ej. 10, -5...',
+    type: 'number',
+    initialValue: edge.weight,
+    callback: (value) => {
+      const weight = Number(value)
+      if (isNaN(weight)) return
+      const index = edges.value.findIndex(e => e.id === edge.id)
+      if (index !== -1) {
+        edges.value[index] = { ...edges.value[index], weight }
+      }
+    }
+  })
+}
+
+const handleDeleteNodeRequest = (nodeId) => {
+  const node = nodes.value.find(n => n.id === nodeId)
+  if (!node) return
+  
+  openModal({
+    title: 'Confirmar Eliminación',
+    message: `¿Eliminar el nodo "${node.label}" y todas sus conexiones?`,
+    type: 'confirm',
+    callback: () => {
+      nodes.value = nodes.value.filter(n => n.id !== nodeId)
+      edges.value = edges.value.filter(e => e.sourceId !== nodeId && e.targetId !== nodeId)
+    }
+  })
+}
+
+const handleDeleteEdgeRequest = (edgeId) => {
+  const edge = edges.value.find(e => e.id === edgeId)
+  if (!edge) return
+  
+  const source = nodes.value.find(n => n.id === edge.sourceId)
+  const target = nodes.value.find(n => n.id === edge.targetId)
+  const label = `${source?.label || '?'} → ${target?.label || '?'}`
+  
+  openModal({
+    title: 'Confirmar Eliminación',
+    message: `¿Eliminar la arista ${label} con peso ${edge.weight}?`,
+    type: 'confirm',
+    callback: () => {
+      edges.value = edges.value.filter(e => e.id !== edgeId)
+    }
+  })
+}
+
+const confirmClearCanvas = () => {
+  openModal({
+    title: '¿Limpiar Todo el Lienzo?',
+    message: 'Se eliminarán todos los nodos y conexiones actuales. Esta acción no se puede deshacer.',
+    type: 'confirm',
+    callback: () => {
+      nodes.value = []
+      edges.value = []
+    }
+  })
+}
+
+// ============ GUARDADO ============
+
 const saveGraph = (name = null) => {
-  // Si no se proporciona nombre, usar el existente o crear uno nuevo
   let finalName = name
   if (!finalName) {
     if (currentGraphIndex.value >= 0 && currentGraphIndex.value < savedGraphs.value.length) {
@@ -170,13 +349,60 @@ const saveGraph = (name = null) => {
   loadSavedGraphsList()
 }
 
-// Cargar todos los grafos guardados
+const handleSaveGraph = () => {
+  if (nodes.value.length === 0 && edges.value.length === 0) {
+    openModal({
+      title: '⚠️ Grafo Vacío',
+      message: 'No hay nodos ni aristas para guardar.',
+      type: 'confirm'
+    })
+    return
+  }
+  
+  let currentName = 'Grafo sin nombre'
+  if (currentGraphIndex.value >= 0 && currentGraphIndex.value < savedGraphs.value.length) {
+    currentName = savedGraphs.value[currentGraphIndex.value].name || currentName
+  }
+  
+  openModal({
+    title: '💾 Guardar Grafo',
+    label: 'Nombre del grafo:',
+    placeholder: 'Ej. Grafo Clase, Red Social...',
+    type: 'input',
+    initialValue: currentName,
+    callback: (name) => {
+      const graphName = String(name).trim() || 'Grafo sin nombre'
+      saveGraph(graphName)
+      
+      // Mostrar confirmación
+      openModal({
+        title: '✅ Guardado Correctamente',
+        message: `"${graphName}" guardado con ${nodes.value.length} nodos y ${edges.value.length} aristas.`,
+        type: 'confirm'
+      })
+    }
+  })
+}
+
+// ============ OTRAS FUNCIONES ============
+
+const onSelectAlgorithm = (id) => {
+  if (id === 'grafos') {
+    showGraphSelector.value = true
+    return
+  }
+  openModal({
+    title: '🚧 Próximamente',
+    message: 'Este algoritmo todavía está en construcción.',
+    type: 'confirm'
+  })
+}
+
 const loadSavedGraphsList = () => {
   const saved = localStorage.getItem('savedGraphs')
   savedGraphs.value = saved ? JSON.parse(saved) : []
 }
 
-// Cargar un grafo específico
 const loadSelectedGraph = (index) => {
   const graph = savedGraphs.value[index]
   if (graph) {
@@ -188,7 +414,6 @@ const loadSelectedGraph = (index) => {
   }
 }
 
-// Eliminar un grafo guardado
 const deleteSavedGraph = (index) => {
   if (confirm('¿Eliminar este grafo guardado?')) {
     const graphs = JSON.parse(localStorage.getItem('savedGraphs') || '[]')
@@ -201,26 +426,17 @@ const deleteSavedGraph = (index) => {
   }
 }
 
-// Crear nuevo grafo vacío
 const createNewGraph = () => {
   nodes.value = []
   edges.value = []
   currentGraphIndex.value = -1
   showGraphSelector.value = false
   currentView.value = 'canvas'
-  setTimeout(() => {
-    saveGraph('Nuevo Grafo')
-  }, 100)
-}
-
-// ============ FUNCIONES DE NAVEGACIÓN ============
-
-const startSimulator = () => {
-  showGraphSelector.value = true
+  setTimeout(() => saveGraph('Nuevo Grafo'), 100)
 }
 
 const backToWelcome = () => {
-  currentView.value = 'welcome'
+  currentView.value = 'home'
 }
 
 const showInstructionsModal = () => {
@@ -230,212 +446,22 @@ const showInstructionsModal = () => {
 const showMatrixModal = () => {
   showMatrix.value = true
 }
-
-// ============ FUNCIONES DEL MODAL ============
-
-const closeModal = () => {
-  modalConfig.show = false
-}
-
-const handleModalSubmit = (value) => {
-  if (modalConfig.onSubmitCallback) {
-    modalConfig.onSubmitCallback(value)
-  }
-  closeModal()
-}
-
-const handleModalDelete = () => {
-  if (modalConfig.onDeleteCallback) {
-    modalConfig.onDeleteCallback()
-  }
-  closeModal()
-}
-
-// ============ FUNCIONES DEL CANVAS ============
-
-// 1. Create Node
-const handleCreateNodeRequest = ({ x, y }) => {
-  modalConfig.title = 'Crear Nuevo Nodo'
-  modalConfig.labelText = 'Etiqueta / Nombre del Nodo'
-  modalConfig.placeholder = 'Ej. A, V1, Terminal...'
-  modalConfig.type = 'input'
-  modalConfig.initialValue = ''
-  modalConfig.onSubmitCallback = (value) => {
-    const label = String(value).trim()
-    if (!label) return
-    
-    const newNode = {
-      id: 'node_' + Date.now(),
-      label,
-      x,
-      y
-    }
-    nodes.value.push(newNode)
-  }
-  modalConfig.onDeleteCallback = null
-  modalConfig.show = true
-}
-
-// 2. Create Edge
-const handleCreateEdgeRequest = ({ sourceId, targetId }) => {
-  const existingEdge = edges.value.find(e => e.sourceId === sourceId && e.targetId === targetId)
-  if (existingEdge) {
-    handleEditEdgeRequest(existingEdge)
-    return
-  }
-
-  modalConfig.title = 'Crear Nueva Conexión'
-  modalConfig.labelText = 'Peso / Valor numérico de la arista'
-  modalConfig.placeholder = 'Ej. 5, 20, -2'
-  modalConfig.type = 'number'
-  modalConfig.initialValue = 1
-  modalConfig.onSubmitCallback = (value) => {
-    const weight = Number(value)
-    if (isNaN(weight)) return
-    
-    const newEdge = {
-      id: 'edge_' + Date.now(),
-      sourceId,
-      targetId,
-      weight
-    }
-    edges.value.push(newEdge)
-  }
-  modalConfig.onDeleteCallback = null
-  modalConfig.show = true
-}
-
-// 3. Edit Node
-const handleEditNodeRequest = (node) => {
-  modalConfig.title = 'Editar Nodo'
-  modalConfig.labelText = 'Nombre / Etiqueta'
-  modalConfig.placeholder = 'Ej. A, V1...'
-  modalConfig.type = 'edit-node'
-  modalConfig.initialValue = node.label
-  modalConfig.deleteButtonText = 'Eliminar Nodo'
-  
-  modalConfig.onSubmitCallback = (value) => {
-    const label = String(value).trim()
-    if (!label) return
-    const index = nodes.value.findIndex(n => n.id === node.id)
-    if (index !== -1) {
-      nodes.value[index] = {
-        ...nodes.value[index],
-        label: label
-      }
-    }
-  }
-  
-  modalConfig.onDeleteCallback = () => {
-    nodes.value = nodes.value.filter(n => n.id !== node.id)
-    edges.value = edges.value.filter(e => e.sourceId !== node.id && e.targetId !== node.id)
-  }
-  
-  modalConfig.show = true
-}
-
-// 4. Edit Edge
-const handleEditEdgeRequest = (edge) => {
-  modalConfig.title = 'Editar Peso de Conexión'
-  modalConfig.labelText = 'Peso Numérico de la Arista'
-  modalConfig.placeholder = 'Ej. 10, -5...'
-  modalConfig.type = 'edit-edge'
-  modalConfig.initialValue = edge.weight
-  modalConfig.deleteButtonText = 'Eliminar Arista'
-  
-  modalConfig.onSubmitCallback = (value) => {
-    const weight = Number(value)
-    if (isNaN(weight)) return
-    
-    const index = edges.value.findIndex(e => e.id === edge.id)
-    if (index !== -1) {
-      edges.value[index] = {
-        ...edges.value[index],
-        weight: weight
-      }
-    }
-  }
-  
-  modalConfig.onDeleteCallback = () => {
-    edges.value = edges.value.filter(e => e.id !== edge.id)
-  }
-  
-  modalConfig.show = true
-}
-
-// 5. Clear Canvas
-const confirmClearCanvas = () => {
-  modalConfig.title = '¿Limpiar Todo el Lienzo?'
-  modalConfig.labelText = 'Se eliminarán todos los nodos y conexiones actuales. Esta acción no se puede deshacer.'
-  modalConfig.type = 'confirm'
-  modalConfig.initialValue = ''
-  modalConfig.onSubmitCallback = () => {
-    nodes.value = []
-    edges.value = []
-  }
-  modalConfig.onDeleteCallback = null
-  modalConfig.show = true
-}
-
-// 6. BOTÓN GUARDAR - CONFIRMACIÓN ANTES DE GUARDAR
-// 6. BOTÓN GUARDAR - CON NOMBRE PERSONALIZADO
-const handleSaveGraph = () => {
-  if (nodes.value.length === 0 && edges.value.length === 0) {
-    modalConfig.title = '⚠️ Grafo Vacío'
-    modalConfig.labelText = 'No hay nodos ni aristas para guardar.'
-    modalConfig.type = 'confirm'
-    modalConfig.initialValue = ''
-    modalConfig.deleteButtonText = ''
-    modalConfig.onSubmitCallback = null
-    modalConfig.onDeleteCallback = null
-    modalConfig.show = true
-    return
-  }
-  
-  // Obtener el nombre actual del grafo
-  let currentName = 'Grafo sin nombre'
-  if (currentGraphIndex.value >= 0 && currentGraphIndex.value < savedGraphs.value.length) {
-    currentName = savedGraphs.value[currentGraphIndex.value].name || currentName
-  }
-  
-  // Pedir nombre con el valor actual
-  modalConfig.title = '💾 Guardar Grafo'
-  modalConfig.labelText = 'Nombre del grafo:'
-  modalConfig.placeholder = 'Ej. Grafo Clase, Red Social...'
-  modalConfig.type = 'input'
-  modalConfig.initialValue = currentName  // ← Usa el nombre actual
-  modalConfig.deleteButtonText = ''
-  modalConfig.onSubmitCallback = (name) => {
-    const graphName = String(name).trim() || 'Grafo sin nombre'
-    
-    // Guardar con el nombre elegido
-    saveGraph(graphName)
-    
-    // Mostrar confirmación
-    modalConfig.title = '✅ Guardado Correctamente'
-    modalConfig.labelText = `"${graphName}" guardado con ${nodes.value.length} nodos y ${edges.value.length} aristas.`
-    modalConfig.type = 'confirm'
-    modalConfig.initialValue = ''
-    modalConfig.deleteButtonText = ''
-    modalConfig.onSubmitCallback = null
-    modalConfig.onDeleteCallback = null
-    modalConfig.show = true
-  }
-  modalConfig.onDeleteCallback = null
-  modalConfig.show = true
-}
 </script>
 
 <style scoped>
 .app-root {
-  height: 100vh;
-  width: 100vw;
-  overflow: hidden;
+  min-height: 100vh;
+  width: 100%;
   display: flex;
   flex-direction: column;
-  background-color: #0b0f19;
-  color: #f1f5f9;
+  background-color: var(--bg-body);
+  color: var(--text-primary);
   position: relative;
+}
+
+.app-root-fixed {
+  height: 100vh;
+  overflow: hidden;
 }
 
 /* ========== GRAPH SELECTOR ========== */

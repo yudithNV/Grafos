@@ -1,7 +1,7 @@
 <template>
   <div class="canvas-workspace">
     
-    <!-- Barra de Herramientas Superior -->
+    <!-- Barra de Herramientas Superior (simplificada) -->
     <div class="canvas-header">
       <div class="header-left">
         <button @click="$emit('back')" class="btn-icon-only" title="Volver a Inicio">
@@ -12,7 +12,9 @@
             Lienzo de Grafo
             <span class="status-indicator"></span>
           </h2>
-          <p class="header-subtitle">Toca arista para editar | Doble toque nodo para editar</p>
+          <p class="header-subtitle">
+            {{ getModeDescription() }}
+          </p>
         </div>
       </div>
 
@@ -47,21 +49,46 @@
       </div>
     </div>
 
+    <!-- Panel Lateral Izquierdo -->
+    <div class="side-panel">
+      <button
+        v-for="tool in tools"
+        :key="tool.id"
+        class="tool-btn"
+        :class="{ 'tool-active': activeTool === tool.id }"
+        @click="setActiveTool(tool.id)"
+        :title="tool.description"
+      >
+        <component :is="tool.icon" class="tool-icon" />
+        <span class="tool-label">{{ tool.label }}</span>
+      </button>
+    </div>
+
     <!-- Indicador de Lienzo Vacío -->
-    <div v-if="nodes.length === 0" class="empty-indicator">
+    <div v-if="nodes.length === 0 && activeTool !== 'delete'" class="empty-indicator">
       <div class="empty-icon-wrapper">
         <MousePointerClick class="empty-icon" />
       </div>
       <h3 class="empty-title">Lienzo Vacío</h3>
       <p class="empty-desc">
-        Toca en cualquier zona vacía para crear un nodo.
+        Selecciona <strong>Nodo</strong> en el panel izquierdo y toca el lienzo para crear uno.
       </p>
     </div>
 
-    <!-- Mensaje de ayuda para aristas -->
-    <div v-if="selectedNodeId" class="connection-tip">
+    <!-- Mensaje de ayuda según modo activo -->
+    <div v-if="activeTool === 'connect' && selectedNodeId" class="connection-tip">
       <span class="pulse-dot"></span>
-      <span>Nodo origen seleccionado. Toque el destino para conectar o el fondo para cancelar.</span>
+      <span>Nodo origen seleccionado. Toca un nodo destino para conectar o el fondo para cancelar.</span>
+    </div>
+
+    <div v-if="activeTool === 'delete'" class="connection-tip delete-tip">
+      <span class="pulse-dot"></span>
+      <span>Modo Eliminar: Toca un nodo o arista para eliminarlo (confirmación requerida).</span>
+    </div>
+
+    <div v-if="activeTool === 'edit'" class="connection-tip edit-tip">
+      <span class="pulse-dot"></span>
+      <span>Modo Editar: Toca un nodo o arista para editar sus propiedades.</span>
     </div>
 
     <!-- Contenedor del Lienzo SVG -->
@@ -138,9 +165,12 @@
               :stroke="edge.color"
               stroke-width="3"
               class="edge-path"
+              :class="{ 'edge-highlight': hoveredEdgeId === edge.id }"
               :marker-end="`url(#${edge.markerId})`"
-              @mousedown.stop="onEdgeTouch(edge, $event)"
-              @touchstart.stop.prevent="onEdgeTouch(edge, $event)"
+              @mousedown.stop="onEdgeMouseDown(edge, $event)"
+              @touchstart.stop.prevent="onEdgeTouchStart(edge, $event)"
+              @mouseenter="hoveredEdgeId = edge.id"
+              @mouseleave="hoveredEdgeId = null"
             />
 
             <!-- Área sensible táctil más ancha para facilitar clicks -->
@@ -150,16 +180,16 @@
               stroke="transparent"
               stroke-width="40"
               class="edge-touch-area"
-              @mousedown.stop="onEdgeTouch(edge, $event)"
-              @touchstart.stop.prevent="onEdgeTouch(edge, $event)"
+              @mousedown.stop="onEdgeMouseDown(edge, $event)"
+              @touchstart.stop.prevent="onEdgeTouchStart(edge, $event)"
             />
 
             <!-- Burbuja de Peso de la Arista -->
             <g
               :transform="`translate(${edge.labelX}, ${edge.labelY})`"
               class="edge-label-group"
-              @mousedown.stop="onEdgeTouch(edge, $event)"
-              @touchstart.stop.prevent="onEdgeTouch(edge, $event)"
+              @mousedown.stop="onEdgeMouseDown(edge, $event)"
+              @touchstart.stop.prevent="onEdgeTouchStart(edge, $event)"
             >
               <rect
                 :x="-edge.rectW / 2"
@@ -182,9 +212,16 @@
             :key="node.id"
             :transform="`translate(${node.x}, ${node.y})`"
             class="node-group"
-            :class="{ 'node-active': selectedNodeId === node.id, 'node-dragging': draggedNodeId === node.id }"
+            :class="{ 
+              'node-active': selectedNodeId === node.id, 
+              'node-dragging': draggedNodeId === node.id,
+              'node-hover': hoveredNodeId === node.id,
+              'node-delete-mode': activeTool === 'delete'
+            }"
             @mousedown.stop="onNodeMouseDown(node, $event)"
             @touchstart.stop.prevent="onNodeTouchStart(node, $event)"
+            @mouseenter="hoveredNodeId = node.id"
+            @mouseleave="hoveredNodeId = null"
           >
             <!-- Círculo del Nodo -->
             <circle r="28" class="node-circle" />
@@ -202,7 +239,7 @@
     <div class="canvas-footer">
       <div class="footer-tips">
         <Info class="footer-info-icon" />
-        <span>Arrastra nodos para mover. Toca un nodo y luego otro para conectarlos.</span>
+        <span>{{ getFooterTip() }}</span>
       </div>
       <div class="legend-container">
         <span class="legend-item">
@@ -228,7 +265,12 @@ import {
   Info,
   MousePointerClick,
   Grid3x3,
-  Save
+  Save,
+  Plus,
+  Link,
+  Hand,
+  Eraser,
+  Pencil
 } from '@lucide/vue'
 
 const props = defineProps({
@@ -251,21 +293,30 @@ const emit = defineEmits([
   'create-node',
   'create-edge',
   'edit-node',
-  'edit-edge'
+  'edit-edge',
+  'delete-node',
+  'delete-edge'
 ])
 
 const canvasContainerRef = ref(null)
 const svgRef = ref(null)
 
-// Selección y arrastre de Nodos
+// Herramientas del panel lateral
+const tools = [
+  { id: 'node', label: 'Nodo', icon: Plus, description: 'Crear nodos (toca lienzo)' },
+  { id: 'connect', label: 'Conectar', icon: Link, description: 'Conectar 2 nodos' },
+  { id: 'move', label: 'Mover', icon: Hand, description: 'Arrastrar nodos' },
+  { id: 'delete', label: 'Borrar', icon: Eraser, description: 'Eliminar con confirmación' },
+  { id: 'edit', label: 'Editar', icon: Pencil, description: 'Editar (nodos o aristas)' }
+]
+
+const activeTool = ref('node')
 const selectedNodeId = ref(null)
 const draggedNodeId = ref(null)
 const dragOffset = ref({ x: 0, y: 0 })
 const hasDragged = ref(false)
-
-// Registradores de clicks para Doble Click/Doble Toque
-const nodeLastTaps = ref({})
-const edgeLastTaps = ref({})
+const hoveredNodeId = ref(null)
+const hoveredEdgeId = ref(null)
 
 // Touch tracking para canvas
 const canvasTouchStart = ref({ x: 0, y: 0 })
@@ -290,6 +341,33 @@ onMounted(() => {
 onUnmounted(() => {
   document.removeEventListener('touchmove', preventScroll)
 })
+
+const setActiveTool = (toolId) => {
+  activeTool.value = toolId
+  selectedNodeId.value = null // Resetear selección al cambiar de herramienta
+}
+
+const getModeDescription = () => {
+  const tool = tools.find(t => t.id === activeTool.value)
+  return tool ? tool.description : 'Selecciona una herramienta'
+}
+
+const getFooterTip = () => {
+  switch (activeTool.value) {
+    case 'node':
+      return 'Toca en cualquier zona vacía para crear un nodo.'
+    case 'connect':
+      return 'Toca un nodo origen y luego un nodo destino para conectarlos.'
+    case 'move':
+      return 'Arrastra cualquier nodo para moverlo libremente.'
+    case 'delete':
+      return 'Toca un nodo o arista para eliminarlo (confirmación requerida).'
+    case 'edit':
+      return 'Toca un nodo o arista para editar sus propiedades.'
+    default:
+      return 'Selecciona una herramienta en el panel izquierdo.'
+  }
+}
 
 const truncateLabel = (label) => {
   return label.length > 6 ? label.slice(0, 5) + '..' : label
@@ -421,8 +499,17 @@ const processedEdges = computed(() => {
   }).filter(Boolean)
 })
 
-// Clic en fondo del lienzo para crear nodo
+// Manejo de clics en el lienzo según herramienta activa
 const onCanvasMouseDown = (e) => {
+  // Solo permitir crear nodos si la herramienta es 'node'
+  if (activeTool.value !== 'node') {
+    if (activeTool.value === 'connect' && selectedNodeId.value) {
+      // Cancelar conexión al hacer clic en el fondo
+      selectedNodeId.value = null
+    }
+    return
+  }
+  
   if (selectedNodeId.value) {
     selectedNodeId.value = null
     return
@@ -436,6 +523,13 @@ const onCanvasMouseDown = (e) => {
 }
 
 const onCanvasTouchStart = (e) => {
+  if (activeTool.value !== 'node') {
+    if (activeTool.value === 'connect' && selectedNodeId.value) {
+      selectedNodeId.value = null
+    }
+    return
+  }
+  
   if (selectedNodeId.value) {
     selectedNodeId.value = null
     return
@@ -450,18 +544,131 @@ const onCanvasTouchStart = (e) => {
   canvasTouchMoved.value = false
 }
 
-// Lógica de arrastre de Nodos (Mouse)
+// Lógica de arrastre de Nodos (solo en modo 'move')
 const onNodeMouseDown = (node, e) => {
-  draggedNodeId.value = node.id
-  hasDragged.value = false
-  dragOffset.value = {
-    x: e.clientX - node.x,
-    y: e.clientY - node.y
+  if (activeTool.value === 'delete') {
+    handleDeleteNode(node)
+    return
+  }
+  
+  if (activeTool.value === 'edit') {
+    handleEditNode(node)
+    return
+  }
+  
+  if (activeTool.value === 'connect') {
+    handleConnectNode(node)
+    return
+  }
+  
+  if (activeTool.value === 'move') {
+    draggedNodeId.value = node.id
+    hasDragged.value = false
+    dragOffset.value = {
+      x: e.clientX - node.x,
+      y: e.clientY - node.y
+    }
   }
 }
 
+const onNodeTouchStart = (node, e) => {
+  if (activeTool.value === 'delete') {
+    handleDeleteNode(node)
+    return
+  }
+  
+  if (activeTool.value === 'edit') {
+    handleEditNode(node)
+    return
+  }
+  
+  if (activeTool.value === 'connect') {
+    handleConnectNode(node)
+    return
+  }
+  
+  if (activeTool.value === 'move' && e.touches.length === 1) {
+    draggedNodeId.value = node.id
+    hasDragged.value = false
+    const touch = e.touches[0]
+    dragOffset.value = {
+      x: touch.clientX - node.x,
+      y: touch.clientY - node.y
+    }
+  }
+}
+
+// Manejo de eventos de aristas
+const onEdgeMouseDown = (edge, e) => {
+  if (activeTool.value === 'delete') {
+    handleDeleteEdge(edge)
+    return
+  }
+  
+  if (activeTool.value === 'edit') {
+    handleEditEdge(edge)
+    return
+  }
+}
+
+const onEdgeTouchStart = (edge, e) => {
+  e.stopPropagation()
+  e.preventDefault()
+  
+  if (activeTool.value === 'delete') {
+    handleDeleteEdge(edge)
+    return
+  }
+  
+  if (activeTool.value === 'edit') {
+    handleEditEdge(edge)
+    return
+  }
+}
+
+// Handlers para cada herramienta
+const handleConnectNode = (node) => {
+  if (!selectedNodeId.value) {
+    selectedNodeId.value = node.id
+  } else {
+    if (selectedNodeId.value === node.id) {
+      // Auto-conexión (loop)
+      emit('create-edge', {
+        sourceId: node.id,
+        targetId: node.id
+      })
+      selectedNodeId.value = null
+    } else {
+      emit('create-edge', {
+        sourceId: selectedNodeId.value,
+        targetId: node.id
+      })
+      selectedNodeId.value = null
+    }
+  }
+}
+
+const handleDeleteNode = (node) => {
+  // Emitir evento para que el padre maneje la confirmación
+  emit('delete-node', node.id)
+}
+
+const handleDeleteEdge = (edge) => {
+  // Emitir evento para que el padre maneje la confirmación
+  emit('delete-edge', edge.id)
+}
+
+const handleEditNode = (node) => {
+  emit('edit-node', node)
+}
+
+const handleEditEdge = (edge) => {
+  emit('edit-edge', edge)
+}
+
+// Movimiento del mouse para arrastrar nodos
 const onMouseMove = (e) => {
-  if (!draggedNodeId.value) return
+  if (!draggedNodeId.value || activeTool.value !== 'move') return
   
   hasDragged.value = true
   const node = props.nodes.find(n => n.id === draggedNodeId.value)
@@ -476,37 +683,18 @@ const onMouseMove = (e) => {
 const onMouseUp = () => {
   if (!draggedNodeId.value) return
   
-  const node = props.nodes.find(n => n.id === draggedNodeId.value)
-  if (node && !hasDragged.value) {
-    const now = Date.now()
-    const lastTap = nodeLastTaps.value[node.id] || 0
-    
-    if (now - lastTap < 500) {
-      onNodeDblClick(node)
-    } else {
-      handleNodeClick(node)
+  if (activeTool.value === 'move') {
+    const node = props.nodes.find(n => n.id === draggedNodeId.value)
+    if (node && !hasDragged.value) {
+      // Si no hubo arrastre, no hacer nada (es un clic, pero no estamos en modo clic)
     }
-    nodeLastTaps.value[node.id] = now
   }
   
   draggedNodeId.value = null
 }
 
-// Lógica de arrastre de Nodos (Táctil)
-const onNodeTouchStart = (node, e) => {
-  if (e.touches.length === 1) {
-    draggedNodeId.value = node.id
-    hasDragged.value = false
-    const touch = e.touches[0]
-    dragOffset.value = {
-      x: touch.clientX - node.x,
-      y: touch.clientY - node.y
-    }
-  }
-}
-
 const onTouchMove = (e) => {
-  // PAN CON 2 DEDOS
+  // PAN CON 2 DEDOS (siempre disponible)
   if (e.touches.length === 2) {
     hasDragged.value = true
     canvasTouchMoved.value = true
@@ -532,8 +720,8 @@ const onTouchMove = (e) => {
     return
   }
   
-  // ARRASTRAR NODO (1 dedo)
-  if (draggedNodeId.value && e.touches.length === 1) {
+  // ARRASTRAR NODO (solo en modo 'move' con 1 dedo)
+  if (draggedNodeId.value && e.touches.length === 1 && activeTool.value === 'move') {
     hasDragged.value = true
     const node = props.nodes.find(n => n.id === draggedNodeId.value)
     if (node) {
@@ -545,8 +733,8 @@ const onTouchMove = (e) => {
     }
   }
   
-  // Detectar movimiento en el canvas
-  if (e.touches.length === 1 && !canvasTouchMoved.value) {
+  // Detectar movimiento en el canvas (para crear nodo en modo 'node')
+  if (e.touches.length === 1 && !canvasTouchMoved.value && activeTool.value === 'node') {
     const touch = e.touches[0]
     const dx = Math.abs(touch.clientX - canvasTouchStart.value.x)
     const dy = Math.abs(touch.clientY - canvasTouchStart.value.y)
@@ -560,25 +748,12 @@ const onTouchMove = (e) => {
 const onTouchEnd = () => {
   twoFingerStart.value = { x: 0, y: 0 }
   
-  if (draggedNodeId.value) {
-    const node = props.nodes.find(n => n.id === draggedNodeId.value)
-    if (node && !hasDragged.value) {
-      const now = Date.now()
-      const lastTap = nodeLastTaps.value[node.id] || 0
-      
-      if (now - lastTap < 500) {
-        onNodeDblClick(node)
-      } else {
-        handleNodeClick(node)
-      }
-      nodeLastTaps.value[node.id] = now
-    }
-    
+  if (draggedNodeId.value && activeTool.value === 'move') {
     draggedNodeId.value = null
     return
   }
   
-  if (!canvasTouchMoved.value && !selectedNodeId.value) {
+  if (!canvasTouchMoved.value && activeTool.value === 'node' && !selectedNodeId.value) {
     const rect = svgRef.value.getBoundingClientRect()
     const x = canvasTouchStart.value.x - rect.left - panOffset.value.x
     const y = canvasTouchStart.value.y - rect.top - panOffset.value.y
@@ -589,46 +764,10 @@ const onTouchEnd = () => {
   canvasTouchMoved.value = false
 }
 
-// Lógica de selección y conexiones
-const handleNodeClick = (node) => {
-  if (!selectedNodeId.value) {
-    selectedNodeId.value = node.id
-  } else {
-    if (selectedNodeId.value === node.id) {
-      emit('create-edge', {
-        sourceId: node.id,
-        targetId: node.id
-      })
-      selectedNodeId.value = null
-    } else {
-      emit('create-edge', {
-        sourceId: selectedNodeId.value,
-        targetId: node.id
-      })
-      selectedNodeId.value = null
-    }
-  }
-}
-
-const onNodeDblClick = (node) => {
-  selectedNodeId.value = null
-  emit('edit-node', node)
-}
-
-// 🔥 FUNCIÓN SIMPLIFICADA PARA ARISTAS - CLIC ÚNICO 🔥
-const onEdgeTouch = (edge, e) => {
-  e.stopPropagation()
-  e.preventDefault()
-  // Abrir edición directamente con un solo toque/clic
-  onEdgeDblClick(edge)
-}
-
-const onEdgeDblClick = (edge) => {
-  emit('edit-edge', edge)
-}
-
 const confirmClear = () => {
-  emit('clear')
+  if (confirm('¿Eliminar todos los nodos y aristas del lienzo?')) {
+    emit('clear')
+  }
 }
 </script>
 
@@ -638,8 +777,8 @@ const confirmClear = () => {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background-color: #f8fafc;
-  color: #1e293b;
+  background-color: var(--bg-body);
+  color: var(--text-primary);
   overflow: hidden;
   position: relative;
   user-select: none;
@@ -653,8 +792,8 @@ const confirmClear = () => {
   align-items: stretch;
   gap: 0.5rem;
   padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid #e2e8f0;
-  background-color: #ffffff;
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--bg-surface);
   z-index: 20;
 }
 
@@ -682,10 +821,10 @@ const confirmClear = () => {
 
 .btn-icon-only {
   padding: 0.5rem;
-  background-color: #f1f5f9;
-  border: 1px solid #cbd5e1;
+  background-color: var(--bg-surface-2);
+  border: 1px solid var(--border-color);
   border-radius: 0.5rem;
-  color: #475569;
+  color: var(--text-secondary);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -696,7 +835,6 @@ const confirmClear = () => {
 }
 
 .btn-icon-only:active {
-  background-color: #e2e8f0;
   transform: scale(0.95);
 }
 
@@ -714,7 +852,7 @@ const confirmClear = () => {
 .header-title {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--text-primary);
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -736,7 +874,7 @@ const confirmClear = () => {
 
 .header-subtitle {
   font-size: 0.6rem;
-  color: #64748b;
+  color: var(--text-secondary);
   margin: 0;
 }
 
@@ -766,10 +904,10 @@ const confirmClear = () => {
 
 .stat-badge {
   padding: 0.25rem 0.5rem;
-  background-color: #f1f5f9;
-  border: 1px solid #e2e8f0;
+  background-color: var(--bg-surface-2);
+  border: 1px solid var(--border-color);
   border-radius: 0.5rem;
-  color: #475569;
+  color: var(--text-secondary);
   font-size: 0.7rem;
 }
 
@@ -781,7 +919,7 @@ const confirmClear = () => {
 }
 
 .stat-number {
-  color: #0f172a;
+  color: var(--text-primary);
   font-weight: 600;
 }
 
@@ -791,42 +929,43 @@ const confirmClear = () => {
   justify-content: center;
   gap: 0.5rem;
   width: 100%;
+  flex-wrap: wrap;
 }
 
 .btn-matrix {
-  background-color: #eef2ff;
-  border-color: #c7d2fe;
-  color: #4f46e5;
+  background-color: var(--accent-soft-bg);
+  border-color: var(--accent-solid);
+  color: var(--accent-solid);
 }
 
-.btn-matrix:active {
-  background-color: #e0e7ff;
-}
 .btn-save-graph {
   background-color: #dcfce7;
   border-color: #86efac;
   color: #16a34a;
 }
 
-.btn-save-graph:active {
-  background-color: #bbf7d0;
+[data-theme='dark'] .btn-save-graph {
+  background-color: rgba(22, 163, 74, 0.15);
+  border-color: rgba(74, 222, 128, 0.35);
+  color: #4ade80;
 }
 
 @media (min-width: 640px) {
   .header-actions {
     width: auto;
     justify-content: flex-end;
+    flex-wrap: nowrap;
   }
 }
 
 .btn-text {
   padding: 0.4rem 0.6rem;
-  background-color: #ffffff;
-  border: 1px solid #cbd5e1;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
   border-radius: 0.5rem;
   font-size: 0.7rem;
   font-weight: 500;
-  color: #334155;
+  color: var(--text-secondary);
   display: flex;
   align-items: center;
   gap: 0.25rem;
@@ -855,6 +994,12 @@ const confirmClear = () => {
   color: #ef4444;
 }
 
+[data-theme='dark'] .btn-danger {
+  background-color: rgba(239, 68, 68, 0.15);
+  border-color: rgba(248, 113, 113, 0.35);
+  color: #f87171;
+}
+
 .btn-icon {
   width: 0.9rem;
   height: 0.9rem;
@@ -867,6 +1012,96 @@ const confirmClear = () => {
   }
 }
 
+/* ===== PANEL LATERAL IZQUIERDO ===== */
+.side-panel {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  z-index: 25;
+  background-color: var(--bg-surface);
+  padding: 0.5rem 0.4rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+@media (min-width: 640px) {
+  .side-panel {
+    left: 1rem;
+    padding: 0.6rem 0.5rem;
+    gap: 0.4rem;
+  }
+}
+
+.tool-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.4rem 0.3rem;
+  border: 2px solid transparent;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  min-width: 3.2rem;
+  min-height: 3.2rem;
+}
+
+@media (min-width: 640px) {
+  .tool-btn {
+    min-width: 3.8rem;
+    min-height: 3.8rem;
+    padding: 0.5rem 0.4rem;
+  }
+}
+
+.tool-btn:hover {
+  background-color: var(--bg-surface-2);
+}
+
+.tool-btn:active {
+  transform: scale(0.92);
+}
+
+.tool-active {
+  border-color: var(--accent-solid);
+  background-color: var(--accent-soft-bg);
+  color: var(--accent-solid);
+}
+
+.tool-icon {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+@media (min-width: 640px) {
+  .tool-icon {
+    width: 1.4rem;
+    height: 1.4rem;
+  }
+}
+
+.tool-label {
+  font-size: 0.5rem;
+  font-weight: 600;
+  margin-top: 0.1rem;
+}
+
+@media (min-width: 640px) {
+  .tool-label {
+    font-size: 0.6rem;
+    margin-top: 0.15rem;
+  }
+}
+
+/* ===== FIN PANEL LATERAL ===== */
+
 .empty-indicator {
   position: absolute;
   top: 50%;
@@ -877,9 +1112,9 @@ const confirmClear = () => {
   pointer-events: none;
   padding: 1.5rem;
   border-radius: 1rem;
-  background-color: #ffffff;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 6px -1px var(--shadow-color);
   z-index: 10;
 }
 
@@ -887,12 +1122,12 @@ const confirmClear = () => {
   width: 3.5rem;
   height: 3.5rem;
   border-radius: 50%;
-  background-color: #e0e7ff;
+  background-color: var(--accent-soft-bg);
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto 1rem;
-  color: #4f46e5;
+  color: var(--accent-solid);
 }
 
 .empty-icon {
@@ -903,14 +1138,14 @@ const confirmClear = () => {
 .empty-title {
   font-size: 1rem;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--text-primary);
   margin-bottom: 0.25rem;
   margin-top: 0;
 }
 
 .empty-desc {
   font-size: 0.8rem;
-  color: #64748b;
+  color: var(--text-secondary);
   margin: 0;
   line-height: 1.4;
 }
@@ -921,13 +1156,13 @@ const confirmClear = () => {
   left: 50%;
   transform: translateX(-50%);
   padding: 0.6rem 1rem;
-  background-color: #e0e7ff;
-  color: #3730a3;
+  background-color: var(--accent-soft-bg);
+  color: var(--accent-solid);
   font-size: 0.75rem;
   font-weight: 500;
-  border: 1px solid #c7d2fe;
+  border: 1px solid var(--accent-solid);
   border-radius: 0.75rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 6px -1px var(--shadow-color);
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -936,12 +1171,44 @@ const confirmClear = () => {
   text-align: center;
 }
 
+.delete-tip {
+  background-color: #fef2f2;
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+[data-theme='dark'] .delete-tip {
+  background-color: rgba(239, 68, 68, 0.15);
+  border-color: rgba(248, 113, 113, 0.35);
+  color: #f87171;
+}
+
+.edit-tip {
+  background-color: #eff6ff;
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
+
+[data-theme='dark'] .edit-tip {
+  background-color: rgba(59, 130, 246, 0.15);
+  border-color: rgba(96, 165, 250, 0.35);
+  color: #60a5fa;
+}
+
 .pulse-dot {
   width: 0.5rem;
   height: 0.5rem;
   border-radius: 50%;
-  background-color: #4f46e5;
+  background-color: var(--accent-solid);
   animation: pulse 1s infinite;
+}
+
+.delete-tip .pulse-dot {
+  background-color: #ef4444;
+}
+
+.edit-tip .pulse-dot {
+  background-color: #3b82f6;
 }
 
 @keyframes pulse {
@@ -962,19 +1229,24 @@ const confirmClear = () => {
 .svg-canvas {
   width: 100%;
   height: 100%;
-  background-color: #f8fafc;
-  background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+  background-color: var(--bg-body);
+  background-image: radial-gradient(var(--border-color) 1px, transparent 1px);
   background-size: 24px 24px;
   touch-action: none;
 }
 
 .edge-path {
-  transition: stroke-width 0.15s ease, stroke 0.15s ease;
+  transition: stroke-width 0.15s ease, stroke 0.15s ease, filter 0.15s ease;
   cursor: pointer;
 }
 
 .edge-path:active {
   stroke-width: 5px;
+}
+
+.edge-highlight {
+  stroke-width: 4px;
+  filter: brightness(1.2);
 }
 
 .edge-touch-area {
@@ -986,8 +1258,8 @@ const confirmClear = () => {
 }
 
 .edge-rect {
-  fill: #ffffff;
-  stroke: #cbd5e1;
+  fill: var(--bg-surface);
+  stroke: var(--border-color);
   stroke-width: 1.5px;
 }
 
@@ -999,8 +1271,8 @@ const confirmClear = () => {
 }
 
 .node-circle {
-  fill: #ffffff;
-  stroke: #475569;
+  fill: var(--bg-surface);
+  stroke: var(--text-secondary);
   stroke-width: 2.5px;
   transition: all 0.15s ease-in-out;
 }
@@ -1009,25 +1281,49 @@ const confirmClear = () => {
   font-family: system-ui, sans-serif;
   font-size: 13px;
   font-weight: 600;
-  fill: #1e293b;
+  fill: var(--text-primary);
   text-anchor: middle;
   user-select: none;
 }
 
 .node-group:active .node-circle {
-  stroke: #2563eb;
-  fill: #f1f5f9;
+  stroke: var(--accent-solid);
+  fill: var(--accent-soft-bg);
 }
 
 .node-active .node-circle {
-  stroke: #4f46e5 !important;
+  stroke: var(--accent-solid) !important;
   stroke-width: 3px;
-  fill: #e0e7ff;
+  fill: var(--accent-soft-bg);
 }
 
 .node-dragging .node-circle {
-  stroke: #4f46e5 !important;
-  fill: #e0e7ff;
+  stroke: var(--accent-solid) !important;
+  fill: var(--accent-soft-bg);
+}
+
+.node-hover .node-circle {
+  stroke-width: 3px;
+}
+
+.node-delete-mode .node-circle {
+  stroke: #ef4444;
+  stroke-dasharray: 4 4;
+}
+
+.node-delete-mode .node-group:hover .node-circle {
+  stroke: #dc2626;
+  fill: #fef2f2;
+  stroke-width: 3px;
+}
+
+[data-theme='dark'] .node-delete-mode .node-circle {
+  stroke: #f87171;
+}
+
+[data-theme='dark'] .node-delete-mode .node-group:hover .node-circle {
+  stroke: #fca5a5;
+  fill: rgba(239, 68, 68, 0.1);
 }
 
 .canvas-footer {
@@ -1036,10 +1332,10 @@ const confirmClear = () => {
   align-items: center;
   justify-content: space-between;
   padding: 0.4rem 0.75rem;
-  border-top: 1px solid #e2e8f0;
-  background-color: #ffffff;
+  border-top: 1px solid var(--border-color);
+  background-color: var(--bg-surface);
   font-size: 0.6rem;
-  color: #64748b;
+  color: var(--text-secondary);
   gap: 0.3rem;
   z-index: 20;
 }
