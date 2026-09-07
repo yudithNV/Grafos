@@ -50,6 +50,8 @@
       :type="modalType"
       :message="modalMessage"
       :initial-value="modalInitialValue"
+      :quick-fill="modalQuickFill"
+      :quick-fill-value="modalQuickFillValue"
       @submit="handleModalSubmit"
     />
 
@@ -172,6 +174,8 @@ const modalPlaceholder = ref('')
 const modalType = ref('input')
 const modalMessage = ref('')
 const modalInitialValue = ref('')
+const modalQuickFill = ref(false)
+const modalQuickFillValue = ref('')
 let modalCallback = null
 
 // Matrix Modal
@@ -188,13 +192,15 @@ onMounted(() => {
 
 // ============ FUNCIONES DEL MODAL ============
 
-const openModal = ({ title, label, placeholder, type, initialValue, message, callback }) => {
+const openModal = ({ title, label, placeholder, type, initialValue, message, callback, quickFill, quickFillValue }) => {
   modalTitle.value = title || ''
   modalLabel.value = label || ''
   modalPlaceholder.value = placeholder || ''
   modalType.value = type || 'input'
   modalMessage.value = message || ''
   modalInitialValue.value = initialValue ?? ''
+  modalQuickFill.value = quickFill || false
+  modalQuickFillValue.value = quickFillValue || ''
   modalCallback = callback
   showModal.value = true
 }
@@ -208,12 +214,44 @@ const handleModalSubmit = (value) => {
 
 // ============ FUNCIONES DEL CANVAS ============
 
+// Convierte un numero (1, 2, 3...) a letras tipo columnas de Excel (A, B, ... Z, AA, AB...)
+const numberToLetters = (num) => {
+  let letters = ''
+  while (num > 0) {
+    const remainder = (num - 1) % 26
+    letters = String.fromCharCode(65 + remainder) + letters
+    num = Math.floor((num - 1) / 26)
+  }
+  return letters
+}
+
+// Calcula la siguiente letra disponible: A, B, C... (y AA, AB... si se acaba el alfabeto)
+const getNextQuickName = () => {
+  const usedNumbers = nodes.value
+    .map(n => {
+      // Valida que el label sea SOLO letras mayusculas (A, B, ..., Z, AA, AB...)
+      if (!/^[A-Z]+$/.test(n.label)) return null
+      // Convierte la letra de vuelta a numero para saber su posicion
+      let num = 0
+      for (const char of n.label) {
+        num = num * 26 + (char.charCodeAt(0) - 64)
+      }
+      return num
+    })
+    .filter(n => n !== null)
+
+  const nextNumber = usedNumbers.length > 0 ? Math.max(...usedNumbers) + 1 : 1
+  return numberToLetters(nextNumber)
+}
+
 const handleCreateNodeRequest = ({ x, y }) => {
   openModal({
     title: 'Crear Nuevo Nodo',
     label: 'Etiqueta / Nombre del Nodo',
     placeholder: 'Ej. A, V1, Terminal...',
     type: 'input',
+    quickFill: true,
+    quickFillValue: getNextQuickName(),
     callback: (value) => {
       const label = String(value).trim()
       if (!label) return

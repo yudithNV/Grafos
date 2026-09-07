@@ -14,7 +14,7 @@
           <li>Cano Poma, Yerko</li>
           <li>Flores Gutierrez, Jorge</li>
           <li>Noa Vargas, Yudith</li>
-          <li>Apellido, Nombre</li>
+          <li>Carlier Fernandez,Jesus </li>
         </ul>
       </div>
     </div>

@@ -32,6 +32,16 @@
               />
             </div>
 
+            <!-- Boton Nombre Rapido (solo cuando el padre lo habilita) -->
+            <button
+              v-if="quickFill"
+              type="button"
+              @click="useQuickFill"
+              class="btn btn-quick"
+            >
+              ⚡ Nombre rápido ({{ quickFillValue }})
+            </button>
+
             <!-- Botones -->
             <div class="modal-btn-group">
               <button type="submit" class="btn" :class="type === 'confirm' ? 'btn-danger' : 'btn-save'">
@@ -57,7 +67,9 @@ const props = defineProps({
   placeholder: { type: String, default: '' },
   type: { type: String, default: 'input' }, // 'input' | 'number' | 'confirm'
   message: { type: String, default: '' },
-  initialValue: { type: [String, Number], default: '' }
+  initialValue: { type: [String, Number], default: '' },
+  quickFill: { type: Boolean, default: false }, // Muestra el botón "Nombre rápido"
+  quickFillValue: { type: String, default: '' } // Valor que se usará al presionarlo
 })
 
 const emit = defineEmits(['update:modelValue', 'submit'])
@@ -90,6 +102,12 @@ const submit = () => {
   }
   emit('submit', val)
   close()
+}
+
+// Rellena el nombre autogenerado (ej. N1, N2...) y envia directamente
+const useQuickFill = () => {
+  inputValue.value = props.quickFillValue
+  submit()
 }
 
 // Escape para cerrar
@@ -294,6 +312,25 @@ watch(() => props.modelValue, (isActive) => {
   background-color: #e2e8f0;
   border-color: #94a3b8;
   color: #1e293b;
+}
+
+.btn-quick {
+  width: 100%;
+  margin-top: 0.75rem;
+  padding: 0.6rem 1rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  border: 1.5px dashed #a855f7;
+  background-color: #faf5ff;
+  color: #9333ea;
+  transition: all 0.15s ease;
+}
+
+.btn-quick:hover {
+  background-color: #f3e8ff;
+  border-color: #9333ea;
 }
 
 .fade-enter-active,
