@@ -1,7 +1,8 @@
+
 <template>
   <div class="canvas-workspace">
     
-    <!-- Barra de Herramientas Superior (simplificada) -->
+    <!-- Barra de Herramientas Superior -->
     <div class="canvas-header">
       <div class="header-left">
         <button @click="$emit('back')" class="btn-icon-only" title="Volver a Inicio">
@@ -46,6 +47,19 @@
           <Trash2 class="btn-icon" />
           <span>Limpiar</span>
         </button>
+
+        <!-- BOTONES DE ALGORITMOS DE ASIGNACIÓN (Condicionados) -->
+        <template v-if="algorithmType === 'asignacion'">
+          <button @click="ejecutarMetodoCeros" class="btn-text btn-matrix">
+            <component :is="Link" class="btn-icon" />
+            <span>Método de Ceros</span>
+          </button>
+
+          <button @click="ejecutarMetodoHungaro" class="btn-text btn-matrix">
+            <component :is="Link" class="btn-icon" />
+            <span>Método Húngaro</span>
+          </button>
+        </template>
       </div>
     </div>
 
@@ -106,7 +120,6 @@
         @mouseup="onMouseUp"
         @touchend="onTouchEnd"
       >
-        <!-- Grupo que contiene TODO (nodos + aristas + background) con transform para pan -->
         <g :transform="`translate(${panOffset.x}, ${panOffset.y})`">
           <!-- Marcadores de Flechas para las Aristas -->
           <defs>
@@ -158,7 +171,6 @@
 
           <!-- Dibujo de las Aristas -->
           <g v-for="edge in processedEdges" :key="edge.id" class="edge-group">
-            <!-- Arista Principal -->
             <path
               :d="edge.path"
               fill="none"
@@ -173,7 +185,6 @@
               @mouseleave="hoveredEdgeId = null"
             />
 
-            <!-- Área sensible táctil más ancha para facilitar clicks -->
             <path
               :d="edge.path"
               fill="none"
@@ -206,7 +217,7 @@
             </g>
           </g>
 
-          <!-- Dibujo de los Nodos (Círculos Planos) -->
+          <!-- Dibujo de los Nodos -->
           <g
             v-for="node in nodes"
             :key="node.id"
@@ -223,10 +234,7 @@
             @mouseenter="hoveredNodeId = node.id"
             @mouseleave="hoveredNodeId = null"
           >
-            <!-- Círculo del Nodo -->
             <circle r="28" class="node-circle" />
-
-            <!-- Texto del Nodo -->
             <text dy="6" class="node-text">
               {{ truncateLabel(node.label) }}
             </text>
@@ -258,6 +266,9 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { resolverMetodoCeros } from '../utils/zeroMethod.js'
+import { resolverMetodoHungaro } from '../utils/hungarianMethod.js'
+
 import {
   ArrowLeft,
   Trash2,
@@ -281,6 +292,10 @@ const props = defineProps({
   edges: {
     type: Array,
     required: true
+  },
+  algorithmType: {
+    type: String,
+    default: 'grafos'
   }
 })
 
@@ -297,6 +312,17 @@ const emit = defineEmits([
   'delete-node',
   'delete-edge'
 ])
+
+// ALGORITMOS DE ASIGNACIÓN
+const ejecutarMetodoCeros = () => {
+  const resultado = resolverMetodoCeros(props.nodes, props.edges)
+  alert(`Ejecutando ${resultado.metodo}`)
+}
+
+const ejecutarMetodoHungaro = () => {
+  const resultado = resolverMetodoHungaro(props.nodes, props.edges)
+  alert(`Ejecutando ${resultado.metodo}`)
+}
 
 const canvasContainerRef = ref(null)
 const svgRef = ref(null)
@@ -344,7 +370,7 @@ onUnmounted(() => {
 
 const setActiveTool = (toolId) => {
   activeTool.value = toolId
-  selectedNodeId.value = null // Resetear selección al cambiar de herramienta
+  selectedNodeId.value = null
 }
 
 const getModeDescription = () => {
@@ -411,7 +437,6 @@ const processedEdges = computed(() => {
       }
     }
 
-    // Verifica si hay arista en dirección contraria
     const hasReverse = props.edges.some(e => e.sourceId === edge.targetId && e.targetId === edge.sourceId)
     
     const dx = x2 - x1
@@ -501,10 +526,8 @@ const processedEdges = computed(() => {
 
 // Manejo de clics en el lienzo según herramienta activa
 const onCanvasMouseDown = (e) => {
-  // Solo permitir crear nodos si la herramienta es 'node'
   if (activeTool.value !== 'node') {
     if (activeTool.value === 'connect' && selectedNodeId.value) {
-      // Cancelar conexión al hacer clic en el fondo
       selectedNodeId.value = null
     }
     return
@@ -535,16 +558,14 @@ const onCanvasTouchStart = (e) => {
     return
   }
   
-  if (e.touches.length !== 1) {
-    return
-  }
+  if (e.touches.length !== 1) return
   
   const touch = e.touches[0]
   canvasTouchStart.value = { x: touch.clientX, y: touch.clientY }
   canvasTouchMoved.value = false
 }
 
-// Lógica de arrastre de Nodos (solo en modo 'move')
+// Lógica de arrastre de Nodos
 const onNodeMouseDown = (node, e) => {
   if (activeTool.value === 'delete') {
     handleDeleteNode(node)
@@ -598,7 +619,6 @@ const onNodeTouchStart = (node, e) => {
   }
 }
 
-// Manejo de eventos de aristas
 const onEdgeMouseDown = (edge, e) => {
   if (activeTool.value === 'delete') {
     handleDeleteEdge(edge)
@@ -626,13 +646,11 @@ const onEdgeTouchStart = (edge, e) => {
   }
 }
 
-// Handlers para cada herramienta
 const handleConnectNode = (node) => {
   if (!selectedNodeId.value) {
     selectedNodeId.value = node.id
   } else {
     if (selectedNodeId.value === node.id) {
-      // Auto-conexión (loop)
       emit('create-edge', {
         sourceId: node.id,
         targetId: node.id
@@ -649,12 +667,10 @@ const handleConnectNode = (node) => {
 }
 
 const handleDeleteNode = (node) => {
-  // Emitir evento para que el padre maneje la confirmación
   emit('delete-node', node.id)
 }
 
 const handleDeleteEdge = (edge) => {
-  // Emitir evento para que el padre maneje la confirmación
   emit('delete-edge', edge.id)
 }
 
@@ -666,7 +682,6 @@ const handleEditEdge = (edge) => {
   emit('edit-edge', edge)
 }
 
-// Movimiento del mouse para arrastrar nodos
 const onMouseMove = (e) => {
   if (!draggedNodeId.value || activeTool.value !== 'move') return
   
@@ -674,27 +689,16 @@ const onMouseMove = (e) => {
   const node = props.nodes.find(n => n.id === draggedNodeId.value)
   if (node) {
     const rect = svgRef.value.getBoundingClientRect()
-    
     node.x = Math.max(30, Math.min(rect.width - 30, e.clientX - rect.left - panOffset.value.x))
     node.y = Math.max(30, Math.min(rect.height - 30, e.clientY - rect.top - panOffset.value.y))
   }
 }
 
 const onMouseUp = () => {
-  if (!draggedNodeId.value) return
-  
-  if (activeTool.value === 'move') {
-    const node = props.nodes.find(n => n.id === draggedNodeId.value)
-    if (node && !hasDragged.value) {
-      // Si no hubo arrastre, no hacer nada (es un clic, pero no estamos en modo clic)
-    }
-  }
-  
   draggedNodeId.value = null
 }
 
 const onTouchMove = (e) => {
-  // PAN CON 2 DEDOS (siempre disponible)
   if (e.touches.length === 2) {
     hasDragged.value = true
     canvasTouchMoved.value = true
@@ -720,20 +724,17 @@ const onTouchMove = (e) => {
     return
   }
   
-  // ARRASTRAR NODO (solo en modo 'move' con 1 dedo)
   if (draggedNodeId.value && e.touches.length === 1 && activeTool.value === 'move') {
     hasDragged.value = true
     const node = props.nodes.find(n => n.id === draggedNodeId.value)
     if (node) {
       const rect = svgRef.value.getBoundingClientRect()
       const touch = e.touches[0]
-      
       node.x = Math.max(30, Math.min(rect.width - 30, touch.clientX - rect.left - panOffset.value.x))
       node.y = Math.max(30, Math.min(rect.height - 30, touch.clientY - rect.top - panOffset.value.y))
     }
   }
   
-  // Detectar movimiento en el canvas (para crear nodo en modo 'node')
   if (e.touches.length === 1 && !canvasTouchMoved.value && activeTool.value === 'node') {
     const touch = e.touches[0]
     const dx = Math.abs(touch.clientX - canvasTouchStart.value.x)

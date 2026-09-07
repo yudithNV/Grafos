@@ -23,7 +23,7 @@
         <h3 class="algo-card-title">{{ card.title }}</h3>
         <p class="algo-card-desc">{{ card.desc }}</p>
         <span class="algo-card-cta">
-          {{ card.comingSoon ? 'Próximamente' : 'Abrir' }}
+          {{ card.comingSoon =false }}
           <ArrowRight class="cta-icon" />
         </span>
       </div>

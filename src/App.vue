@@ -28,6 +28,7 @@
       v-else-if="currentView === 'canvas'"
       :nodes="nodes"
       :edges="edges"
+      :algorithm-type="selectedAlgorithm"
       @back="backToWelcome"
       @show-instructions="showInstructionsModal"
       @show-matrix="showMatrixModal"
@@ -119,6 +120,16 @@ import GraphCanvas from './components/GraphCanvas.vue'
 import CustomModal from './components/CustomModal.vue'
 import MatrixModal from './components/MatrixModal.vue'
 import Footer from './components/Footer.vue'
+
+// Tipo de algoritmo activo ('grafos' o 'asignacion')
+const selectedAlgorithm = ref('grafos')
+
+const onSelectAlgorithm = (id) => {
+  selectedAlgorithm.value = id
+  if (id === 'grafos' || id === 'asignacion') {
+    showGraphSelector.value = true
+  }
+}
 
 // Routing
 const currentView = ref('home')
@@ -392,7 +403,6 @@ const handleSaveGraph = () => {
       const graphName = String(name).trim() || 'Grafo sin nombre'
       saveGraph(graphName)
       
-      // Mostrar confirmación
       openModal({
         title: '✅ Guardado Correctamente',
         message: `"${graphName}" guardado con ${nodes.value.length} nodos y ${edges.value.length} aristas.`,
@@ -403,18 +413,6 @@ const handleSaveGraph = () => {
 }
 
 // ============ OTRAS FUNCIONES ============
-
-const onSelectAlgorithm = (id) => {
-  if (id === 'grafos') {
-    showGraphSelector.value = true
-    return
-  }
-  openModal({
-    title: '🚧 Próximamente',
-    message: 'Este algoritmo todavía está en construcción.',
-    type: 'confirm'
-  })
-}
 
 const loadSavedGraphsList = () => {
   const saved = localStorage.getItem('savedGraphs')
