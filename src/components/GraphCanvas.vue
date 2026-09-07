@@ -262,13 +262,19 @@
       </div>
     </div>
   </div>
+  <Teleport to="body">
+      <ResultModal
+        :is-open="isResultModalOpen"
+        :result-data="currentResult"
+        @close="isResultModalOpen = false"
+      />
+    </Teleport>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { resolverMetodoCeros } from '../utils/zeroMethod.js'
-import { resolverMetodoHungaro } from '../utils/hungarianMethod.js'
-
+import ResultModal from './ResultModal.vue'
 import {
   ArrowLeft,
   Trash2,
@@ -312,16 +318,28 @@ const emit = defineEmits([
   'delete-node',
   'delete-edge'
 ])
+// 2. Variables reactivas para el modal
+const isResultModalOpen = ref(false)
+const currentResult = ref(null)
 
-// ALGORITMOS DE ASIGNACIÓN
+// 3. Funciones de ejecución
 const ejecutarMetodoCeros = () => {
-  const resultado = resolverMetodoCeros(props.nodes, props.edges)
-  alert(`Ejecutando ${resultado.metodo}`)
+  console.log('Nodos recibidos:', props.nodes)
+  console.log('Aristas recibidas:', props.edges)
+  currentResult.value = resolverMetodoCeros(props.nodes, props.edges)
+  isResultModalOpen.value = true
+  console.log('PASO 2: Estado cambiado a true ->', isResultModalOpen.value)
+  try {
+    currentResult.value = resolverMetodoCeros(props.nodes, props.edges)
+    console.log('PASO 3: Datos calculados correctamente ->', currentResult.value)
+  } catch (err) {
+    console.error('ERROR dentro de zeroMethod.js:', err)
+  }
 }
 
 const ejecutarMetodoHungaro = () => {
-  const resultado = resolverMetodoHungaro(props.nodes, props.edges)
-  alert(`Ejecutando ${resultado.metodo}`)
+  currentResult.value = resolverMetodoHungaro(props.nodes, props.edges)
+  isResultModalOpen.value = true
 }
 
 const canvasContainerRef = ref(null)
