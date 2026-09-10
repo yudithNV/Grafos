@@ -1,6 +1,6 @@
 <template>
   <div class="canvas-workspace">
-    
+
     <!-- Barra de Herramientas Superior (simplificada) -->
     <div class="canvas-header">
       <div class="header-left">
@@ -38,10 +38,18 @@
           <Grid3x3 class="btn-icon" />
           <span>Matriz</span>
         </button>
+
         <button @click="$emit('show-instructions')" class="btn-text">
           <BookOpen class="btn-icon" />
           <span>Manual</span>
         </button>
+        <button v-if="esJohnson" @click="ejecutarJohnson" class="btn-text">
+          Ejecutar Johnson
+        </button>
+
+
+
+
         <button @click="confirmClear" class="btn-text btn-danger">
           <Trash2 class="btn-icon" />
           <span>Limpiar</span>
@@ -51,14 +59,8 @@
 
     <!-- Panel Lateral Izquierdo -->
     <div class="side-panel">
-      <button
-        v-for="tool in tools"
-        :key="tool.id"
-        class="tool-btn"
-        :class="{ 'tool-active': activeTool === tool.id }"
-        @click="setActiveTool(tool.id)"
-        :title="tool.description"
-      >
+      <button v-for="tool in tools" :key="tool.id" class="tool-btn" :class="{ 'tool-active': activeTool === tool.id }"
+        @click="setActiveTool(tool.id)" :title="tool.description">
         <component :is="tool.icon" class="tool-icon" />
         <span class="tool-label">{{ tool.label }}</span>
       </button>
@@ -92,144 +94,113 @@
     </div>
 
     <!-- Contenedor del Lienzo SVG -->
-    <div
-      class="canvas-container"
-      ref="canvasContainerRef"
-      @mousedown="onCanvasMouseDown"
-      @touchstart="onCanvasTouchStart"
-    >
-      <svg
-        ref="svgRef"
-        class="svg-canvas"
-        @mousemove="onMouseMove"
-        @touchmove="onTouchMove"
-        @mouseup="onMouseUp"
-        @touchend="onTouchEnd"
-      >
+    <div class="canvas-container" ref="canvasContainerRef" @mousedown="onCanvasMouseDown"
+      @touchstart="onCanvasTouchStart">
+      <svg ref="svgRef" class="svg-canvas" @mousemove="onMouseMove" @touchmove="onTouchMove" @mouseup="onMouseUp"
+        @touchend="onTouchEnd">
         <!-- Grupo que contiene TODO (nodos + aristas + background) con transform para pan -->
         <g :transform="`translate(${panOffset.x}, ${panOffset.y})`">
           <!-- Marcadores de Flechas para las Aristas -->
           <defs>
-            <marker
-              id="arrow-slate"
-              viewBox="0 0 10 10"
-              refX="9"
-              refY="5"
-              markerWidth="5"
-              markerHeight="5"
-              orient="auto-start-reverse"
-            >
+            <marker id="arrow-slate" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5"
+              orient="auto-start-reverse">
               <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#94a3b8" />
             </marker>
-            <marker
-              id="arrow-blue"
-              viewBox="0 0 10 10"
-              refX="9"
-              refY="5"
-              markerWidth="5"
-              markerHeight="5"
-              orient="auto-start-reverse"
-            >
+            <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5"
+              orient="auto-start-reverse">
               <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#6366f1" />
             </marker>
-            <marker
-              id="arrow-rose"
-              viewBox="0 0 10 10"
-              refX="9"
-              refY="5"
-              markerWidth="5"
-              markerHeight="5"
-              orient="auto-start-reverse"
-            >
+            <marker id="arrow-rose" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5"
+              orient="auto-start-reverse">
               <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#ec4899" />
             </marker>
-            <marker
-              id="arrow-purple"
-              viewBox="0 0 10 10"
-              refX="9"
-              refY="5"
-              markerWidth="5"
-              markerHeight="5"
-              orient="auto-start-reverse"
-            >
+            <marker id="arrow-purple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5"
+              orient="auto-start-reverse">
               <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#9333ea" />
+            </marker>
+
+            <marker id="arrow-critical" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6"
+              orient="auto">
+              <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#ff4d6d" />
             </marker>
           </defs>
 
           <!-- Dibujo de las Aristas -->
           <g v-for="edge in processedEdges" :key="edge.id" class="edge-group">
             <!-- Arista Principal -->
-            <path
-              :d="edge.path"
-              fill="none"
-              :stroke="edge.color"
-              stroke-width="3"
-              class="edge-path"
-              :class="{ 'edge-highlight': hoveredEdgeId === edge.id }"
-              :marker-end="`url(#${edge.markerId})`"
-              @mousedown.stop="onEdgeMouseDown(edge, $event)"
-              @touchstart.stop.prevent="onEdgeTouchStart(edge, $event)"
-              @mouseenter="hoveredEdgeId = edge.id"
-              @mouseleave="hoveredEdgeId = null"
-            />
+            <path :d="edge.path" fill="none" :stroke="edge.color" stroke-width="3" class="edge-path"
+              :class="{ 'edge-highlight': hoveredEdgeId === edge.id }" :marker-end="`url(#${edge.markerId})`"
+              @mousedown.stop="onEdgeMouseDown(edge, $event)" @touchstart.stop.prevent="onEdgeTouchStart(edge, $event)"
+              @mouseenter="hoveredEdgeId = edge.id" @mouseleave="hoveredEdgeId = null" />
 
             <!-- Área sensible táctil más ancha para facilitar clicks -->
-            <path
-              :d="edge.path"
-              fill="none"
-              stroke="transparent"
-              stroke-width="40"
-              class="edge-touch-area"
+            <path :d="edge.path" fill="none" stroke="transparent" stroke-width="40" class="edge-touch-area"
               @mousedown.stop="onEdgeMouseDown(edge, $event)"
-              @touchstart.stop.prevent="onEdgeTouchStart(edge, $event)"
-            />
+              @touchstart.stop.prevent="onEdgeTouchStart(edge, $event)" />
+
+            <!-- CAMINO CRÍTICO ANIMADO -->
+            <path v-if="visibleCriticalEdges.includes(edge.id)" :d="edge.path" fill="none" stroke="#ff4d6d"
+              stroke-width="5" pathLength="1" class="critical-edge-path" marker-end="url(#arrow-critical)" />
 
             <!-- Burbuja de Peso de la Arista -->
-            <g
-              :transform="`translate(${edge.labelX}, ${edge.labelY})`"
-              class="edge-label-group"
-              @mousedown.stop="onEdgeMouseDown(edge, $event)"
-              @touchstart.stop.prevent="onEdgeTouchStart(edge, $event)"
-            >
-              <rect
-                :x="-edge.rectW / 2"
-                :y="-12"
-                :width="edge.rectW"
-                :height="24"
-                rx="6"
-                class="edge-rect"
-                :stroke="edge.color"
-              />
+            <g :transform="`translate(${edge.labelX}, ${edge.labelY})`" class="edge-label-group"
+              @mousedown.stop="onEdgeMouseDown(edge, $event)" @touchstart.stop.prevent="onEdgeTouchStart(edge, $event)">
+              <!-- Holgura de la arista -->
+              <text v-if="johnsonActivo && getHolguraEdge(edge.id) !== null" y="-22" class="edge-holgura">
+                H = {{ getHolguraEdge(edge.id) }}
+              </text>
+              <rect :x="-edge.rectW / 2" :y="-12" :width="edge.rectW" :height="24" rx="6" class="edge-rect"
+                :stroke="edge.color" />
               <text dy="5" class="edge-text" :fill="edge.color">
                 {{ edge.weight }}
               </text>
             </g>
-          </g> 
+          </g>
 
           <!-- Dibujo de los Nodos (Círculos Planos) -->
-          <g
-            v-for="node in nodes"
-            :key="node.id"
-            :transform="`translate(${node.x}, ${node.y})`"
-            class="node-group"
-            :class="{ 
-              'node-active': selectedNodeId === node.id, 
+          <g v-for="node in nodes" :key="node.id" :transform="`translate(${node.x}, ${node.y})`" class="node-group"
+            :class="{
+              'node-active': selectedNodeId === node.id,
               'node-dragging': draggedNodeId === node.id,
               'node-hover': hoveredNodeId === node.id,
               'node-delete-mode': activeTool === 'delete'
-            }"
-            @mousedown.stop="onNodeMouseDown(node, $event)"
-            @touchstart.stop.prevent="onNodeTouchStart(node, $event)"
-            @mouseenter="hoveredNodeId = node.id"
-            @mouseleave="hoveredNodeId = null"
-          >
-            <!-- Círculo del Nodo -->
-            <circle r="28" class="node-circle" />
+            }" @mousedown.stop="onNodeMouseDown(node, $event)"
+            @touchstart.stop.prevent="onNodeTouchStart(node, $event)" @mouseenter="hoveredNodeId = node.id"
+            @mouseleave="hoveredNodeId = null">
+            <!-- NODO NORMAL -->
+            <template v-if="!johnsonActivo">
+              <circle r="28" class="node-circle" />
 
-            <!-- Texto del Nodo -->
-            <text dy="6" class="node-text">
-              {{ truncateLabel(node.label) }}
-            </text>
+              <text dy="6" class="node-text">
+                {{ truncateLabel(node.label) }}
+              </text>
+            </template>
+
+            <!-- NODO JOHNSON -->
+            <template v-else>
+              <circle r="36" class="node-circle" />
+
+              <!-- Línea horizontal de la T -->
+              <line x1="-32" y1="-4" x2="32" y2="-4" class="node-divider" />
+
+              <!-- Línea vertical -->
+              <line x1="0" y1="-4" x2="0" y2="32" class="node-divider" />
+
+              <!-- Nombre arriba -->
+              <text x="0" y="-14" class="node-text">
+                {{ truncateLabel(node.label) }}
+              </text>
+
+              <!-- IDA / SUMA / lado izquierdo -->
+              <text x="-17" y="18" class="node-value">
+                {{ johnsonResult?.ida?.[node.id] }}
+              </text>
+
+              <!-- REGRESO / RESTA / lado derecho -->
+              <text x="17" y="18" class="node-value">
+                {{ johnsonResult?.regreso?.[node.id] }}
+              </text>
+            </template>
           </g>
         </g>
       </svg>
@@ -257,7 +228,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import {
   ArrowLeft,
   Trash2,
@@ -272,6 +243,7 @@ import {
   Eraser,
   Pencil
 } from '@lucide/vue'
+import { calcularJohnson } from './utils/johnson'
 
 const props = defineProps({
   nodes: {
@@ -281,6 +253,10 @@ const props = defineProps({
   edges: {
     type: Array,
     required: true
+  },
+  mode: {
+    type: String,
+    default: 'normal'
   }
 })
 
@@ -317,6 +293,204 @@ const dragOffset = ref({ x: 0, y: 0 })
 const hasDragged = ref(false)
 const hoveredNodeId = ref(null)
 const hoveredEdgeId = ref(null)
+
+// Saber si estamos usando el modo Johnson
+const esJohnson = computed(() => {
+  return props.mode === 'johnson'
+})
+
+const johnsonActivo = ref(false)
+const johnsonResult = ref(null)
+
+// ======================================
+// ANIMACIÓN DEL CAMINO CRÍTICO
+// ======================================
+
+const criticalPathEdges = ref([])
+const visibleCriticalEdges = ref([])
+const animandoCaminoCritico = ref(false)
+const pasoCriticoActual = ref(0)
+
+let criticalTimer = null
+
+const construirCaminoCritico = (resultado) => {
+  if (!resultado) return []
+
+  const criticas = resultado.holguras.filter(
+    edge => edge.holgura === 0
+  )
+
+  const inicios = resultado.inicioIds || []
+  const finales = resultado.finIds || []
+
+  // DFS para encontrar un camino continuo
+  // desde alguno de los inicios hasta alguno de los finales
+  const buscar = (actual, visitados = new Set()) => {
+
+    if (finales.includes(actual)) {
+      return []
+    }
+
+    if (visitados.has(actual)) {
+      return null
+    }
+
+    const nuevosVisitados = new Set(visitados)
+    nuevosVisitados.add(actual)
+
+    const salientesCriticas = criticas.filter(
+      edge => edge.sourceId === actual
+    )
+
+    for (const edge of salientesCriticas) {
+
+      const resto = buscar(
+        edge.targetId,
+        nuevosVisitados
+      )
+
+      if (resto !== null) {
+        return [edge, ...resto]
+      }
+    }
+
+    return null
+  }
+
+  // Probar cada posible nodo inicial
+  for (const inicio of inicios) {
+    const camino = buscar(inicio)
+
+    if (camino && camino.length > 0) {
+      return camino
+    }
+  }
+
+  return []
+}
+
+const resetJohnson = () => {
+  johnsonActivo.value = false
+  johnsonResult.value = null
+  criticalPathEdges.value = []
+  visibleCriticalEdges.value = []
+  animandoCaminoCritico.value = false
+  pasoCriticoActual.value = 0
+
+  if (criticalTimer) {
+    clearTimeout(criticalTimer)
+    criticalTimer = null
+  }
+}
+// ======================================
+
+// RESETEAR JOHNSON CUANDO SE LIMPIA
+
+// ======================================
+
+watch(
+
+  () => props.nodes.length,
+
+  (cantidad, anterior) => {
+
+    if (anterior > 0 && cantidad === 0) {
+
+      resetJohnson()
+
+    }
+
+  }
+
+)
+
+
+const animarCaminoCritico = () => {
+
+  // Reiniciar animación anterior
+  if (criticalTimer) {
+    clearTimeout(criticalTimer)
+    criticalTimer = null
+  }
+
+  visibleCriticalEdges.value = []
+  pasoCriticoActual.value = 0
+
+  if (criticalPathEdges.value.length === 0) {
+    return
+  }
+
+  animandoCaminoCritico.value = true
+
+  const mostrarSiguiente = () => {
+
+    if (
+      pasoCriticoActual.value >=
+      criticalPathEdges.value.length
+    ) {
+      animandoCaminoCritico.value = false
+      return
+    }
+
+    const edge =
+      criticalPathEdges.value[
+      pasoCriticoActual.value
+      ]
+
+    // Mostrar la siguiente línea
+    visibleCriticalEdges.value.push(edge.id)
+
+    pasoCriticoActual.value++
+
+    // Esperar antes de avanzar
+    criticalTimer = setTimeout(
+      mostrarSiguiente,
+      900
+    )
+  }
+
+  mostrarSiguiente()
+}
+
+
+const ejecutarJohnson = () => {
+  try {
+
+    // 1. Ejecutar algoritmo
+    johnsonResult.value = calcularJohnson(
+      props.nodes,
+      props.edges
+    )
+
+    // 2. Mostrar T + holguras
+    johnsonActivo.value = true
+
+    // 3. Construir camino crítico ordenado
+    criticalPathEdges.value =
+      construirCaminoCritico(
+        johnsonResult.value
+      )
+
+    // 4. Animarlo
+    animarCaminoCritico()
+
+  } catch (error) {
+    alert(error.message)
+  }
+}
+
+const getHolguraEdge = (edgeId) => {
+  if (!johnsonActivo.value || !johnsonResult.value) {
+    return null
+  }
+
+  const holgura = johnsonResult.value.holguras?.find(
+    (h) => h.id === edgeId
+  )
+
+  return holgura?.holgura ?? null
+}
+
 
 // Touch tracking para canvas
 const canvasTouchStart = ref({ x: 0, y: 0 })
@@ -376,18 +550,18 @@ const truncateLabel = (label) => {
 // Lógica de cálculo de curvas paralelas y rectas para aristas
 const processedEdges = computed(() => {
   const nodeRadius = 28
-  
+
   return props.edges.map(edge => {
     const sourceNode = props.nodes.find(n => n.id === edge.sourceId)
     const targetNode = props.nodes.find(n => n.id === edge.targetId)
-    
+
     if (!sourceNode || !targetNode) return null
-    
+
     const x1 = sourceNode.x
     const y1 = sourceNode.y
     const x2 = targetNode.x
     const y2 = targetNode.y
-    
+
     if (edge.sourceId === edge.targetId) {
       const r = nodeRadius
       const loopSize = 50
@@ -413,30 +587,30 @@ const processedEdges = computed(() => {
 
     // Verifica si hay arista en dirección contraria
     const hasReverse = props.edges.some(e => e.sourceId === edge.targetId && e.targetId === edge.sourceId)
-    
+
     const dx = x2 - x1
     const dy = y2 - y1
     const distance = Math.hypot(dx, dy) || 1
-    
+
     const mx = (x1 + x2) / 2
     const my = (y1 + y2) / 2
-    
+
     const ux = dx / distance
     const uy = dy / distance
     const nx = -uy
     const ny = ux
-    
+
     let path = ''
     let cx = mx
     let cy = my
     let offset = 0
     let color = '#64748b'
     let markerId = 'arrow-slate'
-    
+
     if (hasReverse) {
       const isForward = edge.sourceId < edge.targetId
       offset = 30
-      
+
       if (isForward) {
         color = '#6366f1'
         markerId = 'arrow-blue'
@@ -444,32 +618,32 @@ const processedEdges = computed(() => {
         color = '#ec4899'
         markerId = 'arrow-rose'
       }
-      
+
       cx = mx + nx * offset
       cy = my + ny * offset
-      
+
       const dxStart = cx - x1
       const dyStart = cy - y1
       const lenStart = Math.hypot(dxStart, dyStart) || 1
       const sx = x1 + (dxStart / lenStart) * nodeRadius
       const sy = y1 + (dyStart / lenStart) * nodeRadius
-      
+
       const dxEnd = x2 - cx
       const dyEnd = y2 - cy
       const lenEnd = Math.hypot(dxEnd, dyEnd) || 1
       const ex = x2 - (dxEnd / lenEnd) * nodeRadius
       const ey = y2 - (dyEnd / lenEnd) * nodeRadius
-      
+
       path = `M ${sx} ${sy} Q ${cx} ${cy} ${ex} ${ey}`
     } else {
       const sx = x1 + ux * nodeRadius
       const sy = y1 + uy * nodeRadius
       const ex = x2 - ux * nodeRadius
       const ey = y2 - uy * nodeRadius
-      
+
       path = `M ${sx} ${sy} L ${ex} ${ey}`
     }
-    
+
     let labelX = mx
     let labelY = my
     if (hasReverse) {
@@ -481,9 +655,9 @@ const processedEdges = computed(() => {
       labelX -= nx * 14
       labelY -= ny * 14
     }
-    
+
     const rectW = Math.max(28, String(edge.weight).length * 8 + 12)
-    
+
     return {
       id: edge.id,
       sourceId: edge.sourceId,
@@ -509,16 +683,16 @@ const onCanvasMouseDown = (e) => {
     }
     return
   }
-  
+
   if (selectedNodeId.value) {
     selectedNodeId.value = null
     return
   }
-  
+
   const rect = svgRef.value.getBoundingClientRect()
   const x = e.clientX - rect.left - panOffset.value.x
   const y = e.clientY - rect.top - panOffset.value.y
-  
+
   emit('create-node', { x, y })
 }
 
@@ -529,16 +703,16 @@ const onCanvasTouchStart = (e) => {
     }
     return
   }
-  
+
   if (selectedNodeId.value) {
     selectedNodeId.value = null
     return
   }
-  
+
   if (e.touches.length !== 1) {
     return
   }
-  
+
   const touch = e.touches[0]
   canvasTouchStart.value = { x: touch.clientX, y: touch.clientY }
   canvasTouchMoved.value = false
@@ -550,17 +724,17 @@ const onNodeMouseDown = (node, e) => {
     handleDeleteNode(node)
     return
   }
-  
+
   if (activeTool.value === 'edit') {
     handleEditNode(node)
     return
   }
-  
+
   if (activeTool.value === 'connect') {
     handleConnectNode(node)
     return
   }
-  
+
   if (activeTool.value === 'move') {
     draggedNodeId.value = node.id
     hasDragged.value = false
@@ -576,17 +750,17 @@ const onNodeTouchStart = (node, e) => {
     handleDeleteNode(node)
     return
   }
-  
+
   if (activeTool.value === 'edit') {
     handleEditNode(node)
     return
   }
-  
+
   if (activeTool.value === 'connect') {
     handleConnectNode(node)
     return
   }
-  
+
   if (activeTool.value === 'move' && e.touches.length === 1) {
     draggedNodeId.value = node.id
     hasDragged.value = false
@@ -604,7 +778,7 @@ const onEdgeMouseDown = (edge, e) => {
     handleDeleteEdge(edge)
     return
   }
-  
+
   if (activeTool.value === 'edit') {
     handleEditEdge(edge)
     return
@@ -614,12 +788,12 @@ const onEdgeMouseDown = (edge, e) => {
 const onEdgeTouchStart = (edge, e) => {
   e.stopPropagation()
   e.preventDefault()
-  
+
   if (activeTool.value === 'delete') {
     handleDeleteEdge(edge)
     return
   }
-  
+
   if (activeTool.value === 'edit') {
     handleEditEdge(edge)
     return
@@ -669,12 +843,12 @@ const handleEditEdge = (edge) => {
 // Movimiento del mouse para arrastrar nodos
 const onMouseMove = (e) => {
   if (!draggedNodeId.value || activeTool.value !== 'move') return
-  
+
   hasDragged.value = true
   const node = props.nodes.find(n => n.id === draggedNodeId.value)
   if (node) {
     const rect = svgRef.value.getBoundingClientRect()
-    
+
     node.x = Math.max(30, Math.min(rect.width - 30, e.clientX - rect.left - panOffset.value.x))
     node.y = Math.max(30, Math.min(rect.height - 30, e.clientY - rect.top - panOffset.value.y))
   }
@@ -682,14 +856,14 @@ const onMouseMove = (e) => {
 
 const onMouseUp = () => {
   if (!draggedNodeId.value) return
-  
+
   if (activeTool.value === 'move') {
     const node = props.nodes.find(n => n.id === draggedNodeId.value)
     if (node && !hasDragged.value) {
       // Si no hubo arrastre, no hacer nada (es un clic, pero no estamos en modo clic)
     }
   }
-  
+
   draggedNodeId.value = null
 }
 
@@ -698,28 +872,28 @@ const onTouchMove = (e) => {
   if (e.touches.length === 2) {
     hasDragged.value = true
     canvasTouchMoved.value = true
-    
+
     const touch1 = e.touches[0]
     const touch2 = e.touches[1]
-    
+
     const currentX = (touch1.clientX + touch2.clientX) / 2
     const currentY = (touch1.clientY + touch2.clientY) / 2
-    
+
     if (twoFingerStart.value.x === 0) {
       twoFingerStart.value = { x: currentX, y: currentY }
       return
     }
-    
+
     const deltaX = currentX - twoFingerStart.value.x
     const deltaY = currentY - twoFingerStart.value.y
-    
+
     panOffset.value.x += deltaX
     panOffset.value.y += deltaY
-    
+
     twoFingerStart.value = { x: currentX, y: currentY }
     return
   }
-  
+
   // ARRASTRAR NODO (solo en modo 'move' con 1 dedo)
   if (draggedNodeId.value && e.touches.length === 1 && activeTool.value === 'move') {
     hasDragged.value = true
@@ -727,18 +901,18 @@ const onTouchMove = (e) => {
     if (node) {
       const rect = svgRef.value.getBoundingClientRect()
       const touch = e.touches[0]
-      
+
       node.x = Math.max(30, Math.min(rect.width - 30, touch.clientX - rect.left - panOffset.value.x))
       node.y = Math.max(30, Math.min(rect.height - 30, touch.clientY - rect.top - panOffset.value.y))
     }
   }
-  
+
   // Detectar movimiento en el canvas (para crear nodo en modo 'node')
   if (e.touches.length === 1 && !canvasTouchMoved.value && activeTool.value === 'node') {
     const touch = e.touches[0]
     const dx = Math.abs(touch.clientX - canvasTouchStart.value.x)
     const dy = Math.abs(touch.clientY - canvasTouchStart.value.y)
-    
+
     if (dx > TOUCH_THRESHOLD || dy > TOUCH_THRESHOLD) {
       canvasTouchMoved.value = true
     }
@@ -747,27 +921,26 @@ const onTouchMove = (e) => {
 
 const onTouchEnd = () => {
   twoFingerStart.value = { x: 0, y: 0 }
-  
+
   if (draggedNodeId.value && activeTool.value === 'move') {
     draggedNodeId.value = null
     return
   }
-  
+
   if (!canvasTouchMoved.value && activeTool.value === 'node' && !selectedNodeId.value) {
     const rect = svgRef.value.getBoundingClientRect()
     const x = canvasTouchStart.value.x - rect.left - panOffset.value.x
     const y = canvasTouchStart.value.y - rect.top - panOffset.value.y
-    
+
     emit('create-node', { x, y })
   }
-  
+
   canvasTouchMoved.value = false
 }
 
 const confirmClear = () => {
-  if (confirm('¿Eliminar todos los nodos y aristas del lienzo?')) {
-    emit('clear')
-  }
+
+  emit('clear')
 }
 </script>
 
@@ -870,6 +1043,35 @@ const confirmClear = () => {
   height: 0.5rem;
   border-radius: 50%;
   background-color: #10b981;
+}
+
+/* ===================================
+   CAMINO CRÍTICO
+=================================== */
+
+.critical-edge-path {
+  pointer-events: none;
+
+  stroke-linecap: round;
+  stroke-linejoin: round;
+
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+
+  animation: dibujar-camino-critico 0.75s linear forwards;
+
+  filter:
+    drop-shadow(0 0 4px #ff4d6d) drop-shadow(0 0 8px rgba(255, 77, 109, 0.55));
+}
+
+@keyframes dibujar-camino-critico {
+  from {
+    stroke-dashoffset: 1;
+  }
+
+  to {
+    stroke-dashoffset: 0;
+  }
 }
 
 .header-subtitle {
@@ -1212,8 +1414,17 @@ const confirmClear = () => {
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(1.3); }
+
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.5;
+    transform: scale(1.3);
+  }
 }
 
 .canvas-container {
@@ -1284,6 +1495,33 @@ const confirmClear = () => {
   fill: var(--text-primary);
   text-anchor: middle;
   user-select: none;
+}
+
+.node-divider {
+  stroke: var(--text-secondary);
+  stroke-width: 2px;
+  pointer-events: none;
+}
+
+.node-value {
+  font-family: system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  fill: var(--text-primary);
+  text-anchor: middle;
+  dominant-baseline: middle;
+  user-select: none;
+  pointer-events: none;
+}
+
+.edge-holgura {
+  font-family: system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  fill: var(--text-primary);
+  text-anchor: middle;
+  user-select: none;
+  pointer-events: none;
 }
 
 .node-group:active .node-circle {
@@ -1400,7 +1638,15 @@ const confirmClear = () => {
   }
 }
 
-.line-slate { background-color: #64748b; }
-.line-indigo { background-color: #6366f1; }
-.line-pink { background-color: #ec4899; }
+.line-slate {
+  background-color: #64748b;
+}
+
+.line-indigo {
+  background-color: #6366f1;
+}
+
+.line-pink {
+  background-color: #ec4899;
+}
 </style>

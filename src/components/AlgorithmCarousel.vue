@@ -71,7 +71,7 @@ const cards = [
     desc: 'Encuentra los caminos más cortos entre todos los pares de vértices en un grafo con pesos.',
     icon: Network,
     iconBg: 'linear-gradient(135deg, #6366f1, #06b6d4)',
-    comingSoon: true
+    comingSoon: false
   }
 ]
 

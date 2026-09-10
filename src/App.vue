@@ -28,6 +28,8 @@
       v-else-if="currentView === 'canvas'"
       :nodes="nodes"
       :edges="edges"
+      :mode="canvasMode"
+
       @back="backToWelcome"
       @show-instructions="showInstructionsModal"
       @show-matrix="showMatrixModal"
@@ -124,6 +126,7 @@ import Footer from './components/Footer.vue'
 
 // Routing
 const currentView = ref('home')
+const canvasMode = ref('normal')
 const scrollToAlgorithms = () => {
   const carousel = document.getElementById('algorithms-carousel')
   carousel?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -443,10 +446,27 @@ const handleSaveGraph = () => {
 // ============ OTRAS FUNCIONES ============
 
 const onSelectAlgorithm = (id) => {
+
+  // Pizarra normal
   if (id === 'grafos') {
+    canvasMode.value = 'normal'
     showGraphSelector.value = true
     return
   }
+
+  // Algoritmo de Johnson
+  if (id === 'johnson') {
+    canvasMode.value = 'johnson'
+
+    nodes.value = []
+    edges.value = []
+    currentGraphIndex.value = -1
+
+    currentView.value = 'canvas'
+    return
+  }
+
+  // Otros algoritmos todavía no disponibles
   openModal({
     title: '🚧 Próximamente',
     message: 'Este algoritmo todavía está en construcción.',
