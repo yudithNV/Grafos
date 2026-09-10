@@ -25,9 +25,10 @@
     <AboutView v-else-if="currentView === 'about'" />
 
     <GraphCanvas
-      v-else-if="currentView === 'canvas'"
+      v-if="currentView === 'canvas' && selectedAlgorithm === 'grafos'"
       :nodes="nodes"
       :edges="edges"
+      algorithm-type="grafos"
       @back="backToWelcome"
       @show-instructions="showInstructionsModal"
       @show-matrix="showMatrixModal"
@@ -39,6 +40,27 @@
       @edit-edge="handleEditEdgeRequest"
       @delete-node="handleDeleteNodeRequest"
       @delete-edge="handleDeleteEdgeRequest"
+    />
+    <!-- Módulo Aislado del Algoritmo de Asignación -->
+    <AssignmentCanvas
+      v-else-if="currentView === 'canvas' && selectedAlgorithm === 'asignacion'"
+      :nodes="nodes"
+      :edges="edges"
+      :optimal-edge-ids="optimalAssignmentEdges"
+      algorithm-type="asignacion"
+      @back="backToWelcome"
+      @show-instructions="showInstructionsModal"
+      @show-matrix="showMatrixModal"
+      @save="handleSaveGraph"
+      @clear="confirmClearCanvas"
+      @create-node="handleCreateNodeRequest"
+      @create-edge="handleCreateEdgeRequest"
+      @edit-node="handleEditNodeRequest"
+      @edit-edge="handleEditEdgeRequest"
+      @delete-node="handleDeleteNodeRequest"
+      @delete-edge="handleDeleteEdgeRequest"
+      @clear-optimal="optimalAssignmentEdges = []"
+      @solution-found="handleSolutionFound"
     />
 
     <!-- Custom Modal -->
@@ -60,12 +82,15 @@
       :show="showMatrix"
       :nodes="nodes"
       :edges="edges"
+      :show-solver="selectedAlgorithm === 'asignacion'"
+      :algorithm-type="selectedAlgorithm"
       @close="showMatrix = false"
+      @solution-found="handleSolutionFound"
     />
 
     <Footer v-if="currentView !== 'canvas'" />
 
-    <!-- Graph Selector -->
+    <!-- Graph Selector para Pizarra de Grafos -->
     <div v-if="showGraphSelector" class="graph-selector-overlay" @click.self="showGraphSelector = false">
       <div class="graph-selector-modal">
         <div class="graph-selector-header">
@@ -109,6 +134,57 @@
         </div>
       </div>
     </div>
+
+    <!-- Graph Selector para Algoritmo de Asignación (Unidireccional) -->
+    <div v-if="showAssignmentGraphSelector" class="graph-selector-overlay" @click.self="showAssignmentGraphSelector = false">
+      <div class="graph-selector-modal">
+        <div class="graph-selector-header header-assignment-selector">
+          <div class="selector-title-group">
+            <h3>Cargar Grafo de Asignación</h3>
+            <span class="badge-selector-unidirectional">⚡ Flujo Unidireccional</span>
+          </div>
+          <button @click="showAssignmentGraphSelector = false" class="btn-close-selector">✕</button>
+        </div>
+        <div class="assignment-selector-info">
+          💡 En este modo todas las aristas son estrictamente de ida (sin retornos ni auto-bucles).
+        </div>
+        <div class="graph-selector-list">
+          <div 
+            v-for="(graph, index) in savedAssignmentGraphs" 
+            :key="'asig_' + index"
+            class="graph-item"
+            @click="loadSelectedAssignmentGraph(index)"
+          >
+            <div class="graph-item-info">
+              <span class="graph-item-name">{{ graph.name || `Grafo Asignación ${index + 1}` }}</span>
+              <span class="graph-item-date">{{ graph.date }}</span>
+            </div>
+            <div class="graph-item-stats">
+              <span>{{ graph.nodes.length }} nodos</span>
+              <span>{{ graph.edges.length }} aristas</span>
+            </div>
+            <button @click.stop="deleteSavedAssignmentGraph(index)" class="btn-delete-graph">🗑️</button>
+          </div>
+          
+          <div class="graph-item graph-item-new" @click="createNewAssignmentGraph">
+            <div class="graph-item-info">
+              <span class="graph-item-name graph-item-name-new">
+                ➕ Crear Nuevo Grafo de Asignación
+              </span>
+              <span class="graph-item-date">Empezar desde cero en flujo unidireccional</span>
+            </div>
+          </div>
+          
+          <div v-if="savedAssignmentGraphs.length === 0" class="empty-graphs">
+            <p>No hay grafos de asignación guardados</p>
+            <p class="empty-graphs-hint">Haz clic en "Crear Nuevo Grafo de Asignación" para empezar</p>
+          </div>
+        </div>
+        <div class="graph-selector-footer">
+          <button @click="showAssignmentGraphSelector = false" class="btn-cancel-selector">Cerrar</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -121,9 +197,15 @@ import GraphCanvas from './components/GraphCanvas.vue'
 import CustomModal from './components/CustomModal.vue'
 import MatrixModal from './components/MatrixModal.vue'
 import Footer from './components/Footer.vue'
+import AssignmentCanvas from './components/AssignmentCanvas.vue'
 
 // Routing
+
 const currentView = ref('home')
+const selectedAlgorithm = ref('grafos')
+const optimalAssignmentEdges = ref([])
+const showAssignmentGraphSelector = ref(false)
+const savedAssignmentGraphs = ref([])
 const scrollToAlgorithms = () => {
   const carousel = document.getElementById('algorithms-carousel')
   carousel?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -372,13 +454,19 @@ const confirmClearCanvas = () => {
 
 // ============ GUARDADO ============
 
+// ============ GUARDADO ============
+
 const saveGraph = (name = null) => {
+  const isAssignment = selectedAlgorithm.value === 'asignacion'
+  const storageKey = isAssignment ? 'savedAssignmentGraphs' : 'savedGraphs'
+  const currentList = isAssignment ? savedAssignmentGraphs.value : savedGraphs.value
+
   let finalName = name
   if (!finalName) {
-    if (currentGraphIndex.value >= 0 && currentGraphIndex.value < savedGraphs.value.length) {
-      finalName = savedGraphs.value[currentGraphIndex.value].name
+    if (currentGraphIndex.value >= 0 && currentGraphIndex.value < currentList.length) {
+      finalName = currentList[currentGraphIndex.value].name
     } else {
-      finalName = `Grafo ${new Date().toLocaleString()}`
+      finalName = `${isAssignment ? 'Grafo Asignación' : 'Grafo'} ${new Date().toLocaleString()}`
     }
   }
   
@@ -389,7 +477,7 @@ const saveGraph = (name = null) => {
     edges: edges.value
   }
   
-  const saved = localStorage.getItem('savedGraphs')
+  const saved = localStorage.getItem(storageKey)
   let graphs = saved ? JSON.parse(saved) : []
   
   if (currentGraphIndex.value >= 0 && currentGraphIndex.value < graphs.length) {
@@ -399,8 +487,12 @@ const saveGraph = (name = null) => {
     currentGraphIndex.value = graphs.length - 1
   }
   
-  localStorage.setItem('savedGraphs', JSON.stringify(graphs))
-  loadSavedGraphsList()
+  localStorage.setItem(storageKey, JSON.stringify(graphs))
+  if (isAssignment) {
+    loadSavedAssignmentGraphsList()
+  } else {
+    loadSavedGraphsList()
+  }
 }
 
 const handleSaveGraph = () => {
@@ -413,9 +505,11 @@ const handleSaveGraph = () => {
     return
   }
   
-  let currentName = 'Grafo sin nombre'
-  if (currentGraphIndex.value >= 0 && currentGraphIndex.value < savedGraphs.value.length) {
-    currentName = savedGraphs.value[currentGraphIndex.value].name || currentName
+  const isAssignment = selectedAlgorithm.value === 'asignacion'
+  const currentList = isAssignment ? savedAssignmentGraphs.value : savedGraphs.value
+  let currentName = isAssignment ? 'Grafo Asignación sin nombre' : 'Grafo sin nombre'
+  if (currentGraphIndex.value >= 0 && currentGraphIndex.value < currentList.length) {
+    currentName = currentList[currentGraphIndex.value].name || currentName
   }
   
   openModal({
@@ -425,7 +519,7 @@ const handleSaveGraph = () => {
     type: 'input',
     initialValue: currentName,
     callback: (name) => {
-      const graphName = String(name).trim() || 'Grafo sin nombre'
+      const graphName = String(name).trim() || currentName
       saveGraph(graphName)
       
       openModal({
@@ -440,10 +534,22 @@ const handleSaveGraph = () => {
 // ============ OTRAS FUNCIONES ============
 
 const onSelectAlgorithm = (id) => {
+  if (!id) return
+  selectedAlgorithm.value = id
+
   if (id === 'grafos') {
+    loadSavedGraphsList()
     showGraphSelector.value = true
     return
   }
+
+  if (id === 'asignacion') {
+    loadSavedAssignmentGraphsList()
+    showAssignmentGraphSelector.value = true
+    return
+  }
+
+  // Solo salta si el id no está implementado
   openModal({
     title: '🚧 Próximamente',
     message: 'Este algoritmo todavía está en construcción.',
@@ -456,18 +562,35 @@ const loadSavedGraphsList = () => {
   savedGraphs.value = saved ? JSON.parse(saved) : []
 }
 
+const loadSavedAssignmentGraphsList = () => {
+  const saved = localStorage.getItem('savedAssignmentGraphs')
+  savedAssignmentGraphs.value = saved ? JSON.parse(saved) : []
+}
+
 const loadSelectedGraph = (index) => {
   const graph = savedGraphs.value[index]
   if (graph) {
     nodes.value = JSON.parse(JSON.stringify(graph.nodes))
     edges.value = JSON.parse(JSON.stringify(graph.edges))
+    optimalAssignmentEdges.value = []
     currentGraphIndex.value = index
     showGraphSelector.value = false
     currentView.value = 'canvas'
   }
 }
 
-// ✅ CAMBIO: Ahora usa el modal en vez de confirm()
+const loadSelectedAssignmentGraph = (index) => {
+  const graph = savedAssignmentGraphs.value[index]
+  if (graph) {
+    nodes.value = JSON.parse(JSON.stringify(graph.nodes))
+    edges.value = JSON.parse(JSON.stringify(graph.edges))
+    optimalAssignmentEdges.value = []
+    currentGraphIndex.value = index
+    showAssignmentGraphSelector.value = false
+    currentView.value = 'canvas'
+  }
+}
+
 const deleteSavedGraph = (index) => {
   const graph = savedGraphs.value[index]
   if (!graph) return
@@ -488,13 +611,46 @@ const deleteSavedGraph = (index) => {
   })
 }
 
+const deleteSavedAssignmentGraph = (index) => {
+  const graph = savedAssignmentGraphs.value[index]
+  if (!graph) return
+  
+  openModal({
+    title: 'Confirmar Eliminación',
+    message: `¿Eliminar el grafo de asignación "${graph.name || `Grafo ${index + 1}`}"? Esta acción no se puede deshacer.`,
+    type: 'confirm',
+    callback: () => {
+      const graphs = JSON.parse(localStorage.getItem('savedAssignmentGraphs') || '[]')
+      graphs.splice(index, 1)
+      localStorage.setItem('savedAssignmentGraphs', JSON.stringify(graphs))
+      loadSavedAssignmentGraphsList()
+      if (currentGraphIndex.value === index) {
+        currentGraphIndex.value = -1
+      }
+    }
+  })
+}
+
 const createNewGraph = () => {
   nodes.value = []
   edges.value = []
+  optimalAssignmentEdges.value = []
   currentGraphIndex.value = -1
   showGraphSelector.value = false
   currentView.value = 'canvas'
-  setTimeout(() => saveGraph('Nuevo Grafo'), 100)
+}
+
+const createNewAssignmentGraph = () => {
+  nodes.value = []
+  edges.value = []
+  optimalAssignmentEdges.value = []
+  currentGraphIndex.value = -1
+  showAssignmentGraphSelector.value = false
+  currentView.value = 'canvas'
+}
+
+const handleSolutionFound = (result) => {
+  optimalAssignmentEdges.value = result.optimalEdgeIds || []
 }
 
 const backToWelcome = () => {
@@ -508,6 +664,7 @@ const showInstructionsModal = () => {
 const showMatrixModal = () => {
   showMatrix.value = true
 }
+
 </script>
 
 <style scoped>
@@ -562,6 +719,37 @@ const showMatrixModal = () => {
   background: linear-gradient(135deg, var(--accent-start, #a855f7) 0%, var(--accent-end, #d946ef) 100%);
   color: #ffffff;
   flex-shrink: 0;
+}
+
+.header-assignment-selector {
+  background: linear-gradient(135deg, #0284c7 0%, #4f46e5 100%) !important;
+}
+
+.selector-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.badge-selector-unidirectional {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  width: fit-content;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.assignment-selector-info {
+  background: rgba(2, 132, 199, 0.08);
+  border-bottom: 1px solid rgba(2, 132, 199, 0.2);
+  padding: 0.6rem 1.25rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
 }
 
 .graph-selector-header h3 {
