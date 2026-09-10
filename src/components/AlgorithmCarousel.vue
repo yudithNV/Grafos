@@ -15,7 +15,7 @@
         :key="card.id"
         class="algo-card"
         :class="{ 'algo-card-disabled': card.comingSoon }"
-        @click="!card.comingSoon && $emit('select', card.id)"
+        @click="$emit('select', card.id)"
       >
         <!-- MINIATURA / IMAGEN DE PORTADA -->
         <div class="algo-card-cover">
