@@ -939,7 +939,10 @@ const onTouchEnd = () => {
 }
 
 const confirmClear = () => {
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/master
   emit('clear')
 }
 </script>
