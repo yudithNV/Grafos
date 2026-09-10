@@ -765,9 +765,7 @@ const onTouchEnd = () => {
 }
 
 const confirmClear = () => {
-  if (confirm('¿Eliminar todos los nodos y aristas del lienzo?')) {
-    emit('clear')
-  }
+  emit('clear')
 }
 </script>
 

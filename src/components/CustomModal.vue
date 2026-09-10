@@ -2,7 +2,7 @@
   <Transition name="fade">
     <div v-if="modelValue" class="modal-backdrop" @mousedown.self="close">
       <Transition name="scale">
-        <div class="modal-container" @mousedown.stop">
+        <div class="modal-container" @mousedown.stop>
           <!-- Barra superior con color según tipo -->
           <div class="modal-accent-line" :class="type === 'confirm' ? 'modal-accent-danger' : 'modal-accent-primary'"></div>
 
@@ -13,7 +13,7 @@
           <form @submit.prevent="submit">
             <!-- Modo Confirmación -->
             <div v-if="type === 'confirm'" class="modal-confirm-text">
-              <div class="confirm-icon-wrapper">
+              <div class="confirm-icon-wrapper" :class="type === 'confirm' ? 'confirm-icon-danger' : ''">
                 <Trash2 class="confirm-icon" />
               </div>
               <p>{{ message || '¿Estás seguro?' }}</p>
@@ -32,7 +32,7 @@
               />
             </div>
 
-            <!-- Boton Nombre Rapido (solo cuando el padre lo habilita) -->
+            <!-- Botón Nombre Rápido -->
             <button
               v-if="quickFill"
               type="button"
@@ -65,11 +65,11 @@ const props = defineProps({
   title: { type: String, default: '' },
   label: { type: String, default: '' },
   placeholder: { type: String, default: '' },
-  type: { type: String, default: 'input' }, // 'input' | 'number' | 'confirm'
+  type: { type: String, default: 'input' },
   message: { type: String, default: '' },
   initialValue: { type: [String, Number], default: '' },
-  quickFill: { type: Boolean, default: false }, // Muestra el botón "Nombre rápido"
-  quickFillValue: { type: String, default: '' } // Valor que se usará al presionarlo
+  quickFill: { type: Boolean, default: false },
+  quickFillValue: { type: String, default: '' }
 })
 
 const emit = defineEmits(['update:modelValue', 'submit'])
@@ -104,13 +104,11 @@ const submit = () => {
   close()
 }
 
-// Rellena el nombre autogenerado (ej. N1, N2...) y envia directamente
 const useQuickFill = () => {
   inputValue.value = props.quickFillValue
   submit()
 }
 
-// Escape para cerrar
 const handleKeyDown = (e) => {
   if (e.key === 'Escape' && props.modelValue) {
     close()
@@ -130,24 +128,26 @@ watch(() => props.modelValue, (isActive) => {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 50;
+  z-index: 300;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  background-color: rgba(0, 0, 0, 0.15);
-  backdrop-filter: blur(3px);
+  background-color: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
 
 .modal-container {
-  background-color: #ffffff;
-  border: 1px solid #e2e8f0;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
   border-radius: 1rem;
   padding: 1.5rem;
   width: 100%;
   max-width: 26rem;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 20px 25px -5px var(--shadow-color), 0 10px 10px -5px var(--shadow-color);
   position: relative;
+  color: var(--text-primary);
 }
 
 .modal-accent-line {
@@ -161,7 +161,7 @@ watch(() => props.modelValue, (isActive) => {
 }
 
 .modal-accent-primary {
-  background: linear-gradient(90deg, #a855f7 0%, #d946ef 50%, #ec4899 100%);
+  background: linear-gradient(90deg, var(--accent-start, #a855f7) 0%, var(--accent-end, #d946ef) 50%, #ec4899 100%);
 }
 
 .modal-accent-danger {
@@ -171,15 +171,9 @@ watch(() => props.modelValue, (isActive) => {
 .modal-title {
   font-size: 1.25rem;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--text-primary);
   margin-top: 0.5rem;
   margin-bottom: 1.25rem;
-}
-
-.modal-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
 }
 
 .modal-label {
@@ -188,30 +182,32 @@ watch(() => props.modelValue, (isActive) => {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #64748b;
+  color: var(--text-secondary);
   margin-bottom: 0.375rem;
 }
 
 .modal-input {
   width: 100%;
   padding: 0.75rem 1rem;
-  background-color: #f8fafc;
-  border: 1.5px solid #e2e8f0;
+  background-color: var(--bg-surface-2);
+  border: 1.5px solid var(--border-color);
   border-radius: 0.75rem;
-  color: #1e293b;
+  color: var(--text-primary);
   font-weight: 500;
   outline: none;
   transition: all 0.15s ease;
+  font-size: 0.95rem;
 }
 
 .modal-input:focus {
-  border-color: #d946ef;
-  background-color: #ffffff;
-  box-shadow: 0 0 0 3px rgba(217, 70, 239, 0.1);
+  border-color: var(--accent-solid);
+  background-color: var(--bg-surface);
+  box-shadow: 0 0 0 3px var(--accent-soft-bg);
 }
 
 .modal-input::placeholder {
-  color: #cbd5e1;
+  color: var(--text-secondary);
+  opacity: 0.6;
 }
 
 .modal-confirm-text {
@@ -220,7 +216,7 @@ watch(() => props.modelValue, (isActive) => {
   align-items: center;
   text-align: center;
   padding: 1rem 0;
-  color: #475569;
+  color: var(--text-secondary);
   font-size: 0.95rem;
   line-height: 1.6;
 }
@@ -229,21 +225,34 @@ watch(() => props.modelValue, (isActive) => {
   width: 3.5rem;
   height: 3.5rem;
   border-radius: 50%;
-  background-color: #fef2f2;
+  background-color: var(--accent-soft-bg);
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 0.75rem;
 }
 
+.confirm-icon-wrapper.confirm-icon-danger {
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+[data-theme='dark'] .confirm-icon-wrapper.confirm-icon-danger {
+  background-color: rgba(239, 68, 68, 0.15);
+}
+
 .confirm-icon {
   width: 1.8rem;
   height: 1.8rem;
+  color: var(--accent-solid);
+}
+
+.confirm-icon-wrapper.confirm-icon-danger .confirm-icon {
   color: #ef4444;
 }
 
 .modal-confirm-text p {
   margin: 0;
+  color: var(--text-primary);
 }
 
 .modal-btn-group {
@@ -278,15 +287,15 @@ watch(() => props.modelValue, (isActive) => {
 }
 
 .btn-save {
-  background: linear-gradient(135deg, #a855f7 0%, #d946ef 100%);
+  background: linear-gradient(135deg, var(--accent-start, #a855f7) 0%, var(--accent-end, #d946ef) 100%);
   color: #ffffff;
   font-weight: 600;
   border: none;
 }
 
 .btn-save:hover {
-  background: linear-gradient(135deg, #9333ea 0%, #be185d 100%);
-  box-shadow: 0 4px 12px rgba(217, 70, 239, 0.3);
+  filter: brightness(1.1);
+  box-shadow: 0 4px 12px var(--accent-soft-bg);
 }
 
 .btn-danger {
@@ -302,16 +311,16 @@ watch(() => props.modelValue, (isActive) => {
 }
 
 .btn-cancel {
-  background-color: #f1f5f9;
-  border-color: #cbd5e1;
-  color: #475569;
+  background-color: var(--bg-surface-2);
+  border-color: var(--border-color);
+  color: var(--text-secondary);
   font-weight: 500;
 }
 
 .btn-cancel:hover {
-  background-color: #e2e8f0;
-  border-color: #94a3b8;
-  color: #1e293b;
+  background-color: var(--bg-surface);
+  border-color: var(--accent-solid);
+  color: var(--text-primary);
 }
 
 .btn-quick {
@@ -322,15 +331,15 @@ watch(() => props.modelValue, (isActive) => {
   font-weight: 600;
   border-radius: 0.75rem;
   cursor: pointer;
-  border: 1.5px dashed #a855f7;
-  background-color: #faf5ff;
-  color: #9333ea;
+  border: 1.5px dashed var(--accent-solid);
+  background-color: var(--accent-soft-bg);
+  color: var(--accent-solid);
   transition: all 0.15s ease;
 }
 
 .btn-quick:hover {
-  background-color: #f3e8ff;
-  border-color: #9333ea;
+  filter: brightness(1.05);
+  border-style: solid;
 }
 
 .fade-enter-active,

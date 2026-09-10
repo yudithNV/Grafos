@@ -47,7 +47,10 @@
           <h3 class="modal-name">{{ selectedMember.name }}</h3>
           
           <div class="modal-email-section">
-            <span class="modal-email-label">📧 Correo:</span>
+            <span class="modal-email-label">
+              <Mail class="modal-email-icon" />
+              Correo:
+            </span>
             <a :href="`mailto:${selectedMember.email}`" class="modal-email-link">
               {{ selectedMember.email }}
             </a>
@@ -65,6 +68,7 @@
 <script setup>
 import { ref } from 'vue'
 import CanvasBackground from './CanvasBackground.vue'
+import { Mail } from '@lucide/vue'
 
 const showModal = ref(false)
 const selectedMember = ref(null)
@@ -453,5 +457,13 @@ const closeMemberModal = () => {
   .about-subtitle {
     font-size: 1rem;
   }
+}
+.modal-email-icon {
+  width: 1rem;
+  height: 1rem;
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 0.25rem;
+  color: var(--accent-solid);
 }
 </style>

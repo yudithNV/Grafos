@@ -92,7 +92,7 @@
           
           <div class="graph-item graph-item-new" @click="createNewGraph">
             <div class="graph-item-info">
-              <span class="graph-item-name" style="color: #4f46e5; font-size: 1rem;">
+              <span class="graph-item-name graph-item-name-new">
                 ➕ Crear Nuevo Grafo
               </span>
               <span class="graph-item-date">Empezar desde cero</span>
@@ -101,7 +101,7 @@
           
           <div v-if="savedGraphs.length === 0" class="empty-graphs">
             <p>No hay grafos guardados</p>
-            <p style="font-size: 0.8rem; margin-top: 0.5rem;">Haz clic en "Crear Nuevo Grafo" para empezar</p>
+            <p class="empty-graphs-hint">Haz clic en "Crear Nuevo Grafo" para empezar</p>
           </div>
         </div>
         <div class="graph-selector-footer">
@@ -229,9 +229,7 @@ const numberToLetters = (num) => {
 const getNextQuickName = () => {
   const usedNumbers = nodes.value
     .map(n => {
-      // Valida que el label sea SOLO letras mayusculas (A, B, ..., Z, AA, AB...)
       if (!/^[A-Z]+$/.test(n.label)) return null
-      // Convierte la letra de vuelta a numero para saber su posicion
       let num = 0
       for (const char of n.label) {
         num = num * 26 + (char.charCodeAt(0) - 64)
@@ -430,7 +428,6 @@ const handleSaveGraph = () => {
       const graphName = String(name).trim() || 'Grafo sin nombre'
       saveGraph(graphName)
       
-      // Mostrar confirmación
       openModal({
         title: '✅ Guardado Correctamente',
         message: `"${graphName}" guardado con ${nodes.value.length} nodos y ${edges.value.length} aristas.`,
@@ -470,16 +467,25 @@ const loadSelectedGraph = (index) => {
   }
 }
 
+// ✅ CAMBIO: Ahora usa el modal en vez de confirm()
 const deleteSavedGraph = (index) => {
-  if (confirm('¿Eliminar este grafo guardado?')) {
-    const graphs = JSON.parse(localStorage.getItem('savedGraphs') || '[]')
-    graphs.splice(index, 1)
-    localStorage.setItem('savedGraphs', JSON.stringify(graphs))
-    loadSavedGraphsList()
-    if (currentGraphIndex.value === index) {
-      currentGraphIndex.value = -1
+  const graph = savedGraphs.value[index]
+  if (!graph) return
+  
+  openModal({
+    title: 'Confirmar Eliminación',
+    message: `¿Eliminar el grafo "${graph.name || `Grafo ${index + 1}`}"? Esta acción no se puede deshacer.`,
+    type: 'confirm',
+    callback: () => {
+      const graphs = JSON.parse(localStorage.getItem('savedGraphs') || '[]')
+      graphs.splice(index, 1)
+      localStorage.setItem('savedGraphs', JSON.stringify(graphs))
+      loadSavedGraphsList()
+      if (currentGraphIndex.value === index) {
+        currentGraphIndex.value = -1
+      }
     }
-  }
+  })
 }
 
 const createNewGraph = () => {
@@ -520,7 +526,7 @@ const showMatrixModal = () => {
   overflow: hidden;
 }
 
-/* ========== GRAPH SELECTOR ========== */
+/* ========== GRAPH SELECTOR - ADAPTADO A TEMA ========== */
 .graph-selector-overlay {
   position: fixed;
   inset: 0;
@@ -531,18 +537,21 @@ const showMatrixModal = () => {
   padding: 1rem;
   background-color: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 
 .graph-selector-modal {
-  background-color: #ffffff;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
   border-radius: 1rem;
   width: 100%;
   max-width: 500px;
   max-height: 80vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 20px 60px var(--shadow-color);
   overflow: hidden;
+  color: var(--text-primary);
 }
 
 .graph-selector-header {
@@ -550,7 +559,7 @@ const showMatrixModal = () => {
   align-items: center;
   justify-content: space-between;
   padding: 1rem 1.5rem;
-  background: linear-gradient(135deg, #a855f7 0%, #d946ef 100%);
+  background: linear-gradient(135deg, var(--accent-start, #a855f7) 0%, var(--accent-end, #d946ef) 100%);
   color: #ffffff;
   flex-shrink: 0;
 }
@@ -591,27 +600,28 @@ const showMatrixModal = () => {
   gap: 0.75rem;
   padding: 0.75rem 1rem;
   margin-bottom: 0.5rem;
-  background-color: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background-color: var(--bg-surface-2);
+  border: 1px solid var(--border-color);
   border-radius: 0.75rem;
   cursor: pointer;
   transition: all 0.15s ease;
+  color: var(--text-primary);
 }
 
 .graph-item:hover {
-  background-color: #eef2ff;
-  border-color: #c7d2fe;
+  background-color: var(--accent-soft-bg);
+  border-color: var(--accent-solid);
   transform: translateX(4px);
 }
 
 .graph-item-new {
-  border: 2px dashed #c7d2fe !important;
-  background-color: #eef2ff !important;
+  border: 2px dashed var(--accent-solid) !important;
+  background-color: var(--accent-soft-bg) !important;
 }
 
 .graph-item-new:hover {
-  background-color: #e0e7ff !important;
-  border-color: #4f46e5 !important;
+  background-color: var(--accent-soft-bg) !important;
+  filter: brightness(1.05);
 }
 
 .graph-item-info {
@@ -622,40 +632,45 @@ const showMatrixModal = () => {
 .graph-item-name {
   display: block;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--text-primary);
   font-size: 0.9rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+.graph-item-name-new {
+  color: var(--accent-solid);
+  font-size: 1rem;
+}
+
 .graph-item-date {
   display: block;
   font-size: 0.7rem;
-  color: #94a3b8;
+  color: var(--text-secondary);
 }
 
 .graph-item-stats {
   display: flex;
   gap: 0.75rem;
   font-size: 0.7rem;
-  color: #64748b;
+  color: var(--text-secondary);
   white-space: nowrap;
 }
 
 .btn-delete-graph {
-  background: #fef2f2;
-  border: 1px solid #fca5a5;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
   border-radius: 0.5rem;
   padding: 0.25rem 0.5rem;
   cursor: pointer;
   font-size: 1rem;
   transition: all 0.15s ease;
-  opacity: 0.6;
+  opacity: 0.7;
 }
 
 .btn-delete-graph:hover {
-  background: #fee2e2;
+  background: rgba(239, 68, 68, 0.2);
   opacity: 1;
   transform: scale(1.1);
 }
@@ -663,12 +678,17 @@ const showMatrixModal = () => {
 .empty-graphs {
   text-align: center;
   padding: 2rem 1rem;
-  color: #94a3b8;
+  color: var(--text-secondary);
+}
+
+.empty-graphs-hint {
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
 }
 
 .graph-selector-footer {
   padding: 1rem 1.5rem;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--border-color);
   display: flex;
   justify-content: flex-end;
   flex-shrink: 0;
@@ -676,17 +696,19 @@ const showMatrixModal = () => {
 
 .btn-cancel-selector {
   padding: 0.5rem 1.5rem;
-  background-color: #f1f5f9;
-  border: 1px solid #cbd5e1;
+  background-color: var(--bg-surface-2);
+  border: 1px solid var(--border-color);
   border-radius: 0.5rem;
-  color: #475569;
+  color: var(--text-secondary);
   cursor: pointer;
   font-weight: 500;
   transition: all 0.15s ease;
 }
 
 .btn-cancel-selector:hover {
-  background-color: #e2e8f0;
+  background-color: var(--bg-surface);
+  border-color: var(--accent-solid);
+  color: var(--text-primary);
 }
 
 @media (max-width: 480px) {
