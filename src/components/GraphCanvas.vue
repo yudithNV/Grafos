@@ -1,6 +1,33 @@
 <template>
   <div class="canvas-workspace">
 
+
+    <!-- ================================= -->
+    <!-- ALERTA DEL LIENZO -->
+    <!-- ================================= -->
+
+    <Transition name="alerta">
+      <div v-if="alertaCanvas.visible" class="canvas-alert" :class="`canvas-alert-${alertaCanvas.tipo}`">
+        <div class="canvas-alert-icon">
+          <AlertTriangle />
+        </div>
+
+        <div class="canvas-alert-content">
+          <strong class="canvas-alert-title">
+            {{ alertaCanvas.titulo }}
+          </strong>
+
+          <span class="canvas-alert-message">
+            {{ alertaCanvas.mensaje }}
+          </span>
+        </div>
+
+        <button class="canvas-alert-close" @click="cerrarAlerta">
+          ×
+        </button>
+      </div>
+    </Transition>
+
     <!-- Barra de Herramientas Superior (simplificada) -->
     <div class="canvas-header">
       <div class="header-left">
@@ -228,11 +255,19 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import {
+  ref,
+  computed,
+  watch,
+  onMounted,
+  onUnmounted
+} from 'vue'
+
 import {
   ArrowLeft,
   Trash2,
   BookOpen,
+  AlertTriangle,
   Info,
   MousePointerClick,
   Grid3x3,
@@ -243,6 +278,7 @@ import {
   Eraser,
   Pencil
 } from '@lucide/vue'
+
 import { calcularJohnson } from './utils/johnson'
 
 const props = defineProps({
@@ -293,6 +329,48 @@ const dragOffset = ref({ x: 0, y: 0 })
 const hasDragged = ref(false)
 const hoveredNodeId = ref(null)
 const hoveredEdgeId = ref(null)
+
+
+
+// ======================================
+// ALERTAS DEL LIENZO
+// ======================================
+
+const alertaCanvas = ref({
+  visible: false,
+  titulo: '',
+  mensaje: '',
+  tipo: 'warning'
+})
+
+let alertaTimer = null
+
+const mostrarAlerta = (titulo, mensaje, tipo = 'warning') => {
+  if (alertaTimer) {
+    clearTimeout(alertaTimer)
+  }
+
+  alertaCanvas.value = {
+    visible: true,
+    titulo,
+    mensaje,
+    tipo
+  }
+
+  // Desaparece automáticamente
+  alertaTimer = setTimeout(() => {
+    alertaCanvas.value.visible = false
+  }, 3500)
+}
+
+const cerrarAlerta = () => {
+  alertaCanvas.value.visible = false
+
+  if (alertaTimer) {
+    clearTimeout(alertaTimer)
+    alertaTimer = null
+  }
+}
 
 // Saber si estamos usando el modo Johnson
 const esJohnson = computed(() => {
@@ -802,24 +880,81 @@ const onEdgeTouchStart = (edge, e) => {
 
 // Handlers para cada herramienta
 const handleConnectNode = (node) => {
+  // PRIMER CLIC: seleccionar nodo origen
   if (!selectedNodeId.value) {
     selectedNodeId.value = node.id
-  } else {
-    if (selectedNodeId.value === node.id) {
-      // Auto-conexión (loop)
-      emit('create-edge', {
-        sourceId: node.id,
-        targetId: node.id
-      })
+    return
+  }
+
+  const sourceId = selectedNodeId.value
+  const targetId = node.id
+
+  // ==========================================
+  // REGLAS ESPECIALES PARA JOHNSON
+  // ==========================================
+  if (esJohnson.value) {
+
+    // 1. No permitir bucles A -> A
+    if (esJohnson.value) {
+
+      // No permitir A -> A
+      if (sourceId === targetId) {
+        mostrarAlerta(
+          'Conexión no permitida',
+          'En Johnson no puedes conectar un nodo consigo mismo.'
+        )
+
+        selectedNodeId.value = null
+        return
+      }
+
+      // No permitir A -> B y B -> A
+      const existeConexionContraria = props.edges.some(
+        edge =>
+          edge.sourceId === targetId &&
+          edge.targetId === sourceId
+      )
+
+      if (existeConexionContraria) {
+        mostrarAlerta(
+          'Conexión bidireccional',
+          'Esta conexión no está permitida porque ya existe una conexión en sentido contrario.'
+        )
+
+        selectedNodeId.value = null
+        return
+      }
+    }
+
+    // 2. Verificar si existe la conexión contraria
+    // Ejemplo:
+    // queremos B -> A
+    // pero ya existe A -> B
+    const existeConexionContraria = props.edges.some(
+      edge =>
+        edge.sourceId === targetId &&
+        edge.targetId === sourceId
+    )
+
+    if (existeConexionContraria) {
+      alert(
+        'No se puede crear esta conexión porque ya existe una conexión en sentido contrario. Johnson no permite conexiones bidireccionales.'
+      )
+
       selectedNodeId.value = null
-    } else {
-      emit('create-edge', {
-        sourceId: selectedNodeId.value,
-        targetId: node.id
-      })
-      selectedNodeId.value = null
+      return
     }
   }
+
+  // ==========================================
+  // CREAR CONEXIÓN
+  // ==========================================
+  emit('create-edge', {
+    sourceId,
+    targetId
+  })
+
+  selectedNodeId.value = null
 }
 
 const handleDeleteNode = (node) => {
@@ -939,15 +1074,121 @@ const onTouchEnd = () => {
 }
 
 const confirmClear = () => {
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/master
   emit('clear')
 }
 </script>
 
 <style scoped>
+/* ===================================
+   ALERTA DEL LIENZO
+=================================== */
+
+.canvas-alert {
+  position: absolute;
+  top: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+
+  width: min(420px, calc(100% - 32px));
+
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  padding: 14px 16px;
+
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.25);
+
+  z-index: 100;
+}
+
+.canvas-alert-warning {
+  border-color: #f59e0b;
+}
+
+.canvas-alert-icon {
+  width: 38px;
+  height: 38px;
+
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 10px;
+
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+}
+
+.canvas-alert-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.canvas-alert-content {
+  flex: 1;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 3px;
+}
+
+.canvas-alert-title {
+  font-size: 13px;
+  font-weight: 700;
+
+  color: var(--text-primary);
+}
+
+.canvas-alert-message {
+  font-size: 12px;
+  line-height: 1.4;
+
+  color: var(--text-secondary);
+}
+
+.canvas-alert-close {
+  border: none;
+  background: transparent;
+
+  color: var(--text-secondary);
+
+  font-size: 22px;
+
+  cursor: pointer;
+
+  padding: 4px;
+}
+
+.canvas-alert-close:hover {
+  color: var(--text-primary);
+}
+
+
+/* ANIMACIÓN */
+
+.alerta-enter-active,
+.alerta-leave-active {
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
+}
+
+.alerta-enter-from,
+.alerta-leave-to {
+  opacity: 0;
+  transform: translate(-50%, -12px);
+}
+
+
 .canvas-workspace {
   flex-grow: 1;
   display: flex;

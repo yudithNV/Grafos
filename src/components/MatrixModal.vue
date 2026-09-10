@@ -4,7 +4,12 @@
       <Transition name="scale">
         <div class="matrix-container" @mousedown.stop">
           <div class="matrix-header">
-            <h3 class="matrix-title">Matriz de Adyacencia</h3>
+            <h3 class="matrix-title">
+              {{ esJohnson
+                ? 'Matriz de Adyacencia - Johnson'
+                : 'Matriz de Adyacencia'
+              }}
+            </h3>
             <button @click="close" class="btn-close">
               <X class="icon-close" />
             </button>
@@ -14,47 +19,48 @@
             <table class="matrix-table">
               <thead>
                 <tr>
-                  <th class="th-corner">De \ A</th>
-                  <th v-for="node in nodes" :key="node.id" class="th-node">
-                    {{ node.label }}
-                  </th>
-                  <th class="th-sum">Σ Pesos</th>
-                  <th class="th-count"># Cantidad</th>
+                  <<th v-for="node in nodes" :key="node.id" class="th-node">
+                    {{ getNodeLabel(node) }}
+                    </th>
+
+                    <!-- Solo mostrar en modos normales -->
+                    <th v-if="!esJohnson" class="th-sum">
+                      Σ Pesos
+                    </th>
+
+                    <th v-if="!esJohnson" class="th-count">
+                      # Cantidad
+                    </th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="(row, rowIndex) in matrixData" :key="rowIndex">
-                  <td class="td-node">{{ nodes[rowIndex].label }}</td>
-                  <td 
-                    v-for="(cell, colIndex) in row" 
-                    :key="colIndex"
-                    class="td-cell"
-                    :class="{ 'td-zero': cell === 0 }"
-                  >
+                  <td class="td-node">
+                    {{ getNodeLabel(nodes[rowIndex]) }}
+                  </td>
+                  <td v-for="(cell, colIndex) in row" :key="colIndex" class="td-cell"
+                    :class="{ 'td-zero': cell === 0 }">
                     {{ cell }}
                   </td>
-                  <td class="td-sum">{{ rowSums[rowIndex] }}</td>
-                  <td class="td-count">{{ rowCounts[rowIndex] }}</td>
+                  <td v-if="!esJohnson" class="td-sum">
+                    {{ rowSums[rowIndex] }}
+                  </td>
+
+                  <td v-if="!esJohnson" class="td-count">
+                    {{ rowCounts[rowIndex] }}
+                  </td>
                 </tr>
-                <tr class="tr-sum">
+                <tr v-if="!esJohnson" class="tr-sum">
                   <td class="td-node-sum">Σ Pesos</td>
-                  <td 
-                    v-for="(colSum, colIndex) in colSums" 
-                    :key="colIndex"
-                    class="td-sum-col"
-                  >
+                  <td v-for="(colSum, colIndex) in colSums" :key="colIndex" class="td-sum-col">
                     {{ colSum }}
                   </td>
                   <td class="td-sum-total">{{ totalSum }}</td>
                   <td class="td-count-total">{{ totalCount }}</td>
                 </tr>
-                <tr class="tr-count">
+                <tr v-if="!esJohnson" class="tr-count">
                   <td class="td-node-count"># Cantidad</td>
-                  <td 
-                    v-for="(colCount, colIndex) in colCounts" 
-                    :key="colIndex"
-                    class="td-count-col"
-                  >
+                  <td v-for="(colCount, colIndex) in colCounts" :key="colIndex" class="td-count-col">
                     {{ colCount }}
                   </td>
                   <td class="td-count-total">{{ totalCount }}</td>
@@ -65,9 +71,16 @@
           </div>
 
           <div class="matrix-footer">
-            <div class="matrix-legend">
-              <span class="legend-dot dot-sum">●</span> Suma de Pesos
-              <span class="legend-dot dot-count">●</span> Cantidad de Conexiones
+            <div v-if="!esJohnson" class="matrix-legend">
+              <span class="legend-dot dot-sum">●</span>
+              Suma de Pesos
+
+              <span class="legend-dot dot-count">●</span>
+              Cantidad de Conexiones
+            </div>
+
+            <div v-else class="matrix-legend">
+              Nodo: IDA | REGRESO
             </div>
             <button @click="close" class="btn-close-modal">Cerrar</button>
           </div>
@@ -80,20 +93,77 @@
 <script setup>
 import { computed } from 'vue'
 import { X } from '@lucide/vue'
+import { calcularJohnson } from './utils/johnson'
 
 const props = defineProps({
   show: Boolean,
+
   nodes: {
     type: Array,
     required: true
   },
+
   edges: {
     type: Array,
     required: true
+  },
+
+  mode: {
+    type: String,
+    default: 'normal'
   }
 })
 
 const emit = defineEmits(['close'])
+
+
+// ======================================
+// MODO JOHNSON
+// ======================================
+
+const esJohnson = computed(() => {
+  return props.mode === 'johnson'
+})
+
+// Ejecutar Johnson para obtener IDA y REGRESO
+const johnsonResult = computed(() => {
+  if (!esJohnson.value) {
+    return null
+  }
+
+  if (props.nodes.length === 0) {
+    return null
+  }
+
+  try {
+    return calcularJohnson(
+      props.nodes,
+      props.edges
+    )
+  } catch (error) {
+    console.error(
+      'No se pudo calcular Johnson para la matriz:',
+      error.message
+    )
+
+    return null
+  }
+})
+
+// Texto que aparecerá en las filas y columnas
+const getNodeLabel = (node) => {
+  if (!esJohnson.value || !johnsonResult.value) {
+    return node.label
+  }
+
+  const ida =
+    johnsonResult.value.ida?.[node.id] ?? '-'
+
+  const regreso =
+    johnsonResult.value.regreso?.[node.id] ?? '-'
+
+  return `${node.label} ${ida} | ${regreso}`
+}
 
 // Construir matriz de adyacencia
 const matrixData = computed(() => {
@@ -113,7 +183,7 @@ const matrixData = computed(() => {
 
 // ✅ SUMA DE PESOS por fila
 const rowSums = computed(() => {
-  return matrixData.value.map(row => 
+  return matrixData.value.map(row =>
     row.reduce((sum, val) => sum + val, 0)
   )
 })
@@ -132,7 +202,7 @@ const colSums = computed(() => {
 
 // ✅ CANTIDAD DE CONEXIONES por fila (NO ceros)
 const rowCounts = computed(() => {
-  return matrixData.value.map(row => 
+  return matrixData.value.map(row =>
     row.filter(val => val !== 0).length
   )
 })
@@ -291,6 +361,7 @@ const close = () => {
 }
 
 @media (min-width: 640px) {
+
   .th-corner,
   .th-node,
   .th-sum,
@@ -377,6 +448,7 @@ const close = () => {
 }
 
 @media (min-width: 640px) {
+
   .td-sum,
   .td-count {
     padding: 0.4rem 0.5rem;
@@ -409,6 +481,7 @@ const close = () => {
 }
 
 @media (min-width: 640px) {
+
   .td-node-sum,
   .td-node-count {
     padding: 0.4rem 0.5rem;
@@ -434,6 +507,7 @@ const close = () => {
 }
 
 @media (min-width: 640px) {
+
   .td-sum-col,
   .td-count-col {
     padding: 0.4rem 0.5rem;
@@ -459,6 +533,7 @@ const close = () => {
 }
 
 @media (min-width: 640px) {
+
   .td-sum-total,
   .td-count-total {
     padding: 0.4rem 0.5rem;
@@ -549,6 +624,7 @@ const close = () => {
 .fade-leave-active {
   transition: opacity 0.25s ease;
 }
+
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
@@ -558,6 +634,7 @@ const close = () => {
 .scale-leave-active {
   transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
 }
+
 .scale-enter-from,
 .scale-leave-to {
   transform: scale(0.92);
