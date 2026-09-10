@@ -90,7 +90,7 @@ const cards = [
     icon: Network,
     iconBg: 'linear-gradient(135deg, #6366f1, #06b6d4)',
     image: null,
-    comingSoon: true
+    comingSoon: false // ← Cambiar de true a false
   },
   {
     id: 'johnson',
