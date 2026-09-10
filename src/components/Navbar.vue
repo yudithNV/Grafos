@@ -9,7 +9,7 @@
         <circle cx="9" cy="28" r="4" class="brand-node brand-node-b" />
         <circle cx="31" cy="28" r="4" class="brand-node brand-node-c" />
       </svg>
-      <span class="brand-name">GraphFlow</span>
+      <span class="brand-name">Graphix</span>
     </button>
 
     <div class="navbar-links">
@@ -124,32 +124,31 @@ const navItems = [
 .brand-node-c { fill: var(--accent-end); }
 
 /* ===== NOMBRE DEL SISTEMA CON BRILLO ===== */
+/* ===== NOMBRE DEL SISTEMA CON BRILLO NEÓN BLANCO ===== */
 .brand-name {
   font-size: 1.15rem;
   font-weight: 800;
   letter-spacing: -0.03em;
-  color: var(--text-primary);
+  color: #ffffff;
   transition: all 0.3s ease;
 }
 
-/* El nombre brilla SIEMPRE (efecto neón sutil) */
-.brand-name {
-  text-shadow: 
-    0 0 5px rgba(168, 85, 247, 0.1),
-    0 0 10px rgba(168, 85, 247, 0.05);
-}
-
+/* Brillo neón blanco (modo oscuro - MÁS intenso) */
 [data-theme='dark'] .brand-name {
+  color: #ffffff;
   text-shadow: 
-    0 0 10px rgba(168, 85, 247, 0.2),
-    0 0 20px rgba(168, 85, 247, 0.1),
-    0 0 30px rgba(168, 85, 247, 0.05);
+    0 0 5px  #ffffff,
+    0 0 10px #ffffff;
 }
 
+/* Brillo neón blanco (modo claro - MÁS suave) */
 [data-theme='light'] .brand-name {
+  color: #1a1a1a;              /* texto oscuro para que se lea en fondo claro */
   text-shadow: 
-    0 0 8px rgba(168, 85, 247, 0.15),
-    0 0 15px rgba(168, 85, 247, 0.08);
+    0 0 5px  rgba(255, 255, 255, 0.9),
+    0 0 10px rgba(255, 255, 255, 0.7),
+    0 0 20px rgba(255, 255, 255, 0.5),
+    0 0 40px rgba(255, 255, 255, 0.3);
 }
 
 .navbar-links {
@@ -180,29 +179,24 @@ const navItems = [
 
 /* ===== BOTÓN ACTIVO - SOLO LAS LETRAS BRILLAN ===== */
 .nav-link-active {
-  color: var(--accent-solid);
   font-weight: 600;
-  
-  /* EFECTO BRILLO NEÓN EN EL TEXTO (SIN FONDO) */
-  text-shadow: 
-    0 0 10px rgba(168, 85, 247, 0.4),
-    0 0 20px rgba(168, 85, 247, 0.2);
-  
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
 }
 
-/* Brillo en modo oscuro (más intenso) */
+/* ===== DARK: BLANCO con glow (un poco menos intenso que "Graphix") ===== */
 [data-theme='dark'] .nav-link-active {
+  color: #ffffff;
   text-shadow: 
-    0 0 15px rgba(168, 85, 247, 0.6),
-    0 0 30px rgba(168, 85, 247, 0.3),
-    0 0 45px rgba(168, 85, 247, 0.15);
+    0 0 4px  rgba(255, 255, 255, 0.55),
+    0 0 10px rgba(255, 255, 255, 0.30),
+    0 0 20px rgba(168, 85, 247, 0.20);
 }
 
-/* Brillo en modo claro (más suave) */
+/* ===== LIGHT: LILA (lo que ya tenías) ===== */
 [data-theme='light'] .nav-link-active {
+  color: var(--accent-solid);
   text-shadow: 
     0 0 10px rgba(168, 85, 247, 0.5),
     0 0 20px rgba(168, 85, 247, 0.25);
@@ -217,8 +211,18 @@ const navItems = [
   transform: translateX(-50%);
   width: 60%;
   height: 2px;
-  background: linear-gradient(90deg, transparent, var(--accent-solid), transparent);
   border-radius: 2px;
+}
+
+/* Dark: línea blanca */
+[data-theme='dark'] .nav-link-active::after {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.9), transparent);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.7);
+}
+
+/* Light: línea lila */
+[data-theme='light'] .nav-link-active::after {
+  background: linear-gradient(90deg, transparent, var(--accent-solid), transparent);
   box-shadow: 0 0 10px var(--accent-solid);
 }
 

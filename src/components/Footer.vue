@@ -1,6 +1,6 @@
 <template>
   <footer class="app-footer">
-    <span class="footer-text">GraphFlow — Grupo pingüinos.exe </span>
+    <span class="footer-text">Graphix — Grupo pingüinos.exe </span>
     <span class="footer-year">{{ year }}</span>
   </footer>
 </template>

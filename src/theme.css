@@ -5,17 +5,26 @@
 */
 
 :root {
-  --bg-body: #f8fafc;
-  --bg-surface: #ffffff;
-  --bg-surface-2: #f1f5f9;
-  --text-primary: #0f172a;
-  --text-secondary: #64748b;
-  --border-color: #e2e8f0;
-  --accent-start: #a855f7;
-  --accent-end: #d946ef;
-  --accent-solid: #7c3aed;
-  --accent-soft-bg: #eef2ff;
-  --shadow-color: rgba(15, 23, 42, 0.08);
+  /* ===== FONDOS: lavanda muy claro, no blanco puro ===== */
+  --bg-body:            #f7f5ff;   /* lavanda casi blanco */
+  --bg-surface:         #ffffff;   /* cards sí blancas → contraste */
+  --bg-surface-2:       #f0ecff;   /* superficie secundaria */
+  
+  /* ===== TEXTO: violeta oscuro, no negro ===== */
+  --text-primary:       #1e1b33;   /* casi negro con tinte violeta */
+  --text-secondary:     #6b6390;   /* gris violáceo legible */
+  
+  /* ===== BORDES: lila suave ===== */
+  --border-color:       #e4ddfa;   /* lila muy claro */
+  
+  /* ===== ACENTOS: mismos que dark para coherencia ===== */
+  --accent-start:       #a855f7;
+  --accent-end:         #d946ef;
+  --accent-solid:       #8b5cf6;
+  --accent-soft-bg:     #ede9fe;   /* lavanda más saturado para badges */
+  
+  /* ===== SOMBRAS: con tinte violeta, no gris ===== */
+  --shadow-color:       rgba(139, 92, 246, 0.12);
 }
 
 [data-theme='dark'] {
