@@ -496,7 +496,7 @@ const backToWelcome = () => {
 }
 
 const showInstructionsModal = () => {
-  window.open('/manual_grafos.pdf', '_blank')
+  window.open('/Manual_Graphix_Dark.pdf', '_blank')
 }
 
 const showMatrixModal = () => {

@@ -39,7 +39,7 @@
               @click="useQuickFill"
               class="btn btn-quick"
             >
-              ⚡ Nombre rápido ({{ quickFillValue }})
+              Nombre rápido ({{ quickFillValue }})
             </button>
 
             <!-- Botones -->
