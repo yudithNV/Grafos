@@ -25,9 +25,28 @@
     <AboutView v-else-if="currentView === 'about'" />
 
     <GraphCanvas
-      v-else-if="currentView === 'canvas'"
+      v-if="currentView === 'canvas' && selectedAlgorithm === 'grafos'"
       :nodes="nodes"
       :edges="edges"
+      algorithm-type="grafos"
+      @back="backToWelcome"
+      @show-instructions="showInstructionsModal"
+      @show-matrix="showMatrixModal"
+      @save="handleSaveGraph"
+      @clear="confirmClearCanvas"
+      @create-node="handleCreateNodeRequest"
+      @create-edge="handleCreateEdgeRequest"
+      @edit-node="handleEditNodeRequest"
+      @edit-edge="handleEditEdgeRequest"
+      @delete-node="handleDeleteNodeRequest"
+      @delete-edge="handleDeleteEdgeRequest"
+    />
+    <!-- Módulo Aislado del Algoritmo de Asignación -->
+    <AssignmentCanvas
+      v-else-if="currentView === 'canvas' && selectedAlgorithm === 'asignacion'"
+      :nodes="nodes"
+      :edges="edges"
+      algorithm-type="asignacion"
       @back="backToWelcome"
       @show-instructions="showInstructionsModal"
       @show-matrix="showMatrixModal"
@@ -121,9 +140,13 @@ import GraphCanvas from './components/GraphCanvas.vue'
 import CustomModal from './components/CustomModal.vue'
 import MatrixModal from './components/MatrixModal.vue'
 import Footer from './components/Footer.vue'
+import AssignmentCanvas from './utils/AssignmentCanvas.vue'
+
 
 // Routing
+
 const currentView = ref('home')
+const selectedAlgorithm = ref('grafos')
 const scrollToAlgorithms = () => {
   const carousel = document.getElementById('algorithms-carousel')
   carousel?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -440,10 +463,24 @@ const handleSaveGraph = () => {
 // ============ OTRAS FUNCIONES ============
 
 const onSelectAlgorithm = (id) => {
+  if (!id) return // Previene ejecuciones vacías al iniciar
+  selectedAlgorithm.value = id
+
   if (id === 'grafos') {
-    showGraphSelector.value = true
+    loadSavedGraphsList()      // 1. Refresca la lista de localStorage
+    showGraphSelector.value = true // 2. Despliega el modal "Cargar Grafo Guardado"
     return
   }
+
+  if (id === 'asignacion') {
+    nodes.value = []
+    edges.value = []
+    currentGraphIndex.value = -1
+    currentView.value = 'canvas'
+    return
+  }
+
+  // Solo salta si el id no está implementado
   openModal({
     title: '🚧 Próximamente',
     message: 'Este algoritmo todavía está en construcción.',
@@ -494,7 +531,6 @@ const createNewGraph = () => {
   currentGraphIndex.value = -1
   showGraphSelector.value = false
   currentView.value = 'canvas'
-  setTimeout(() => saveGraph('Nuevo Grafo'), 100)
 }
 
 const backToWelcome = () => {
@@ -508,6 +544,7 @@ const showInstructionsModal = () => {
 const showMatrixModal = () => {
   showMatrix.value = true
 }
+
 </script>
 
 <style scoped>
