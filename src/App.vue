@@ -395,8 +395,19 @@ const handleSaveGraph = () => {
   }
 
   let currentName = 'Grafo sin nombre'
-  if (currentGraphIndex.value >= 0 && currentGraphIndex.value < savedGraphs.value.length) {
-    currentName = savedGraphs.value[currentGraphIndex.value].name || currentName
+
+  if (currentGraphIndex.value >= 0) {
+    const graphs =
+      JSON.parse(
+        localStorage.getItem('savedGraphs') || '[]'
+      )
+
+    const currentGraph =
+      graphs[currentGraphIndex.value]
+
+    if (currentGraph?.name) {
+      currentName = currentGraph.name
+    }
   }
 
   openModal({

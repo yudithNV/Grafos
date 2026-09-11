@@ -47,12 +47,29 @@
 
       <!-- Estadísticas Académicas -->
       <div class="stats-container">
+
         <div class="stat-badge">
-          Nodos: <strong class="stat-number">{{ nodes.length }}</strong>
+          Nodos:
+          <strong class="stat-number">
+            {{ nodes.length }}
+          </strong>
         </div>
+
         <div class="stat-badge">
-          Aristas: <strong class="stat-number">{{ edges.length }}</strong>
+          Aristas:
+          <strong class="stat-number">
+            {{ edges.length }}
+          </strong>
         </div>
+
+        <!-- SOLO JOHNSON -->
+        <div v-if="esJohnson && johnsonActivo" class="stat-badge stat-critical">
+          Ruta crítica:
+          <strong class="stat-critical-number">
+            {{ johnsonResult?.duracionProyecto }}
+          </strong>
+        </div>
+
       </div>
 
       <!-- Acciones de Cabecera -->
@@ -146,9 +163,9 @@
               <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#9333ea" />
             </marker>
 
-            <marker id="arrow-critical" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6"
+            <marker id="arrow-critical" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5"
               orient="auto">
-              <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#ff4d6d" />
+              <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#38d9ff" class="critical-arrow" />
             </marker>
           </defs>
 
@@ -166,8 +183,13 @@
               @touchstart.stop.prevent="onEdgeTouchStart(edge, $event)" />
 
             <!-- CAMINO CRÍTICO ANIMADO -->
-            <path v-if="visibleCriticalEdges.includes(edge.id)" :d="edge.path" fill="none" stroke="#ff4d6d"
-              stroke-width="5" pathLength="1" class="critical-edge-path" marker-end="url(#arrow-critical)" />
+            <!-- CAMINO CRÍTICO - RESPLANDOR -->
+            <path v-if="visibleCriticalEdges.includes(edge.id)" :d="edge.path" fill="none" stroke="#4f7cff"
+              stroke-width="7" class="critical-edge-glow" />
+
+            <!-- CAMINO CRÍTICO - LÍNEA ANIMADA -->
+            <path v-if="visibleCriticalEdges.includes(edge.id)" :d="edge.path" fill="none" stroke="#38d9ff"
+              stroke-width="4.5" class="critical-edge-path" marker-end="url(#arrow-critical)" />
 
             <!-- Burbuja de Peso de la Arista -->
             <g :transform="`translate(${edge.labelX}, ${edge.labelY})`" class="edge-label-group"
@@ -204,29 +226,52 @@
             </template>
 
             <!-- NODO JOHNSON -->
+            <!-- NODO JOHNSON -->
             <template v-else>
-              <circle r="36" class="node-circle" />
 
-              <!-- Línea horizontal de la T -->
-              <line x1="-32" y1="-4" x2="32" y2="-4" class="node-divider" />
+              <g class="johnson-node" :class="{
+                'johnson-node-critical': isCriticalNode(node.id)
+              }">
 
-              <!-- Línea vertical -->
-              <line x1="0" y1="-4" x2="0" y2="32" class="node-divider" />
+                <!-- Círculo exterior -->
+                <circle r="38" class="johnson-circle" />
 
-              <!-- Nombre arriba -->
-              <text x="0" y="-14" class="node-text">
-                {{ truncateLabel(node.label) }}
-              </text>
+                <!-- Arco izquierdo -->
+                <path d="M -27 -16 A 31 31 0 0 0 -27 17" class="johnson-arc johnson-arc-left" />
 
-              <!-- IDA / SUMA / lado izquierdo -->
-              <text x="-17" y="18" class="node-value">
-                {{ johnsonResult?.ida?.[node.id] }}
-              </text>
+                <!-- Arco derecho -->
+                <path d="M 27 -16 A 31 31 0 0 1 27 17" class="johnson-arc johnson-arc-right" />
 
-              <!-- REGRESO / RESTA / lado derecho -->
-              <text x="17" y="18" class="node-value">
-                {{ johnsonResult?.regreso?.[node.id] }}
-              </text>
+                <!-- Nombre -->
+                <text x="0" y="-13" class="johnson-name">
+                  {{ truncateLabel(node.label) }}
+                </text>
+
+                <!-- Línea vertical -->
+                <line x1="0" y1="-2" x2="0" y2="27" class="johnson-divider" />
+
+                <!-- VALOR IDA -->
+                <text x="-15" y="10" class="johnson-value">
+                  {{ johnsonResult?.ida?.[node.id] }}
+                </text>
+
+                <!-- VALOR REGRESO -->
+                <text x="15" y="10" class="johnson-value">
+                  {{ johnsonResult?.regreso?.[node.id] }}
+                </text>
+
+                <!-- IDA -->
+                <text x="-15" y="25" class="johnson-label">
+                  IDA
+                </text>
+
+                <!-- REG -->
+                <text x="15" y="25" class="johnson-label">
+                  REG
+                </text>
+
+              </g>
+
             </template>
           </g>
         </g>
@@ -390,6 +435,16 @@ const animandoCaminoCritico = ref(false)
 const pasoCriticoActual = ref(0)
 
 let criticalTimer = null
+
+const isCriticalNode = (nodeId) => {
+  if (!johnsonActivo.value) return false
+
+  return criticalPathEdges.value.some(
+    edge =>
+      edge.sourceId === nodeId ||
+      edge.targetId === nodeId
+  )
+}
 
 const construirCaminoCritico = (resultado) => {
   if (!resultado) return []
@@ -1290,8 +1345,31 @@ const confirmClear = () => {
 }
 
 /* ===================================
-   CAMINO CRÍTICO
+   CAMINO CRÍTICO JOHNSON
 =================================== */
+/* ==========================================
+   CAMINO CRÍTICO JOHNSON - NARANJA NEÓN
+========================================== */
+
+/* ==========================================
+   JOHNSON - CAMINO CRÍTICO NEÓN
+========================================== */
+
+.critical-edge-glow {
+  pointer-events: none;
+
+  stroke-linecap: round;
+  stroke-linejoin: round;
+
+  opacity: 0.55;
+
+  filter:
+    drop-shadow(0 0 3px #38d9ff) drop-shadow(0 0 6px #22b8f0) drop-shadow(0 0 10px #4f7cff) drop-shadow(0 0 14px rgba(124, 58, 237, 0.65));
+
+  animation:
+    critical-glow-pulse 0.9s ease-in-out infinite alternate;
+}
+
 
 .critical-edge-path {
   pointer-events: none;
@@ -1299,22 +1377,54 @@ const confirmClear = () => {
   stroke-linecap: round;
   stroke-linejoin: round;
 
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
+  stroke-dasharray: 11 7;
 
-  animation: dibujar-camino-critico 0.75s linear forwards;
+  animation:
+    critical-flow 0.65s linear infinite,
+    critical-light 0.9s ease-in-out infinite alternate;
 
   filter:
-    drop-shadow(0 0 4px #ff4d6d) drop-shadow(0 0 8px rgba(255, 77, 109, 0.55));
+    drop-shadow(0 0 2px #ffffff) drop-shadow(0 0 4px #38d9ff) drop-shadow(0 0 7px #22b8f0) drop-shadow(0 0 11px #4f7cff);
 }
 
-@keyframes dibujar-camino-critico {
+
+.critical-arrow {
+  filter:
+    drop-shadow(0 0 2px #ffffff) drop-shadow(0 0 5px #38d9ff) drop-shadow(0 0 9px #4f7cff);
+}
+
+
+@keyframes critical-flow {
   from {
-    stroke-dashoffset: 1;
+    stroke-dashoffset: 18;
   }
 
   to {
     stroke-dashoffset: 0;
+  }
+}
+
+
+@keyframes critical-light {
+  from {
+    opacity: 0.82;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+
+@keyframes critical-glow-pulse {
+  from {
+    opacity: 0.35;
+    stroke-width: 6;
+  }
+
+  to {
+    opacity: 0.7;
+    stroke-width: 8;
   }
 }
 
@@ -1355,6 +1465,41 @@ const confirmClear = () => {
   border-radius: 0.5rem;
   color: var(--text-secondary);
   font-size: 0.7rem;
+}
+
+/* ===================================
+   ESTADÍSTICA RUTA CRÍTICA JOHNSON
+=================================== */
+
+.stat-critical {
+  background-color: rgba(56, 217, 255, 0.10);
+
+  border: 1px solid rgba(56, 217, 255, 0.45);
+
+  color: #38d9ff;
+
+  box-shadow:
+    0 0 8px rgba(56, 217, 255, 0.12);
+
+  transition: all 0.2s ease;
+}
+
+.stat-critical:hover {
+  background-color: rgba(56, 217, 255, 0.16);
+
+  border-color: #38d9ff;
+
+  box-shadow:
+    0 0 8px rgba(56, 217, 255, 0.25),
+    0 0 16px rgba(79, 124, 255, 0.15);
+}
+
+.stat-critical-number {
+  color: #38d9ff;
+  font-weight: 700;
+
+  text-shadow:
+    0 0 5px rgba(56, 217, 255, 0.6);
 }
 
 @media (min-width: 640px) {
@@ -1893,4 +2038,175 @@ const confirmClear = () => {
 .line-pink {
   background-color: #ec4899;
 }
+/* ==========================================
+   NODO JOHNSON MINIMALISTA
+========================================== */
+
+.johnson-node {
+  pointer-events: none;
+}
+
+
+/* CÍRCULO PRINCIPAL */
+.johnson-circle {
+  fill: var(--bg-surface);
+
+  stroke: #818cf8;
+  stroke-width: 2.5px;
+
+  filter:
+    drop-shadow(0 0 2px rgba(99, 102, 241, 0.4));
+
+  transition:
+    stroke 0.3s ease,
+    filter 0.3s ease;
+}
+
+
+/* ARCOS DECORATIVOS */
+.johnson-arc {
+  fill: none;
+
+  stroke-width: 2.5px;
+
+  stroke-linecap: round;
+
+  opacity: 0.9;
+}
+
+
+/* ARCO IZQUIERDO */
+.johnson-arc-left {
+  stroke: #22d3ee;
+
+  filter:
+    drop-shadow(0 0 3px rgba(34, 211, 238, 0.6));
+}
+
+
+/* ARCO DERECHO */
+.johnson-arc-right {
+  stroke: #a855f7;
+
+  filter:
+    drop-shadow(0 0 3px rgba(168, 85, 247, 0.6));
+}
+
+
+/* NOMBRE DEL NODO */
+.johnson-name {
+  font-family: system-ui, sans-serif;
+
+  font-size: 14px;
+  font-weight: 800;
+
+  fill: var(--text-primary);
+
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+
+/* VALORES */
+.johnson-value {
+  font-family: system-ui, sans-serif;
+
+  font-size: 12px;
+  font-weight: 800;
+
+  fill: var(--text-primary);
+
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+
+/* IDA / REG */
+.johnson-label {
+  font-family: system-ui, sans-serif;
+
+  font-size: 6px;
+  font-weight: 700;
+
+  letter-spacing: 0.5px;
+
+  fill: var(--text-secondary);
+
+  text-anchor: middle;
+}
+
+
+/* SEPARADOR */
+.johnson-divider {
+  stroke: var(--text-secondary);
+
+  stroke-width: 1.5px;
+
+  opacity: 0.65;
+}
+
+/* ==========================================
+   NODO DEL CAMINO CRÍTICO
+========================================== */
+
+.johnson-node-critical .johnson-circle {
+  stroke: #38d9ff;
+
+  stroke-width: 3px;
+
+  filter:
+    drop-shadow(0 0 3px #38d9ff)
+    drop-shadow(0 0 7px rgba(56, 217, 255, 0.75))
+    drop-shadow(0 0 12px rgba(99, 102, 241, 0.7))
+    drop-shadow(0 0 18px rgba(168, 85, 247, 0.45));
+
+  animation:
+    johnson-node-glow 1.2s ease-in-out infinite alternate;
+}
+
+
+.johnson-node-critical .johnson-arc-left {
+  stroke: #38d9ff;
+
+  filter:
+    drop-shadow(0 0 4px #38d9ff)
+    drop-shadow(0 0 8px #22d3ee);
+}
+
+
+.johnson-node-critical .johnson-arc-right {
+  stroke: #c084fc;
+
+  filter:
+    drop-shadow(0 0 4px #c084fc)
+    drop-shadow(0 0 8px #8b5cf6);
+}
+
+
+.johnson-node-critical .johnson-name,
+.johnson-node-critical .johnson-value {
+  filter:
+    drop-shadow(0 0 4px rgba(56, 217, 255, 0.8));
+}
+
+
+@keyframes johnson-node-glow {
+
+  from {
+    filter:
+      drop-shadow(0 0 3px #38d9ff)
+      drop-shadow(0 0 7px rgba(56, 217, 255, 0.55))
+      drop-shadow(0 0 11px rgba(99, 102, 241, 0.5));
+  }
+
+  to {
+    filter:
+      drop-shadow(0 0 5px #38d9ff)
+      drop-shadow(0 0 10px rgba(56, 217, 255, 0.85))
+      drop-shadow(0 0 16px rgba(99, 102, 241, 0.75))
+      drop-shadow(0 0 21px rgba(168, 85, 247, 0.45));
+  }
+
+}
+
 </style>
