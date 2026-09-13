@@ -28,9 +28,11 @@
       v-else-if="currentView === 'canvas'"
       :nodes="nodes"
       :edges="edges"
+      :algorithm-type="selectedAlgorithm"
       @back="backToWelcome"
       @show-instructions="showInstructionsModal"
       @show-matrix="showMatrixModal"
+      @show-assignment-matrix="showAssignmentMatrixModal"
       @save="handleSaveGraph"
       @clear="confirmClearCanvas"
       @create-node="handleCreateNodeRequest"
@@ -61,6 +63,14 @@
       :nodes="nodes"
       :edges="edges"
       @close="showMatrix = false"
+    />
+
+    <!-- Assignment Matrix Modal -->
+    <AssignmentMatrixModal
+      :show="showAssignmentMatrix"
+      :nodes="nodes"
+      :edges="edges"
+      @close="showAssignmentMatrix = false"
     />
 
     <Footer v-if="currentView !== 'canvas'" />
@@ -120,6 +130,7 @@ import AboutView from './components/AboutView.vue'
 import GraphCanvas from './components/GraphCanvas.vue'
 import CustomModal from './components/CustomModal.vue'
 import MatrixModal from './components/MatrixModal.vue'
+import AssignmentMatrixModal from './components/AssignmentMatrixModal.vue'
 import Footer from './components/Footer.vue'
 
 // Routing
@@ -180,6 +191,9 @@ let modalCallback = null
 
 // Matrix Modal
 const showMatrix = ref(false)
+
+// Assignment Matrix Modal
+const showAssignmentMatrix = ref(false)
 
 // Graph Selector
 const showGraphSelector = ref(false)
@@ -439,8 +453,11 @@ const handleSaveGraph = () => {
 
 // ============ OTRAS FUNCIONES ============
 
+const selectedAlgorithm = ref('grafos')  // agregalo junto a tus otros ref, arriba
+
 const onSelectAlgorithm = (id) => {
-  if (id === 'grafos') {
+  selectedAlgorithm.value = id
+  if (id === 'grafos' || id === 'asignacion') {
     showGraphSelector.value = true
     return
   }
@@ -507,6 +524,10 @@ const showInstructionsModal = () => {
 
 const showMatrixModal = () => {
   showMatrix.value = true
+}
+
+const showAssignmentMatrixModal = () => {
+  showAssignmentMatrix.value = true
 }
 </script>
 
