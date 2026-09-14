@@ -1,86 +1,208 @@
+//solver.js corregido
 /**
- * Utilidad para la resolución del Algoritmo de Asignación (Método Húngaro / Reducción).
- * Reutilizable para múltiples algoritmos de optimización de grafos.
+ * Utilidad para la resolucion del Algoritmo de Asignacion.
+ * Filtra automaticamente las filas por Nodos Origen y las columnas por Nodos Destino.
  */
 
 export const INF = Number.MAX_SAFE_INTEGER
 
-/**
- * Resuelve el algoritmo de asignación para grafos dirigidos.
- * 
- * @param {Array} nodes Lista de nodos [{ id, label, ... }]
- * @param {Array} edges Lista de aristas [{ id, sourceId, targetId, weight, ... }]
- * @param {'minimize'|'maximize'} mode Modo de optimización
- * @returns {Object} Resultado con pasos detallados y asignación óptima
- */
 export function solveAlgorithm(nodes, edges, mode = 'minimize') {
-  const n = nodes.length
-  if (n === 0) {
+  if (nodes.length === 0 || edges.length === 0) {
     return {
-      alpha: [],
-      beta: [],
-      costMatrix: [],
-      rowReducedMatrix: [],
-      finalMatrix: [],
-      assignments: [],
-      optimalEdgeIds: [],
-      totalCost: 0,
-      mode,
-      maxWeight: 0,
-      INF
+      costoTotal: 0,
+      metodo: `Asignacion (${mode === 'maximize' ? 'Maximizar' : 'Minimizar'})`,
+      asignaciones: [],
+      pasos: [],
+      optimalEdgeIds: []
     }
   }
 
-  // 1. Obtener peso máximo global (para la transformación si es maximización)
+  // 1. Identificar Nodos Origen (salidas) y Nodos Destino (entradas)
+  const sourceIds = [...new Set(edges.map(e => e.sourceId))]
+  const targetIds = [...new Set(edges.map(e => e.targetId))]
+
+  const sourceNodes = nodes.filter(n => sourceIds.includes(n.id))
+  const targetNodes = nodes.filter(n => targetIds.includes(n.id))
+
+  const rowLabels = sourceNodes.map(n => n.label)
+  const colLabels = targetNodes.map(n => n.label)
+
+  const numRows = sourceNodes.length
+  const numCols = targetNodes.length
+  const targetAssignments = Math.min(numRows, numCols)
+
+  // 2. Obtener peso maximo para maximizacion
   let maxWeight = 0
   edges.forEach(e => {
     const w = Number(e.weight) || 0
     if (w > maxWeight) maxWeight = w
   })
 
-  // 2. Construir matriz de costos C[u][v] SOLO con aristas válidas (u !== v)
-  // Las no existentes se inicializan con INF consistente
-  const costMatrix = Array.from({ length: n }, () => Array(n).fill(INF))
-  const rawCostMatrix = Array.from({ length: n }, () => Array(n).fill(INF))
+  // 3. Construir Matriz Rectangular [numRows x numCols]
+  const rawCostMatrix = Array.from({ length: numRows }, () => Array(numCols).fill(INF))
+  const costMatrix = Array.from({ length: numRows }, () => Array(numCols).fill(INF))
 
   edges.forEach(edge => {
-    const u = nodes.findIndex(node => node.id === edge.sourceId)
-    const v = nodes.findIndex(node => node.id === edge.targetId)
-    if (u !== -1 && v !== -1 && u !== v) {
+    const rIdx = sourceNodes.findIndex(n => n.id === edge.sourceId)
+    const cIdx = targetNodes.findIndex(n => n.id === edge.targetId)
+    if (rIdx !== -1 && cIdx !== -1) {
       const w = Number(edge.weight) || 0
-      rawCostMatrix[u][v] = w
-      costMatrix[u][v] = mode === 'minimize' ? w : (maxWeight - w)
+      rawCostMatrix[rIdx][cIdx] = w
+      costMatrix[rIdx][cIdx] = mode === 'minimize' ? w : (maxWeight - w)
     }
   })
 
-  // 3. Alpha seguro (filtrar INF): Mínimo de cada fila
+  const pasos = []
+
+  pasos.push({
+    titulo: '1. Matriz de Trabajo Inicial',
+    descripcion: 'Matriz original entre origenes (filas) y destinos (columnas).',
+    rowLabels,
+    colLabels,
+    matrix: rawCostMatrix.map(r => [...r])
+  })
+
+  if (mode === 'maximize') {
+    pasos.push({
+      titulo: '2. Conversion por Maximizacion',
+      descripcion: `Inversion de costos (M = ${maxWeight}) calculada como C'ij = M - Cij.`,
+      rowLabels,
+      colLabels,
+      matrix: costMatrix.map(r => [...r])
+    })
+  }
+
+  // 4. Reduccion por Filas (Alpha)
   const alpha = costMatrix.map(row => {
     const valid = row.filter(v => v !== INF)
     return valid.length > 0 ? Math.min(...valid) : 0
   })
 
-  // 4. Reducción por filas: C'_ij = C_ij - alpha_i
   const rowReducedMatrix = costMatrix.map((row, i) =>
     row.map(val => (val === INF ? INF : val - alpha[i]))
   )
 
-  // 5. Beta seguro (filtrar INF): Mínimo de cada columna sobre rowReducedMatrix
-  const beta = Array.from({ length: n }, (_, j) => {
-    const col = rowReducedMatrix.map(row => row[j]).filter(v => v !== INF)
+  pasos.push({
+    titulo: `${mode === 'maximize' ? '3' : '2'}. Reduccion por Filas`,
+    descripcion: `Minimos restados por fila (alpha): [${alpha.join(', ')}].`,
+    rowLabels,
+    colLabels,
+    matrix: rowReducedMatrix.map(r => [...r])
+  })
+
+  // 5. Reduccion por Columnas (Beta)
+  const beta = Array.from({ length: numCols }, (_, j) => {
+    const col = rowReducedMatrix.map(r => r[j]).filter(v => v !== INF)
     return col.length > 0 ? Math.min(...col) : 0
   })
 
-  // 6. Matriz Reducida Final: C''_ij = C'_ij - beta_j
-  const finalMatrix = rowReducedMatrix.map(row =>
+  let finalMatrix = rowReducedMatrix.map(row =>
     row.map((val, j) => (val === INF ? INF : val - beta[j]))
   )
 
-  // 7. Asignación 1-a-1 sobre los ceros mediante algoritmo de Kuhn (máximo emparejamiento bipartito)
-  const matchTargetToSource = Array(n).fill(-1)
+  pasos.push({
+    titulo: `${mode === 'maximize' ? '4' : '3'}. Reduccion por Columnas`,
+    descripcion: `Minimos restados por columna (beta): [${beta.join(', ')}].`,
+    rowLabels,
+    colLabels,
+    matrix: finalMatrix.map(r => [...r])
+  })
+
+  // 6. Emparejamiento por ceros + ajuste hungaro iterativo.
+  let matchTargetToSource = findZeroMatching(finalMatrix, costMatrix, numRows, numCols)
+  let matchedCount = countMatches(matchTargetToSource)
+  let iteration = 1
+
+  while (matchedCount < targetAssignments) {
+    const cover = findMinimumZeroCover(finalMatrix, costMatrix, matchTargetToSource, numRows, numCols)
+    const lineCount = countCoveredLines(cover)
+
+    pasos.push({
+      titulo: `${mode === 'maximize' ? '5' : '4'}.${iteration} Cobertura de Ceros`,
+      descripcion: `Lineas necesarias: ${lineCount}. Ceros independientes: ${matchedCount}/${targetAssignments}.`,
+      rowLabels,
+      colLabels,
+      matrix: finalMatrix.map(r => [...r]),
+      coveredRows: [...cover.coveredRows],
+      coveredCols: [...cover.coveredCols]
+    })
+
+    if (lineCount >= targetAssignments) break
+
+    const minUncovered = findMinUncovered(finalMatrix, costMatrix, cover.coveredRows, cover.coveredCols, numRows, numCols)
+    if (minUncovered === INF) break
+
+    finalMatrix = applyHungarianAdjustment(finalMatrix, cover.coveredRows, cover.coveredCols, minUncovered)
+
+    pasos.push({
+      titulo: `${mode === 'maximize' ? '5' : '4'}.${iteration} Ajuste Hungaro`,
+      descripcion: `Menor no cubierto: ${minUncovered}. Se resta a celdas no cubiertas y se suma en intersecciones.`,
+      rowLabels,
+      colLabels,
+      matrix: finalMatrix.map(r => [...r]),
+      coveredRows: [...cover.coveredRows],
+      coveredCols: [...cover.coveredCols]
+    })
+
+    matchTargetToSource = findZeroMatching(finalMatrix, costMatrix, numRows, numCols)
+    matchedCount = countMatches(matchTargetToSource)
+    iteration++
+  }
+
+  matchTargetToSource = findZeroMatching(finalMatrix, costMatrix, numRows, numCols)
+
+  // 7. Extraer Asignaciones Optimas
+  const uiAsignaciones = []
+  const optimalEdgeIds = []
+  let totalCost = 0
+
+  for (let v = 0; v < numCols; v++) {
+    const u = matchTargetToSource[v]
+    if (u !== -1) {
+      const sNode = sourceNodes[u]
+      const tNode = targetNodes[v]
+
+      const edge = edges.find(e => e.sourceId === sNode.id && e.targetId === tNode.id)
+      const origWeight = edge ? (Number(edge.weight) || 0) : 0
+
+      if (edge) optimalEdgeIds.push(edge.id)
+      totalCost += origWeight
+
+      uiAsignaciones.push({
+        origen: sNode.label,
+        destino: tNode.label,
+        costo: origWeight,
+        rowIdx: u,
+        colIdx: v
+      })
+    }
+  }
+
+  pasos.push({
+    titulo: `${mode === 'maximize' ? '6' : '5'}. Asignacion Optima`,
+    descripcion: `Ceros independientes seleccionados: ${uiAsignaciones.length}/${targetAssignments}.`,
+    rowLabels,
+    colLabels,
+    matrix: finalMatrix.map(r => [...r]),
+    asignaciones: uiAsignaciones
+  })
+
+  return {
+    metodo: `Asignacion (Metodo de Ceros - ${mode === 'maximize' ? 'Maximizar' : 'Minimizar'})`,
+    costoTotal: totalCost,
+    asignaciones: uiAsignaciones,
+    optimalEdgeIds,
+    pasos,
+    INF
+  }
+}
+
+function findZeroMatching(matrix, costMatrix, numRows, numCols) {
+  const matchTargetToSource = Array(numCols).fill(-1)
 
   function dfsKuhn(u, visited) {
-    for (let v = 0; v < n; v++) {
-      if (finalMatrix[u][v] === 0 && costMatrix[u][v] !== INF && !visited[v]) {
+    for (let v = 0; v < numCols; v++) {
+      if (matrix[u][v] === 0 && costMatrix[u][v] !== INF && !visited[v]) {
         visited[v] = true
         if (matchTargetToSource[v] < 0 || dfsKuhn(matchTargetToSource[v], visited)) {
           matchTargetToSource[v] = u
@@ -91,71 +213,88 @@ export function solveAlgorithm(nodes, edges, mode = 'minimize') {
     return false
   }
 
-  // ✅ Ordenamos fuentes: primero las que tienen menos ceros disponibles (filas restrictivas),
-  // y en empate, las de mejor peso según el modo (min: menor costo, max: mayor beneficio).
-  const sourceIndices = Array.from({ length: n }, (_, i) => i)
-  sourceIndices.sort((a, b) => {
-    const zerosA = finalMatrix[a].filter((val, j) => val === 0 && costMatrix[a][j] !== INF).length
-    const zerosB = finalMatrix[b].filter((val, j) => val === 0 && costMatrix[b][j] !== INF).length
-    if (zerosA !== zerosB) return zerosA - zerosB
-
-    const minRawA = Math.min(...rawCostMatrix[a].filter(v => v !== INF), 0)
-    const minRawB = Math.min(...rawCostMatrix[b].filter(v => v !== INF), 0)
-    return mode === 'minimize' ? minRawA - minRawB : minRawB - minRawA
-  })
-
-  for (const u of sourceIndices) {
-    const visited = Array(n).fill(false)
+  for (let u = 0; u < numRows; u++) {
+    const visited = Array(numCols).fill(false)
     dfsKuhn(u, visited)
   }
 
-  // 8. Construir lista de asignaciones y costo total con los pesos originales
-  const assignments = []
-  const optimalEdgeIds = []
-  let totalCost = 0
+  return matchTargetToSource
+}
 
-  for (let v = 0; v < n; v++) {
-    const u = matchTargetToSource[v]
-    if (u !== -1) {
-      const originalEdge = edges.find(
-        e => e.sourceId === nodes[u].id && e.targetId === nodes[v].id
-      )
-      const origWeight = originalEdge ? (Number(originalEdge.weight) || 0) : (rawCostMatrix[u][v] !== INF ? rawCostMatrix[u][v] : 0)
+function countMatches(matchTargetToSource) {
+  return matchTargetToSource.filter(sourceIdx => sourceIdx !== -1).length
+}
 
-      if (originalEdge) {
-        optimalEdgeIds.push(originalEdge.id)
+function countCoveredLines(cover) {
+  return cover.coveredRows.filter(Boolean).length + cover.coveredCols.filter(Boolean).length
+}
+
+function findMinimumZeroCover(matrix, costMatrix, matchTargetToSource, numRows, numCols) {
+  const matchedRows = Array(numRows).fill(false)
+  const markedRows = Array(numRows).fill(false)
+  const markedCols = Array(numCols).fill(false)
+
+  matchTargetToSource.forEach(sourceIdx => {
+    if (sourceIdx !== -1) matchedRows[sourceIdx] = true
+  })
+
+  for (let i = 0; i < numRows; i++) {
+    if (!matchedRows[i]) markedRows[i] = true
+  }
+
+  let changed = true
+  while (changed) {
+    changed = false
+
+    for (let i = 0; i < numRows; i++) {
+      if (!markedRows[i]) continue
+
+      for (let j = 0; j < numCols; j++) {
+        if (matrix[i][j] === 0 && costMatrix[i][j] !== INF && !markedCols[j]) {
+          markedCols[j] = true
+          changed = true
+        }
       }
+    }
 
-      totalCost += origWeight
-
-      assignments.push({
-        sourceIndex: u,
-        targetIndex: v,
-        sourceNode: nodes[u],
-        targetNode: nodes[v],
-        sourceLabel: nodes[u]?.label || `Nodo ${u + 1}`,
-        targetLabel: nodes[v]?.label || `Nodo ${v + 1}`,
-        weight: origWeight,
-        edgeId: originalEdge ? originalEdge.id : null
-      })
+    for (let j = 0; j < numCols; j++) {
+      const matchedRow = matchTargetToSource[j]
+      if (markedCols[j] && matchedRow !== -1 && !markedRows[matchedRow]) {
+        markedRows[matchedRow] = true
+        changed = true
+      }
     }
   }
 
-  // Ordenar asignaciones por índice de origen para presentación limpia
-  assignments.sort((a, b) => a.sourceIndex - b.sourceIndex)
-
   return {
-    alpha,
-    beta,
-    costMatrix,
-    rawCostMatrix,
-    rowReducedMatrix,
-    finalMatrix,
-    assignments,
-    optimalEdgeIds,
-    totalCost,
-    mode,
-    maxWeight,
-    INF
+    coveredRows: markedRows.map(marked => !marked),
+    coveredCols: markedCols
   }
+}
+
+function findMinUncovered(matrix, costMatrix, coveredRows, coveredCols, numRows, numCols) {
+  let min = INF
+
+  for (let i = 0; i < numRows; i++) {
+    if (coveredRows[i]) continue
+
+    for (let j = 0; j < numCols; j++) {
+      if (!coveredCols[j] && costMatrix[i][j] !== INF && matrix[i][j] < min) {
+        min = matrix[i][j]
+      }
+    }
+  }
+
+  return min
+}
+
+function applyHungarianAdjustment(matrix, coveredRows, coveredCols, minUncovered) {
+  return matrix.map((row, i) =>
+    row.map((value, j) => {
+      if (value === INF) return INF
+      if (!coveredRows[i] && !coveredCols[j]) return value - minUncovered
+      if (coveredRows[i] && coveredCols[j]) return value + minUncovered
+      return value
+    })
+  )
 }
