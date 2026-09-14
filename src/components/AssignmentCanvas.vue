@@ -42,9 +42,9 @@
         </button>
         <button @click="openSolverChoiceModal" class="btn-text btn-resolver">
           <Sparkles class="btn-icon" />
-          <span>➕ Resolver</span>
+          <span> Resolver</span>
         </button>
-        <button @click="$emit('show-instructions')" class="btn-text">
+        <button @click="$emit('show-instructions', 'asignacion')" class="btn-text">
           <BookOpen class="btn-icon" />
           <span>Manual</span>
         </button>
@@ -129,7 +129,7 @@
             <path
               :d="edge.path"
               fill="none"
-              :stroke="edge.isOptimal ? '#00f2ff' : edge.color"
+              :stroke="edge.isOptimal ? '#00f2ff' : (edge.customColor || edge.color)"
               :stroke-width="edge.isOptimal ? 4 : 2.5"
               class="edge-path"
               :class="{ 
@@ -165,11 +165,13 @@
                 rx="6"
                 class="edge-rect"
                 :class="{ 'edge-rect-optimal': edge.isOptimal }"
+                :style="{ stroke: edge.isOptimal ? '#00f2ff' : (edge.customColor || edge.color) }"
               />
               <text 
                 y="4" 
                 class="edge-text"
                 :class="{ 'edge-text-optimal': edge.isOptimal }"
+                :fill="edge.isOptimal ? '#00f2ff' : (edge.customColor || edge.color)"
               >
                 {{ edge.weight }}
               </text>
@@ -196,6 +198,7 @@
               r="28" 
               class="node-circle" 
               :class="{ 'node-circle-optimal': isNodeInOptimal(node.id) }"
+              :style="{ stroke: node.color || '#94a3b8' }"
             />
             <text class="node-text" y="1" dominant-baseline="middle">
               {{ truncateLabel(node.label) }}
@@ -566,7 +569,8 @@ const processedEdges = computed(() => {
     return {
       id: edge.id, sourceId: edge.sourceId, targetId: edge.targetId, weight: edge.weight,
       path, labelX, labelY, rectW,
-      color: '#64748b', markerId: 'arrow-assignment-slate', isOptimal
+      color: '#64748b', markerId: 'arrow-assignment-slate', isOptimal,
+      customColor: edge.color
     }
   }).filter(Boolean)
 })

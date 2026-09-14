@@ -162,7 +162,7 @@
             <path
               :d="edge.path"
               fill="none"
-              :stroke="edge.color"
+              :stroke="edge.customColor || edge.color"
               stroke-width="3"
               class="edge-path"
               :class="{ 'edge-highlight': hoveredEdgeId === edge.id }"
@@ -198,9 +198,9 @@
                 :height="24"
                 rx="6"
                 class="edge-rect"
-                :stroke="edge.color"
+                :stroke="edge.customColor || edge.color"
               />
-              <text dy="5" class="edge-text" :fill="edge.color">
+              <text dy="5" class="edge-text" :fill="edge.customColor || edge.color">
                 {{ edge.weight }}
               </text>
             </g>
@@ -224,7 +224,11 @@
             @mouseleave="hoveredNodeId = null"
           >
             <!-- Círculo del Nodo -->
-            <circle r="28" class="node-circle" />
+            <circle 
+              r="28" 
+              class="node-circle"
+              :style="{ stroke: node.color || '#94a3b8' }"
+            />
 
             <!-- Texto del Nodo -->
             <text dy="6" class="node-text">
@@ -407,7 +411,8 @@ const processedEdges = computed(() => {
         id: edge.id, sourceId: edge.sourceId, targetId: edge.targetId, weight: edge.weight,
         path, labelX: x1, labelY: y1 - r - loopSize + 15,
         rectW: Math.max(28, String(edge.weight).length * 8 + 12),
-        color: '#9333ea', markerId: 'arrow-purple'
+        color: '#9333ea', markerId: 'arrow-purple',
+        customColor: edge.color
       }
     }
 
@@ -494,7 +499,8 @@ const processedEdges = computed(() => {
       labelY,
       rectW,
       color,
-      markerId
+      markerId,
+      customColor: edge.color
     }
   }).filter(Boolean)
 })

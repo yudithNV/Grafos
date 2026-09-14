@@ -66,6 +66,7 @@
     <!-- Custom Modal -->
     <CustomModal
       v-model="showModal"
+      :icon-name="modalIconName" 
       :title="modalTitle"
       :label="modalLabel"
       :placeholder="modalPlaceholder"
@@ -74,6 +75,8 @@
       :initial-value="modalInitialValue"
       :quick-fill="modalQuickFill"
       :quick-fill-value="modalQuickFillValue"
+      :show-color-picker="modalShowColorPicker"
+      :initial-color="modalInitialColor"
       @submit="handleModalSubmit"
     />
 
@@ -274,6 +277,8 @@ const modalInitialValue = ref('')
 const modalQuickFill = ref(false)
 const modalQuickFillValue = ref('')
 let modalCallback = null
+const modalShowColorPicker = ref(false)
+const modalInitialColor = ref('#64748b')
 
 // Matrix Modal
 const showMatrix = ref(false)
@@ -287,9 +292,13 @@ onMounted(() => {
   loadSavedGraphsList()
 })
 
+
+// Modal Icon
+const modalIconName = ref('')
+
 // ============ FUNCIONES DEL MODAL ============
 
-const openModal = ({ title, label, placeholder, type, initialValue, message, callback, quickFill, quickFillValue }) => {
+const openModal = ({ title, label, placeholder, type, initialValue, message, callback, quickFill, quickFillValue, showColorPicker, initialColor, iconName }) => {
   modalTitle.value = title || ''
   modalLabel.value = label || ''
   modalPlaceholder.value = placeholder || ''
@@ -298,13 +307,22 @@ const openModal = ({ title, label, placeholder, type, initialValue, message, cal
   modalInitialValue.value = initialValue ?? ''
   modalQuickFill.value = quickFill || false
   modalQuickFillValue.value = quickFillValue || ''
+  modalShowColorPicker.value = showColorPicker || false
+  modalInitialColor.value = initialColor || '#64748b'
+  modalIconName.value = iconName || ''
   modalCallback = callback
   showModal.value = true
 }
 
-const handleModalSubmit = (value) => {
+const handleModalSubmit = (payload) => {
   if (modalCallback) {
-    modalCallback(value)
+    // Si el modal tenía selector de color, payload es un objeto {value, color}
+    if (modalShowColorPicker.value && typeof payload === 'object' && payload.value !== undefined) {
+      modalCallback(payload.value, payload.color)
+    } else {
+      // Si no, payload es solo el valor
+      modalCallback(payload)
+    }
     modalCallback = null
   }
 }
@@ -393,12 +411,18 @@ const handleEditNodeRequest = (node) => {
     placeholder: 'Ej. A, V1...',
     type: 'input',
     initialValue: node.label,
-    callback: (value) => {
+    showColorPicker: true,
+    initialColor: node.color || '#64748b',
+    callback: (value, color) => {
       const label = String(value).trim()
       if (!label) return
       const index = nodes.value.findIndex(n => n.id === node.id)
       if (index !== -1) {
-        nodes.value[index] = { ...nodes.value[index], label }
+        nodes.value[index] = { 
+          ...nodes.value[index], 
+          label,
+          color: color || '#64748b'
+        }
       }
     }
   })
@@ -411,12 +435,18 @@ const handleEditEdgeRequest = (edge) => {
     placeholder: 'Ej. 10, -5...',
     type: 'number',
     initialValue: edge.weight,
-    callback: (value) => {
+    showColorPicker: true,
+    initialColor: edge.color || '#64748b',
+    callback: (value, color) => {
       const weight = Number(value)
       if (isNaN(weight)) return
       const index = edges.value.findIndex(e => e.id === edge.id)
       if (index !== -1) {
-        edges.value[index] = { ...edges.value[index], weight }
+        edges.value[index] = { 
+          ...edges.value[index], 
+          weight,
+          color: color || '#64748b'
+        }
       }
     }
   })
@@ -469,8 +499,6 @@ const confirmClearCanvas = () => {
 
 // ============ GUARDADO ============
 
-// ============ GUARDADO ============
-
 const saveGraph = (name = null) => {
   const isAssignment = selectedAlgorithm.value === 'asignacion'
   const storageKey = isAssignment ? 'savedAssignmentGraphs' : 'savedGraphs'
@@ -513,7 +541,8 @@ const saveGraph = (name = null) => {
 const handleSaveGraph = () => {
   if (nodes.value.length === 0 && edges.value.length === 0) {
     openModal({
-      title: '⚠️ Grafo Vacío',
+      title: 'Grafo Vacío',
+      iconName: 'warning',         // ← agrega esto
       message: 'No hay nodos ni aristas para guardar.',
       type: 'confirm'
     })
@@ -528,7 +557,8 @@ const handleSaveGraph = () => {
   }
   
   openModal({
-    title: '💾 Guardar Grafo',
+    title: 'Guardar Grafo',
+    iconName: 'save',  
     label: 'Nombre del grafo:',
     placeholder: 'Ej. Grafo Clase, Red Social...',
     type: 'input',
@@ -537,11 +567,14 @@ const handleSaveGraph = () => {
       const graphName = String(name).trim() || currentName
       saveGraph(graphName)
       
-      openModal({
-        title: '✅ Guardado Correctamente',
-        message: `"${graphName}" guardado con ${nodes.value.length} nodos y ${edges.value.length} aristas.`,
-        type: 'confirm'
-      })
+      setTimeout(() => {
+        openModal({
+          title: 'Guardado Correctamente',
+          iconName: 'success',
+          message: `"${graphName}" guardado con ${nodes.value.length} nodos y ${edges.value.length} aristas.`,
+          type: 'info'   // 👈 antes 'confirm'
+        })
+      }, 250)  // espera a que el primer modal termine de cerrarse
     }
   })
 }
@@ -566,7 +599,8 @@ const onSelectAlgorithm = (id) => {
 
   // Solo salta si el id no está implementado
   openModal({
-    title: '🚧 Próximamente',
+    title: 'Próximamente',
+    iconName: 'construction',    // ← agrega esto
     message: 'Este algoritmo todavía está en construcción.',
     type: 'confirm'
   })
@@ -672,8 +706,12 @@ const backToWelcome = () => {
   currentView.value = 'home'
 }
 
-const showInstructionsModal = () => {
-  window.open('/Manual_Graphix_Dark.pdf', '_blank')
+const showInstructionsModal = (manual = 'grafos') => {
+  const file = manual === 'asignacion'
+    ? '/manual_asignacion.pdf'
+    : '/Manual_Graphix_Dark.pdf'
+
+  window.open(file, '_blank')
 }
 
 const showMatrixModal = () => {

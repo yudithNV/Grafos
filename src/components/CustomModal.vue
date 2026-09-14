@@ -4,22 +4,41 @@
       <Transition name="scale">
         <div class="modal-container" @mousedown.stop>
           <!-- Barra superior con color según tipo -->
-          <div class="modal-accent-line" :class="type === 'confirm' ? 'modal-accent-danger' : 'modal-accent-primary'"></div>
+          <div
+            class="modal-accent-line"
+            :class="type === 'confirm' ? 'modal-accent-danger' : 'modal-accent-primary'"
+          ></div>
 
-          <!-- Cabecera -->
-          <h3 class="modal-title">{{ title }}</h3>
+          <!-- Cabecera con icono + título -->
+          <div class="modal-header">
+            <component
+              v-if="resolvedIcon"
+              :is="resolvedIcon"
+              class="modal-title-icon"
+              :class="type === 'confirm' ? 'modal-title-icon-danger' : ''"
+            />
+            <h3 class="modal-title">{{ title }}</h3>
+          </div>
 
           <!-- Formulario -->
           <form @submit.prevent="submit">
-            <!-- Modo Confirmación -->
+            <!-- Modo Confirmación (eliminar / acción destructiva) -->
             <div v-if="type === 'confirm'" class="modal-confirm-text">
-              <div class="confirm-icon-wrapper" :class="type === 'confirm' ? 'confirm-icon-danger' : ''">
+              <div class="confirm-icon-wrapper confirm-icon-danger">
                 <Trash2 class="confirm-icon" />
               </div>
               <p>{{ message || '¿Estás seguro?' }}</p>
             </div>
 
-            <!-- Modo Edición -->
+            <!-- Modo Info (solo aviso) -->
+            <div v-else-if="type === 'info'" class="modal-confirm-text">
+              <div class="confirm-icon-wrapper">
+                <component :is="resolvedIcon || Info" class="confirm-icon" />
+              </div>
+              <p>{{ message }}</p>
+            </div>
+
+            <!-- Modo Edición / Input -->
             <div v-else>
               <label v-if="label" class="modal-label">{{ label }}</label>
               <input
@@ -30,6 +49,30 @@
                 class="modal-input"
                 required
               />
+
+              <!-- Selector de Color -->
+              <div v-if="showColorPicker" class="color-picker-section">
+                <label class="modal-label">Color</label>
+                <div class="color-picker-wrapper">
+                  <input
+                    type="color"
+                    v-model="colorValue"
+                    class="color-input"
+                  />
+                  <span class="color-hex-display">{{ colorValue }}</span>
+                </div>
+                <div class="color-palette">
+                  <button
+                    v-for="col in colorPalette"
+                    :key="col"
+                    type="button"
+                    class="color-dot"
+                    :style="{ backgroundColor: col }"
+                    :title="col"
+                    @click="colorValue = col"
+                  />
+                </div>
+              </div>
             </div>
 
             <!-- Botón Nombre Rápido -->
@@ -44,10 +87,29 @@
 
             <!-- Botones -->
             <div class="modal-btn-group">
-              <button type="submit" class="btn" :class="type === 'confirm' ? 'btn-danger' : 'btn-save'">
-                {{ type === 'confirm' ? 'Eliminar' : 'Guardar' }}
+              <!-- Modo info: solo "Aceptar" -->
+              <button
+                v-if="type === 'info'"
+                type="button"
+                @click="close"
+                class="btn btn-save"
+              >
+                Aceptar
               </button>
-              <button type="button" @click="close" class="btn btn-cancel">Cancelar</button>
+
+              <!-- Modo confirm / input: botones normales -->
+              <template v-else>
+                <button
+                  type="submit"
+                  class="btn"
+                  :class="type === 'confirm' ? 'btn-danger' : 'btn-save'"
+                >
+                  {{ type === 'confirm' ? 'Eliminar' : 'Guardar' }}
+                </button>
+                <button type="button" @click="close" class="btn btn-cancel">
+                  Cancelar
+                </button>
+              </template>
             </div>
           </form>
         </div>
@@ -57,8 +119,19 @@
 </template>
 
 <script setup>
-import { ref, watch, nextTick } from 'vue'
-import { Trash2 } from '@lucide/vue'
+import { ref, watch, nextTick, computed } from 'vue'
+import {
+  Trash2,
+  Save,
+  CheckCircle,
+  AlertTriangle,
+  Construction,
+  X,
+  Pencil,
+  Plus,
+  Link as LinkIcon,
+  Info,
+} from '@lucide/vue'
 
 const props = defineProps({
   modelValue: Boolean,
@@ -69,25 +142,65 @@ const props = defineProps({
   message: { type: String, default: '' },
   initialValue: { type: [String, Number], default: '' },
   quickFill: { type: Boolean, default: false },
-  quickFillValue: { type: String, default: '' }
+  quickFillValue: { type: String, default: '' },
+  showColorPicker: { type: Boolean, default: false },
+  initialColor: { type: String, default: '#64748b' },
+  iconName: { type: String, default: '' },
 })
 
 const emit = defineEmits(['update:modelValue', 'submit'])
 
+// Mapa de iconos disponibles por nombre
+const iconMap = {
+  save: Save,
+  success: CheckCircle,
+  warning: AlertTriangle,
+  construction: Construction,
+  error: X,
+  trash: Trash2,
+  edit: Pencil,
+  plus: Plus,
+  link: LinkIcon,
+  info: Info,
+}
+
+const resolvedIcon = computed(() => {
+  if (props.iconName && iconMap[props.iconName]) {
+    return iconMap[props.iconName]
+  }
+  return null
+})
+
 const inputValue = ref('')
 const inputRef = ref(null)
+const colorValue = ref('')
+const colorPalette = [
+  '#64748b',
+  '#6366f1',
+  '#ec4899',
+  '#ef4444',
+  '#f97316',
+  '#eab308',
+  '#10b981',
+  '#06b6d4',
+  '#8b5cf6',
+  '#a855f7',
+]
 
 watch(() => props.modelValue, (val) => {
   if (val) {
     inputValue.value = props.initialValue ?? ''
     nextTick(() => {
-      if (inputRef.value && props.type !== 'confirm') {
+      if (inputRef.value && props.type !== 'confirm' && props.type !== 'info') {
         inputRef.value.focus()
         if (props.type === 'input') {
           inputRef.value.select()
         }
       }
     })
+    if (props.showColorPicker) {
+      colorValue.value = props.initialColor ?? '#64748b'
+    }
   }
 })
 
@@ -96,11 +209,19 @@ const close = () => {
 }
 
 const submit = () => {
+  // Para info no hay submit (se maneja con close)
+  if (props.type === 'info') {
+    close()
+    return
+  }
   let val = inputValue.value
   if (props.type === 'number') {
     val = Number(val)
   }
-  emit('submit', val)
+  const payload = props.showColorPicker
+    ? { value: val, color: colorValue.value }
+    : val
+  emit('submit', payload)
   close()
 }
 
@@ -128,7 +249,7 @@ watch(() => props.modelValue, (isActive) => {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 10000; /* 🔥 FIX: antes 300, ahora por encima del selector de grafos (9999) */
+  z-index: 10000;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -168,12 +289,31 @@ watch(() => props.modelValue, (isActive) => {
   background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
 }
 
+/* ===== CABECERA CON ICONO ===== */
+.modal-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.modal-title-icon {
+  width: 1.35rem;
+  height: 1.35rem;
+  color: var(--accent-solid);
+  flex-shrink: 0;
+}
+
+.modal-title-icon-danger {
+  color: #ef4444;
+}
+
 .modal-title {
   font-size: 1.25rem;
   font-weight: 600;
   color: var(--text-primary);
-  margin-top: 0.5rem;
-  margin-bottom: 1.25rem;
+  margin: 0;
 }
 
 .modal-label {
@@ -286,6 +426,11 @@ watch(() => props.modelValue, (isActive) => {
   }
 }
 
+/* Cuando solo hay 1 botón (info), que no se quede a la mitad */
+.modal-btn-group .btn-save:only-child {
+  width: 100%;
+}
+
 .btn-save {
   background: linear-gradient(135deg, var(--accent-start, #a855f7) 0%, var(--accent-end, #d946ef) 100%);
   color: #ffffff;
@@ -359,5 +504,70 @@ watch(() => props.modelValue, (isActive) => {
 .scale-leave-to {
   transform: scale(0.96);
   opacity: 0;
+}
+
+/* ===== SELECTOR DE COLOR ===== */
+.color-picker-section {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.color-picker-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.color-input {
+  width: 3rem;
+  height: 2.5rem;
+  border: 2px solid var(--border-color);
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.color-input:hover {
+  border-color: var(--accent-solid);
+}
+
+.color-hex-display {
+  font-family: monospace;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 0.3rem 0.6rem;
+  background-color: var(--bg-surface-2);
+  border-radius: 0.4rem;
+  min-width: 5rem;
+  text-align: center;
+}
+
+.color-palette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.color-dot {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  border: 2px solid var(--border-color);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+}
+
+.color-dot:hover {
+  border-color: #ffffff;
+  transform: scale(1.15);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
+}
+
+.color-dot:active {
+  transform: scale(0.95);
 }
 </style>
