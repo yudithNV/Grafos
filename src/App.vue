@@ -97,6 +97,9 @@
           <h3>Cargar Grafo Guardado</h3>
           <button @click="showGraphSelector = false" class="btn-close-selector">✕</button>
         </div>
+        <div class="assignment-selector-info">
+          En este modo puedes crear grafos con aristas de ida y vuelta, auto-bucles y pesos negativos.
+        </div>
         <div class="graph-selector-list">
           <div 
             v-for="(graph, index) in savedGraphs" 
@@ -141,12 +144,12 @@
         <div class="graph-selector-header header-assignment-selector">
           <div class="selector-title-group">
             <h3>Cargar Grafo de Asignación</h3>
-            <span class="badge-selector-unidirectional">⚡ Flujo Unidireccional</span>
+            <span class="badge-selector-unidirectional"> Flujo Unidireccional</span>
           </div>
           <button @click="showAssignmentGraphSelector = false" class="btn-close-selector">✕</button>
         </div>
         <div class="assignment-selector-info">
-          💡 En este modo todas las aristas son estrictamente de ida (sin retornos ni auto-bucles).
+          En este modo todas las aristas son estrictamente de ida (sin retornos ni auto-bucles).
         </div>
         <div class="graph-selector-list">
           <div 
@@ -212,13 +215,25 @@ const scrollToAlgorithms = () => {
 }
 
 const goTo = async (view) => {
+  // Si es "algoritmos" -> scroll a "¿Qué es un algoritmo?"
   if (view === 'algoritmos') {
     currentView.value = 'home'
     await nextTick()
-    scrollToAlgorithms()
+    const section = document.getElementById('que-es-algoritmo')
+    section?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     return
   }
 
+  // Si es "herramientas" -> scroll al carrusel
+  if (view === 'herramientas') {
+    currentView.value = 'home'
+    await nextTick()
+    const carousel = document.getElementById('algorithms-carousel')
+    carousel?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    return
+  }
+
+  // Para el resto (home, about, etc.)
   currentView.value = view
   if (view === 'home') {
     await nextTick()
@@ -687,17 +702,20 @@ const showMatrixModal = () => {
 .graph-selector-overlay {
   position: fixed;
   inset: 0;
-  z-index: 200;
+  z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
+   pointer-events: auto; /* 🔥 asegura que capture clicks */
 }
 
 .graph-selector-modal {
+  position: relative;
+  z-index: 1;
   background-color: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: 1rem;

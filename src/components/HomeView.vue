@@ -2,11 +2,9 @@
   <div class="home-view">
     <!-- BLOQUE 1: BANNER HERO CON ÓRBITAS DENTRO DEL TÍTULO -->
     <section class="hero-banner">
-      <!-- 👇 NUEVO: canvas de constelaciones en el hero -->
       <CanvasBackground :show-lines="false" :ball-count="50" />
 
       <div class="hero-orbit-container">
-        <!-- Título con órbitas DENTRO (como en el ejemplo original) -->
         <h1 class="home-title">
           Graphix
           <div class="orbit orbit-1"></div>
@@ -31,7 +29,6 @@
           <div class="orbit orbit-20"></div>
         </h1>
 
-        <!-- Subtítulo (fuera del h1) -->
         <template v-if="mode === 'home'">
           <p class="home-subtitle">
             Simulador interactivo para diseñar, conectar y analizar grafos. Explora la teoría de grafos y poner a prueba algoritmos complejos en tiempo real.
@@ -49,8 +46,8 @@
     <section class="content-section" v-if="mode === 'home'">
       <CanvasBackground />
       <div class="content-container">
-        <!-- NUEVO: fila con explicación + video -->
-        <div class="explainer-row">
+        <!-- Fila con explicación + video -->
+        <div id="que-es-algoritmo" class="explainer-row">
           <div class="explainer">
             <h2 class="explainer-title">¿Qué es un algoritmo?</h2>
             <p class="explainer-text">
@@ -62,7 +59,6 @@
             </p>
           </div>
 
-          <!-- NUEVO: video embebido -->
           <div class="explainer-video">
             <iframe
               :src="videoUrl"
@@ -75,16 +71,72 @@
           </div>
         </div>
 
+        <!-- Grid: dos bloques lado a lado -->
+        <div class="info-grid">
+          <!-- Bloque: elementos de un grafo -->
+          <div class="info-block">
+            <h2 class="explainer-title">Elementos de un grafo</h2>
+            <p class="explainer-text">
+              Un grafo es una estructura formada por <strong>nodos</strong> y
+              <strong>aristas</strong>. Sirve para modelar relaciones entre elementos.
+            </p>
+            <ul class="info-list">
+              <li>
+                <strong>Vértices o Nodos (V):</strong> son los puntos individuales que
+                representan a las entidades o elementos de la red (por ejemplo: ciudades,
+                personas, computadoras o tareas).
+              </li>
+              <li>
+                <strong>Aristas o Arcos (E):</strong> son las líneas que conectan un nodo
+                con otro, representando la relación o interacción entre ellos (por ejemplo:
+                carreteras, amistad, cables de red).
+              </li>
+            </ul>
+
+            <img
+              src="/elementos.png.jpg"
+              alt="Elementos de un grafo"
+              class="info-image"
+            />
+          </div>
+
+          <!-- Bloque: tipos de grafos según sus aristas -->
+          <div class="info-block">
+            <h2 class="explainer-title">Tipos de Grafos según sus aristas</h2>
+
+            <p class="explainer-text">
+              Dependiendo de cómo se comportan sus conexiones (aristas), los grafos se clasifican principalmente en:
+            </p>
+            <ul class="info-list">
+              <li><strong>Dirigido:</strong> las aristas tienen dirección.</li>
+              <li><strong>No dirigido:</strong> las aristas no tienen dirección.</li>
+              <li><strong>Ponderado:</strong> las aristas tienen un peso o valor.</li>
+              <li><strong>No ponderado:</strong> las aristas no tienen un peso o valor.</li>
+            </ul>
+
+            <img
+              src="/tipos.png.jpg"
+              alt="Tipos de grafos según sus aristas"
+              class="info-image"
+            />
+          </div>
+        </div>
+
         <div id="algorithms-carousel" class="algorithms-anchor">
+          <h2 class="tools-title">Herramientas</h2>
           <AlgorithmCarousel @select="(id) => $emit('select', id)" />
         </div>
       </div>
     </section>
 
     <section class="content-section" v-else>
+      
       <CanvasBackground />
+      
       <div class="content-container">
+        
         <div id="algorithms-carousel" class="algorithms-anchor">
+          <h2 class="tools-title">Herramientas</h2>
           <AlgorithmCarousel @select="(id) => $emit('select', id)" />
         </div>
       </div>
@@ -109,11 +161,6 @@ const youtubeLink = 'https://www.youtube.com/watch?v=f10jKIslSUY'
 // Convierte cualquier formato de link de YouTube a URL de embed
 const videoUrl = computed(() => {
   const url = youtubeLink
-  // Formatos soportados:
-  // - https://www.youtube.com/watch?v=XXXX
-  // - https://youtu.be/XXXX
-  // - https://www.youtube.com/embed/XXXX
-  // - https://www.youtube.com/shorts/XXXX
   const match = url.match(
     /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/
   )
@@ -132,8 +179,8 @@ const videoUrl = computed(() => {
 
 /* ===== BLOQUE 1: BANNER HERO ===== */
 .hero-banner {
-  position: relative;        /* 👈 NUEVO: ancla el canvas */
-  overflow: hidden;          /* 👈 NUEVO: evita que se salga */
+  position: relative;
+  overflow: hidden;
   width: 100%;
   min-height: 100vh;
   display: flex;
@@ -145,7 +192,7 @@ const videoUrl = computed(() => {
 
 .hero-orbit-container {
   position: relative;
-  z-index: 2;                /* 👈 NUEVO: por encima del canvas */
+  z-index: 2;
   width: 100%;
   max-width: 65rem;
   display: flex;
@@ -155,7 +202,7 @@ const videoUrl = computed(() => {
   padding: 3rem 1rem;
 }
 
-/* ===== TÍTULO CON ÓRBITAS DENTRO (como en el ejemplo) ===== */
+/* ===== TÍTULO CON ÓRBITAS DENTRO ===== */
 .home-title {
   font-size: 3.5rem;
   font-weight: 800;
@@ -169,26 +216,22 @@ const videoUrl = computed(() => {
   transition: color 0.3s ease, filter 0.3s ease;
 }
 
-/* ===== MODO OSCURO: BLANCO con glow tipo constelación ===== */
 [data-theme='dark'] .home-title {
   color: #ffffff;
   background: none;
   -webkit-text-fill-color: #ffffff;
-
   filter:
     drop-shadow(0 0 6px  rgba(255, 255, 255, 0.45))
     drop-shadow(0 0 16px rgba(255, 255, 255, 0.25))
     drop-shadow(0 0 34px rgba(168, 85, 247, 0.25));
 }
 
-/* ===== MODO CLARO: mantenemos el gradiente ===== */
 [data-theme='light'] .home-title {
   background: linear-gradient(135deg, #7c3aed, #a855f7, #d946ef);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   color: transparent;
-
   filter:
     drop-shadow(0 0 8px  rgba(168, 85, 247, 0.30))
     drop-shadow(0 0 20px rgba(168, 85, 247, 0.18))
@@ -196,15 +239,11 @@ const videoUrl = computed(() => {
 }
 
 @media (min-width: 768px) {
-  .home-title {
-    font-size: 5.5rem;
-  }
+  .home-title { font-size: 5.5rem; }
 }
 
 @media (min-width: 1024px) {
-  .home-title {
-    font-size: 10rem;
-  }
+  .home-title { font-size: 10rem; }
 }
 
 .home-subtitle {
@@ -217,7 +256,6 @@ const videoUrl = computed(() => {
   transition: color 0.3s ease, text-shadow 0.3s ease;
 }
 
-/* ===== MODO OSCURO: blanco con brillo sutil ===== */
 [data-theme='dark'] .home-subtitle {
   color: #f5f3ff;
   text-shadow:
@@ -226,15 +264,14 @@ const videoUrl = computed(() => {
     0 0 28px rgba(168, 85, 247, 0.20);
 }
 
-/* ===== MODO CLARO: gris oscuro legible ===== */
 [data-theme='light'] .home-subtitle {
-  color: #4c4373;   /* violeta grisáceo oscuro, legible */
+  color: #4c4373;
   text-shadow:
     0 0 8px  rgba(168, 85, 247, 0.12),
     0 0 18px rgba(168, 85, 247, 0.06);
 }
 
-/* ===== ÓRBITAS DENTRO DEL H1 ===== */
+/* ===== ÓRBITAS ===== */
 .orbit {
   position: absolute;
   top: 0;
@@ -256,7 +293,6 @@ const videoUrl = computed(() => {
   left: 0;
 }
 
-/* Configuración de cada órbita */
 .orbit-1  { animation: orbit-rotate 10s linear infinite; animation-delay: -6.8s; top: 56%;  left: 0.5%;  width: 99%; }
 .orbit-1:after  { animation-delay: -6.8s; height: 4px;  width: 4px;  background-color: #f59e0b; }
 .orbit-2  { animation: orbit-rotate 10s linear infinite; animation-delay: -0.3s; top: 77%;  left: 8%;    width: 84%; }
@@ -336,7 +372,15 @@ const videoUrl = computed(() => {
   scroll-margin-top: 5.5rem;
 }
 
-/* ===== NUEVO: fila explicación + video ===== */
+.tools-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0 0 1.5rem;
+  text-align: center;
+}
+
+/* ===== Fila explicación + video ===== */
 .explainer-row {
   display: flex;
   align-items: stretch;
@@ -347,12 +391,12 @@ const videoUrl = computed(() => {
 }
 
 .explainer {
-  flex: 1 1 55%;
+  flex: 1 1 50%;
   background-color: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: 1.25rem;
   padding: 1.75rem 2rem;
-  margin-bottom: 0;      /* el margen lo lleva .explainer-row ahora */
+  margin-bottom: 0;
   text-align: left;
 }
 
@@ -370,10 +414,11 @@ const videoUrl = computed(() => {
   margin: 0;
 }
 
-/* ===== NUEVO: contenedor del video ===== */
+/* ===== Contenedor del video ===== */
 .explainer-video {
-  flex: 1 1 45%;
+  flex: 1 1 50%;
   position: relative;
+  
   border-radius: 1.25rem;
   overflow: hidden;
   border: 1px solid var(--border-color);
@@ -392,7 +437,6 @@ const videoUrl = computed(() => {
   display: block;
 }
 
-/* Halo sutil en dark mode para que combine con el título */
 [data-theme='dark'] .explainer-video {
   box-shadow:
     0 0 0 1px rgba(168, 85, 247, 0.15),
@@ -400,7 +444,74 @@ const videoUrl = computed(() => {
     0 8px 30px rgba(0, 0, 0, 0.3);
 }
 
-/* Responsive: se apilan en pantallas medianas y pequeñas */
+/* ===== Bloque info (texto + imagen) ===== */
+.info-block {
+  width: 100%;
+  text-align: left;
+  margin-bottom: 3rem;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 1.25rem;
+  padding: 1.75rem 2rem;
+}
+
+.info-subtitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 1.25rem 0 0.5rem;
+}
+
+.info-list {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.65;
+  padding-left: 1.25rem;
+  margin: 0.75rem 0;
+}
+
+.info-list li {
+  margin-bottom: 0.5rem;
+}
+
+.info-note {
+  background-color: var(--accent-soft-bg);
+  border-left: 3px solid var(--accent-solid);
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin: 1rem 0;
+}
+
+.info-image {
+  width: 100%;
+  border-radius: 1rem;
+  margin-top: 1rem;
+  border: 1px solid var(--border-color);
+}
+
+/* ===== Grid de dos columnas para los bloques info ===== */
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  width: 100%;
+  margin-bottom: 3rem;
+}
+
+.info-grid .info-block {
+  margin-bottom: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Empuja la imagen al fondo del bloque para que ambas queden alineadas */
+.info-grid .info-block .info-image {
+  margin-top: auto;
+}
+
+/* ===== Responsive ===== */
 @media (max-width: 900px) {
   .explainer-row {
     flex-direction: column;
@@ -410,6 +521,11 @@ const videoUrl = computed(() => {
   .explainer-video {
     flex: 1 1 auto;
     width: 100%;
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
   }
 }
 
@@ -423,7 +539,8 @@ const videoUrl = computed(() => {
     padding: 2.5rem 1rem 3rem;
   }
 
-  .explainer {
+  .explainer,
+  .info-block {
     padding: 1.25rem 1.5rem;
   }
 

@@ -48,6 +48,7 @@ defineEmits(['navigate', 'toggle-theme'])
 const navItems = [
   { id: 'home', label: 'Inicio' },
   { id: 'algoritmos', label: 'Algoritmos' },
+  { id: 'herramientas', label: 'Herramientas' },
   { id: 'about', label: 'Quiénes somos' }
 ]
 </script>

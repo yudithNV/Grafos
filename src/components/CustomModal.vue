@@ -128,7 +128,7 @@ watch(() => props.modelValue, (isActive) => {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 300;
+  z-index: 10000; /* 🔥 FIX: antes 300, ahora por encima del selector de grafos (9999) */
   display: flex;
   align-items: center;
   justify-content: center;
