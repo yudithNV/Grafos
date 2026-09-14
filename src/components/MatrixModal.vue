@@ -2,7 +2,7 @@
   <Transition name="fade">
     <div v-if="show" class="matrix-backdrop" @mousedown.self="close">
       <Transition name="scale">
-        <div class="matrix-container" @mousedown.stop">
+        <div class="matrix-container" @mousedown.stop>
           <div class="matrix-header">
             <h3 class="matrix-title">Matriz de Adyacencia</h3>
             <button @click="close" class="btn-close">
@@ -85,11 +85,13 @@ const props = defineProps({
   show: Boolean,
   nodes: {
     type: Array,
-    required: true
+    required: true,
+    default: () => []
   },
   edges: {
     type: Array,
-    required: true
+    required: true,
+    default: () => []
   }
 })
 
@@ -104,7 +106,7 @@ const matrixData = computed(() => {
     const sourceIdx = props.nodes.findIndex(n => n.id === edge.sourceId)
     const targetIdx = props.nodes.findIndex(n => n.id === edge.targetId)
     if (sourceIdx !== -1 && targetIdx !== -1) {
-      matrix[sourceIdx][targetIdx] = edge.weight
+      matrix[sourceIdx][targetIdx] = Number(edge.weight) || 0
     }
   })
 
