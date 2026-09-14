@@ -19,10 +19,10 @@
             <h4 class="modal-title">¿Qué deseas hacer?</h4>
             <div class="modal-buttons">
               <button @click="choose('minimize')" class="btn-minimize">
-                ⚡ Minimizar Costo
+                Minimizacion de Costos
               </button>
               <button @click="choose('maximize')" class="btn-maximize">
-                🔥 Maximizar Beneficio
+                Maximizacion de Costos
               </button>
             </div>
             <button @click="close" class="btn-cancel">Cancelar</button>

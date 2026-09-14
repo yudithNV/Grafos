@@ -235,123 +235,118 @@
     />
 
     <!-- Modal de Resolución Paso a Paso -->
-    <Transition name="fade">
-      <div v-if="isStepsModalOpen" class="matrix-backdrop" @mousedown.self="isStepsModalOpen = false">
-        <Transition name="scale">
-          <div class="matrix-container solver-modal-container" @mousedown.stop>
-            <div class="matrix-header">
-              <h3 class="matrix-title">
-                Resolución Óptima ({{ solverMode === 'minimize' ? 'Minimización' : 'Maximización' }})
-              </h3>
-              <button @click="isStepsModalOpen = false" class="btn-close">
-                <X class="icon-close" />
-              </button>
-            </div>
-
-            <div class="matrix-scroll solver-steps-scroll">
-              <div class="solver-mode-selector">
-                <span class="mode-selector-label">Objetivo:</span>
-                <div class="mode-buttons">
-                  <button 
-                    class="btn-mode" 
-                    :class="{ 'btn-mode-active': solverMode === 'minimize' }"
-                    @click="executeSolver('minimize')"
-                  >
-                    ⚡ Minimizar Costo
-                  </button>
-                  <button 
-                    class="btn-mode" 
-                    :class="{ 'btn-mode-active': solverMode === 'maximize' }"
-                    @click="executeSolver('maximize')"
-                  >
-                    🔥 Maximizar Beneficio
-                  </button>
-                </div>
-              </div>
-
-              <div v-if="solverMode === 'maximize'" class="step-card step-conversion">
-                <span class="step-title">Paso 0: Conversión por Maximización</span>
-                <p class="step-desc">
-                  Elemento Máximo Global ($M$) = <strong>{{ solverResult.maxWeight }}</strong>. Matriz invertida de costos calculada como $C'_{ij} = M - C_{ij}$.
-                </p>
-              </div>
-
-              <div class="step-card">
-                <span class="step-title">Paso 1: Reducción por Filas (&alpha;)</span>
-                <div class="vector-list">
-                  <div v-for="(val, idx) in solverResult.alpha" :key="'alpha_' + idx" class="vector-item">
-                    &alpha;({{ nodes[idx]?.label }}): <strong>{{ val }}</strong>
-                  </div>
-                </div>
-              </div>
-
-              <div class="step-card">
-                <span class="step-title">Paso 2: Reducción por Columnas (&beta;)</span>
-                <div class="vector-list">
-                  <div v-for="(val, idx) in solverResult.beta" :key="'beta_' + idx" class="vector-item">
-                    &beta;({{ nodes[idx]?.label }}): <strong>{{ val }}</strong>
-                  </div>
-                </div>
-              </div>
-
-              <div class="step-card">
-                <span class="step-title">Paso 3: Matriz Reducida Final</span>
-                <table class="matrix-table">
-                  <thead>
-                    <tr>
-                      <th class="th-corner">De \ A</th>
-                      <th v-for="node in nodes" :key="'col_' + node.id" class="th-node">{{ node.label }}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="(row, i) in solverResult.finalMatrix" :key="'row_' + i">
-                      <td class="td-node">{{ nodes[i]?.label }}</td>
-                      <td 
-                        v-for="(val, j) in row" 
-                        :key="'cell_' + j" 
-                        class="td-cell"
-                        :class="{ 'td-zero': val === 0 }"
-                      >
-                        {{ val === solverResult.INF || val >= 1000000 ? '—' : val }}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              <div class="step-card result-summary">
-                <span class="step-title">Asignación Óptima Encontrada:</span>
-                <div v-if="solverResult.assignments && solverResult.assignments.length > 0" class="assignments-tags">
-                  <div v-for="(item, idx) in solverResult.assignments" :key="idx" class="assignment-tag">
-                    <span class="tag-edge">{{ item.sourceLabel }} → {{ item.targetLabel }}</span>
-                    <span class="tag-weight">Peso: {{ item.weight }}</span>
-                  </div>
-                </div>
-                <p v-else class="no-assignments-text">
-                  No se encontraron suficientes ceros independientes para cubrir todos los nodos. Intenta añadir más conexiones.
-                </p>
-                <div class="optimal-total-bar">
-                  <span>{{ solverMode === 'minimize' ? 'Costo Total Mínimo:' : 'Beneficio Total Máximo:' }}</span>
-                  <strong class="total-number">{{ solverResult.totalCost }}</strong>
-                </div>
-              </div>
-            </div>
-
-            <div class="matrix-footer">
-              <button @click="applySolutionOnCanvas" class="btn-apply-solution">
-                🎯 Ver Solución en Lienzo
-              </button>
-              <button @click="isStepsModalOpen = false" class="btn-close-modal">
-                Cerrar
-              </button>
-            </div>
-          </div>
-        </Transition>
+<div v-if="isStepsModalOpen" class="modal-overlay" @click.self="isStepsModalOpen = false">
+  <div class="modal-card">
+    
+    <!-- Cabecera -->
+    <div class="modal-header">
+      <div class="header-title-group">
+        <h3 class="modal-title">Resolución Paso a Paso</h3>
+        <span class="algorithm-badge" v-if="solverResult?.metodo">
+          {{ solverResult.metodo }}
+        </span>
       </div>
-    </Transition>
+      <button @click="isStepsModalOpen = false" class="btn-close-icon">&times;</button>
+    </div>
+
+    <!-- Cuerpo -->
+    <div class="modal-body">
+      
+      <!-- Métricas -->
+      <div class="metrics-grid" v-if="solverResult">
+        <div class="metric-card highlight">
+          <span class="metric-label">
+            {{ solverMode === 'maximize' ? 'Beneficio Total Máximo' : 'Costo Total Óptimo' }}
+          </span>
+          <span class="metric-value">{{ solverResult.costoTotal ?? 0 }}</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Asignaciones</span>
+          <span class="metric-value">{{ solverResult.asignaciones?.length ?? 0 }}</span>
+        </div>
+      </div>
+
+      <!-- Resumen de Asignaciones Óptimas -->
+      <div class="section-container" v-if="solverResult?.asignaciones?.length">
+        <h4 class="section-heading">Resumen de Asignaciones Óptimas</h4>
+        <div class="table-wrapper">
+          <table class="result-table">
+            <thead>
+              <tr>
+                <th>Origen</th>
+                <th class="arrow-header"></th>
+                <th>Destino</th>
+                <th>{{ solverMode === 'maximize' ? 'Beneficio Original' : 'Costo Original' }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(asig, index) in solverResult.asignaciones" :key="index">
+                <td class="font-medium">{{ asig.origen }}</td>
+                <td class="arrow-cell">→</td>
+                <td class="font-medium">{{ asig.destino }}</td>
+                <td class="cost-badge">{{ asig.costo }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Evolución de la Matriz (Pasos) -->
+      <div class="section-container" v-if="solverResult?.pasos?.length">
+        <h4 class="section-heading">Evolución de la Matriz</h4>
+        
+        <div class="steps-accordion">
+          <div v-for="(paso, pIndex) in solverResult.pasos" :key="pIndex" class="step-card">
+            <span class="step-title">{{ paso.titulo }}</span>
+            <p class="step-desc">{{ paso.descripcion }}</p>
+
+            <!-- Renderizado de Matriz por Paso -->
+            <div class="matrix-preview-wrapper" v-if="paso.matrix && paso.matrix.length">
+                <table class="step-matrix-table">
+                <thead>
+                  <tr>
+                    <th class="corner-cell">De \ A</th>
+                    <!-- Usa colLabels -->
+                    <th v-for="(colLabel, cIdx) in paso.colLabels" :key="'col_' + cIdx">
+                      {{ colLabel }}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(row, rIdx) in paso.matrix" :key="'row_' + rIdx">
+                    <!-- Usa rowLabels -->
+                    <td class="row-label-cell">{{ paso.rowLabels[rIdx] }}</td>
+                    <td 
+                      v-for="(val, cIdx) in row" 
+                      :key="'cell_' + cIdx"
+                      :class="{ 
+                        'zero-cell': val === 0,
+                        'assigned-cell': isAssignedCell(paso.asignaciones, rIdx, cIdx)
+                      }"
+                    >
+                      {{ val === solverResult.INF || val >= 1000000 ? '—' : val }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Pie -->
+    <div class="modal-footer">
+      <button @click="isStepsModalOpen = false" class="btn-primary">Aceptar</button>
+    </div>
 
   </div>
+</div>
+  </div>
 </template>
+
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
@@ -489,8 +484,17 @@ const openSolverChoiceModal = () => {
 }
 
 const handleSolverChoice = (mode) => {
+  solverMode.value = mode
+  
+  // 1. Ejecuta el algoritmo con las props actualizadas
+  const result = solveAlgorithm(props.nodes, props.edges, mode)
+  solverResult.value = result
+
+  // 2. Transmite el resultado para iluminar las aristas óptimas
+  emit('solution-found', result)
+
+  // 3. Cierra el selector y abre el modal paso a paso
   showSolverChoiceModal.value = false
-  executeSolver(mode)
   isStepsModalOpen.value = true
 }
 
@@ -502,6 +506,11 @@ const executeSolver = (mode) => {
 const applySolutionOnCanvas = () => {
   emit('solution-found', solverResult.value)
   isStepsModalOpen.value = false
+}
+
+const isAssignedCell = (asignaciones, rIdx, cIdx) => {
+  if (!asignaciones) return false
+  return asignaciones.some(a => a.rowIdx === rIdx && a.colIdx === cIdx)
 }
 
 const hasDirectedPath = (startId, endId, visited = new Set()) => {
@@ -1546,4 +1555,257 @@ const onTouchEnd = () => {
   transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
 }
 .scale-enter-from, .scale-leave-to { transform: scale(0.92); opacity: 0; }
+/* Modal Overlay y Contenedor */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.modal-card {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 720px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+  color: #f8fafc;
+  overflow: hidden;
+}
+
+/* Cabecera */
+.modal-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #334155;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.modal-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #f8fafc;
+  margin: 0;
+}
+
+.algorithm-badge {
+  background: #312e81;
+  color: #a5b4fc;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.6rem;
+  border-radius: 9999px;
+  border: 1px solid #4338ca;
+}
+
+.btn-close-icon {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 1.5rem;
+  cursor: pointer;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.btn-close-icon:hover {
+  color: #f8fafc;
+}
+
+/* Cuerpo */
+.modal-body {
+  padding: 1.5rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Tarjetas de Métricas */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.metric-card {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.metric-card.highlight {
+  border-color: #6366f1;
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.metric-label {
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.metric-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #38bdf8;
+}
+
+/* Secciones y Tablas */
+.section-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.section-heading {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #cbd5e1;
+  margin: 0;
+}
+
+.table-wrapper {
+  border: 1px solid #334155;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.result-table, .step-matrix-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.result-table th, .step-matrix-table th {
+  background: #0f172a;
+  color: #94a3b8;
+  padding: 0.75rem;
+  font-weight: 600;
+  border-bottom: 1px solid #334155;
+}
+
+.result-table td, .step-matrix-table td {
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid #1e293b;
+  color: #e2e8f0;
+}
+
+.font-medium {
+  font-weight: 500;
+}
+
+.arrow-cell {
+  color: #6366f1;
+}
+
+.cost-badge {
+  color: #38bdf8;
+  font-weight: 600;
+}
+
+/* Acordeón de Pasos y Matrices */
+.steps-accordion {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.step-card {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.step-title {
+  font-weight: 600;
+  color: #818cf8;
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.step-desc {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  margin: 0 0 0.75rem 0;
+}
+
+.matrix-preview-wrapper {
+  overflow-x: auto;
+}
+
+.step-matrix-table {
+  border: 1px solid #334155;
+}
+
+.step-matrix-table td, .step-matrix-table th {
+  border: 1px solid #334155;
+}
+
+.corner-cell, .row-label-cell {
+  background: #1e293b !important;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.zero-cell {
+  background: rgba(234, 179, 8, 0.15);
+  color: #facc15;
+  font-weight: 700;
+}
+
+.assigned-cell {
+  background: rgba(34, 197, 94, 0.25) !important;
+  color: #4ade80 !important;
+  font-weight: 700;
+  border: 1px solid #22c55e !important;
+}
+
+/* Pie de Modal */
+.modal-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #334155;
+  display: flex;
+  justify-content: flex-end;
+  background: #0f172a;
+}
+
+.btn-primary {
+  background: #6366f1;
+  color: #ffffff;
+  border: none;
+  padding: 0.5rem 1.25rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-primary:hover {
+  background: #4f46e5;
+}
 </style>
