@@ -93,14 +93,14 @@ const cards = [
     comingSoon: false // ← Cambiar de true a false
   },
   {
-    id: 'johnson',
-    title: 'Algoritmo de Johnson',
-    desc: 'Encuentra los caminos más cortos entre todos los pares de vértices en un grafo con pesos.',
-    icon: Network,
-    iconBg: 'linear-gradient(135deg, #6366f1, #06b6d4)',
-    image: null,
-    comingSoon: true
-  }
+  id: 'johnson',
+  title: 'Algoritmo de Johnson',
+  desc: 'Encuentra los caminos más cortos entre todos los pares de vértices en un grafo con pesos.',
+  icon: Network,
+  iconBg: 'linear-gradient(135deg, #6366f1, #06b6d4)',
+  image: null,
+  comingSoon: false
+}
 ]
 
 const scrollBy = (direction) => {

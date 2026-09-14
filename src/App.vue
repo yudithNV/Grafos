@@ -1,26 +1,13 @@
 <template>
   <div class="app-root" :class="{ 'app-root-fixed': currentView === 'canvas' }">
     <!-- Navbar -->
-    <Navbar
-      v-if="currentView !== 'canvas'"
-      :current="currentView"
-      :theme="theme"
-      @navigate="goTo"
-      @toggle-theme="toggleTheme"
-    />
+    <Navbar v-if="currentView !== 'canvas'" :current="currentView" :theme="theme" @navigate="goTo"
+      @toggle-theme="toggleTheme" />
 
     <!-- Views -->
-    <HomeView
-      v-if="currentView === 'home'"
-      mode="home"
-      @select="onSelectAlgorithm"
-    />
+    <HomeView v-if="currentView === 'home'" mode="home" @select="onSelectAlgorithm" />
 
-    <HomeView
-      v-else-if="currentView === 'algoritmos'"
-      mode="algoritmos"
-      @select="onSelectAlgorithm"
-    />
+    <HomeView v-else-if="currentView === 'algoritmos'" mode="algoritmos" @select="onSelectAlgorithm" />
 
     <AboutView v-else-if="currentView === 'about'" />
 
@@ -28,7 +15,25 @@
       v-if="currentView === 'canvas' && selectedAlgorithm === 'grafos'"
       :nodes="nodes"
       :edges="edges"
+      :mode="canvasMode"
       algorithm-type="grafos"
+      @back="backToWelcome"
+      @show-instructions="showInstructionsModal"
+      @show-matrix="showMatrixModal"
+      @save="handleSaveGraph"
+      @clear="confirmClearCanvas"
+      @create-node="handleCreateNodeRequest"
+      @create-edge="handleCreateEdgeRequest"
+      @edit-node="handleEditNodeRequest"
+      @edit-edge="handleEditEdgeRequest"
+      @delete-node="handleDeleteNodeRequest"
+      @delete-edge="handleDeleteEdgeRequest"
+    />
+    <GraphCanvas
+      v-else-if="currentView === 'canvas' && selectedAlgorithm === 'johnson'"
+      :nodes="nodes"
+      :edges="edges"
+      :mode="canvasMode"
       @back="backToWelcome"
       @show-instructions="showInstructionsModal"
       @show-matrix="showMatrixModal"
@@ -87,6 +92,7 @@
       :edges="edges"
       :show-solver="selectedAlgorithm === 'asignacion'"
       :algorithm-type="selectedAlgorithm"
+      :mode="canvasMode"
       @close="showMatrix = false"
       @solution-found="handleSolutionFound"
     />
@@ -104,12 +110,7 @@
           En este modo puedes crear grafos con aristas de ida y vuelta, auto-bucles y pesos negativos.
         </div>
         <div class="graph-selector-list">
-          <div 
-            v-for="(graph, index) in savedGraphs" 
-            :key="index"
-            class="graph-item"
-            @click="loadSelectedGraph(index)"
-          >
+          <div v-for="(graph, index) in savedGraphs" :key="index" class="graph-item" @click="loadSelectedGraph(index)">
             <div class="graph-item-info">
               <span class="graph-item-name">{{ graph.name || `Grafo ${index + 1}` }}</span>
               <span class="graph-item-date">{{ graph.date }}</span>
@@ -120,7 +121,7 @@
             </div>
             <button @click.stop="deleteSavedGraph(index)" class="btn-delete-graph">🗑️</button>
           </div>
-          
+
           <div class="graph-item graph-item-new" @click="createNewGraph">
             <div class="graph-item-info">
               <span class="graph-item-name graph-item-name-new">
@@ -129,7 +130,7 @@
               <span class="graph-item-date">Empezar desde cero</span>
             </div>
           </div>
-          
+
           <div v-if="savedGraphs.length === 0" class="empty-graphs">
             <p>No hay grafos guardados</p>
             <p class="empty-graphs-hint">Haz clic en "Crear Nuevo Grafo" para empezar</p>
@@ -212,6 +213,7 @@ const selectedAlgorithm = ref('grafos')
 const optimalAssignmentEdges = ref([])
 const showAssignmentGraphSelector = ref(false)
 const savedAssignmentGraphs = ref([])
+const canvasMode = ref('normal')
 const scrollToAlgorithms = () => {
   const carousel = document.getElementById('algorithms-carousel')
   carousel?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -393,7 +395,23 @@ const handleCreateEdgeRequest = ({ sourceId, targetId }) => {
     initialValue: 1,
     callback: (value) => {
       const weight = Number(value)
+
       if (isNaN(weight)) return
+
+      // En Johnson no permitir pesos negativos
+      if (canvasMode.value === 'johnson' && weight < 0) {
+
+        setTimeout(() => {
+          openModal({
+            title: '⚠️ Peso no permitido',
+            message: 'En Johnson no se permiten valores negativos. Ingresa un valor mayor o igual a 0.',
+            type: 'confirm'
+          })
+        }, 150)
+
+        return
+      }
+
       edges.value.push({
         id: 'edge_' + Date.now(),
         sourceId,
@@ -439,8 +457,26 @@ const handleEditEdgeRequest = (edge) => {
     initialColor: edge.color || '#64748b',
     callback: (value, color) => {
       const weight = Number(value)
+
       if (isNaN(weight)) return
+
+      // En Johnson no permitir pesos negativos
+      // En Johnson no permitir pesos negativos
+      if (canvasMode.value === 'johnson' && weight < 0) {
+
+        setTimeout(() => {
+          openModal({
+            title: '⚠️ Peso no permitido',
+            message: 'En Johnson no se permiten valores negativos. Ingresa un valor mayor o igual a 0.',
+            type: 'confirm'
+          })
+        }, 150)
+
+        return
+      }
+
       const index = edges.value.findIndex(e => e.id === edge.id)
+
       if (index !== -1) {
         edges.value[index] = { 
           ...edges.value[index], 
@@ -455,7 +491,7 @@ const handleEditEdgeRequest = (edge) => {
 const handleDeleteNodeRequest = (nodeId) => {
   const node = nodes.value.find(n => n.id === nodeId)
   if (!node) return
-  
+
   openModal({
     title: 'Confirmar Eliminación',
     message: `¿Eliminar el nodo "${node.label}" y todas sus conexiones?`,
@@ -470,11 +506,11 @@ const handleDeleteNodeRequest = (nodeId) => {
 const handleDeleteEdgeRequest = (edgeId) => {
   const edge = edges.value.find(e => e.id === edgeId)
   if (!edge) return
-  
+
   const source = nodes.value.find(n => n.id === edge.sourceId)
   const target = nodes.value.find(n => n.id === edge.targetId)
   const label = `${source?.label || '?'} → ${target?.label || '?'}`
-  
+
   openModal({
     title: 'Confirmar Eliminación',
     message: `¿Eliminar la arista ${label} con peso ${edge.weight}?`,
@@ -506,30 +542,42 @@ const saveGraph = (name = null) => {
 
   let finalName = name
   if (!finalName) {
-    if (currentGraphIndex.value >= 0 && currentGraphIndex.value < currentList.length) {
-      finalName = currentList[currentGraphIndex.value].name
+    const currentGraph = isAssignment
+      ? currentList[currentGraphIndex.value]
+      : currentList.find(graph => graph._storageIndex === currentGraphIndex.value)
+    if (currentGraph) {
+      finalName = currentGraph.name
     } else {
       finalName = `${isAssignment ? 'Grafo Asignación' : 'Grafo'} ${new Date().toLocaleString()}`
     }
   }
-  
+
+  // Nombre automático
+  if (!finalName) {
+    finalName = `Grafo ${new Date().toLocaleString()}`
+  }
+
   const data = {
     name: finalName,
     date: new Date().toLocaleString(),
-    nodes: nodes.value,
-    edges: edges.value
+
+    // IMPORTANTE:
+    // guardar si pertenece a Pizarra o Johnson
+    mode: canvasMode.value,
+
+    nodes: JSON.parse(JSON.stringify(nodes.value)),
+    edges: JSON.parse(JSON.stringify(edges.value))
   }
-  
   const saved = localStorage.getItem(storageKey)
   let graphs = saved ? JSON.parse(saved) : []
-  
+
   if (currentGraphIndex.value >= 0 && currentGraphIndex.value < graphs.length) {
     graphs[currentGraphIndex.value] = data
-  } else {
+  }
+  else {
     graphs.push(data)
     currentGraphIndex.value = graphs.length - 1
   }
-  
   localStorage.setItem(storageKey, JSON.stringify(graphs))
   if (isAssignment) {
     loadSavedAssignmentGraphsList()
@@ -548,14 +596,16 @@ const handleSaveGraph = () => {
     })
     return
   }
-  
   const isAssignment = selectedAlgorithm.value === 'asignacion'
   const currentList = isAssignment ? savedAssignmentGraphs.value : savedGraphs.value
   let currentName = isAssignment ? 'Grafo Asignación sin nombre' : 'Grafo sin nombre'
-  if (currentGraphIndex.value >= 0 && currentGraphIndex.value < currentList.length) {
-    currentName = currentList[currentGraphIndex.value].name || currentName
+  const currentGraph = isAssignment
+    ? currentList[currentGraphIndex.value]
+    : currentList.find(graph => graph._storageIndex === currentGraphIndex.value)
+  if (currentGraph?.name) {
+    currentName = currentGraph.name
   }
-  
+
   openModal({
     title: 'Guardar Grafo',
     iconName: 'save',  
@@ -586,18 +636,38 @@ const onSelectAlgorithm = (id) => {
   selectedAlgorithm.value = id
 
   if (id === 'grafos') {
+    canvasMode.value = 'normal'
+    nodes.value = []
+    edges.value = []
+    currentGraphIndex.value = -1
     loadSavedGraphsList()
     showGraphSelector.value = true
+
     return
   }
 
   if (id === 'asignacion') {
+    canvasMode.value = 'normal'
     loadSavedAssignmentGraphsList()
     showAssignmentGraphSelector.value = true
     return
   }
 
-  // Solo salta si el id no está implementado
+  if (id === 'johnson') {
+    canvasMode.value = 'johnson'
+
+    nodes.value = []
+    edges.value = []
+    currentGraphIndex.value = -1
+
+    // Cargar SOLO grafos Johnson
+    loadSavedGraphsList()
+
+    // Mostrar el mismo selector
+    showGraphSelector.value = true
+
+    return
+  }
   openModal({
     title: 'Próximamente',
     iconName: 'construction',    // ← agrega esto
@@ -608,7 +678,21 @@ const onSelectAlgorithm = (id) => {
 
 const loadSavedGraphsList = () => {
   const saved = localStorage.getItem('savedGraphs')
-  savedGraphs.value = saved ? JSON.parse(saved) : []
+  const allGraphs = saved ? JSON.parse(saved) : []
+
+  // Filtrar según el modo actual
+  savedGraphs.value = allGraphs
+    .map((graph, storageIndex) => ({
+      ...graph,
+
+      // Los grafos viejos que no tienen mode
+      // se consideran grafos normales de Pizarra
+      mode: graph.mode || 'normal',
+
+      // Guardamos la posición REAL en localStorage
+      _storageIndex: storageIndex
+    }))
+    .filter(graph => graph.mode === canvasMode.value)
 }
 
 const loadSavedAssignmentGraphsList = () => {
@@ -622,7 +706,7 @@ const loadSelectedGraph = (index) => {
     nodes.value = JSON.parse(JSON.stringify(graph.nodes))
     edges.value = JSON.parse(JSON.stringify(graph.edges))
     optimalAssignmentEdges.value = []
-    currentGraphIndex.value = index
+    currentGraphIndex.value = graph._storageIndex ?? index
     showGraphSelector.value = false
     currentView.value = 'canvas'
   }
@@ -642,20 +726,43 @@ const loadSelectedAssignmentGraph = (index) => {
 
 const deleteSavedGraph = (index) => {
   const graph = savedGraphs.value[index]
+
   if (!graph) return
-  
+
   openModal({
     title: 'Confirmar Eliminación',
-    message: `¿Eliminar el grafo "${graph.name || `Grafo ${index + 1}`}"? Esta acción no se puede deshacer.`,
+
+    message:
+      `¿Eliminar el grafo "${graph.name || `Grafo ${index + 1}`}"? Esta acción no se puede deshacer.`,
+
     type: 'confirm',
+
     callback: () => {
-      const graphs = JSON.parse(localStorage.getItem('savedGraphs') || '[]')
-      graphs.splice(index, 1)
-      localStorage.setItem('savedGraphs', JSON.stringify(graphs))
-      loadSavedGraphsList()
-      if (currentGraphIndex.value === index) {
+      const graphs =
+        JSON.parse(
+          localStorage.getItem('savedGraphs') || '[]'
+        )
+
+      // Índice REAL dentro de localStorage
+      const storageIndex =
+        graph._storageIndex
+
+      graphs.splice(storageIndex, 1)
+
+      localStorage.setItem(
+        'savedGraphs',
+        JSON.stringify(graphs)
+      )
+
+      if (
+        currentGraphIndex.value === storageIndex
+      ) {
         currentGraphIndex.value = -1
       }
+
+      // Volver a cargar solamente
+      // los grafos del modo actual
+      loadSavedGraphsList()
     }
   })
 }
@@ -961,10 +1068,12 @@ const showMatrixModal = () => {
     max-height: 90vh;
     border-radius: 0.75rem;
   }
+
   .graph-item {
     flex-wrap: wrap;
     gap: 0.5rem;
   }
+
   .graph-item-stats {
     font-size: 0.65rem;
   }
