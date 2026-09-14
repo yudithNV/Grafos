@@ -236,7 +236,24 @@ const handleCreateEdgeRequest = ({ sourceId, targetId }) => {
     initialValue: 1,
     callback: (value) => {
       const weight = Number(value)
+
       if (isNaN(weight)) return
+
+      
+      // En Johnson no permitir pesos negativos
+      if (canvasMode.value === 'johnson' && weight < 0) {
+
+        setTimeout(() => {
+          openModal({
+            title: '⚠️ Peso no permitido',
+            message: 'En Johnson no se permiten valores negativos. Ingresa un valor mayor o igual a 0.',
+            type: 'confirm'
+          })
+        }, 150)
+
+        return
+      }
+
       edges.value.push({
         id: 'edge_' + Date.now(),
         sourceId,
@@ -274,10 +291,31 @@ const handleEditEdgeRequest = (edge) => {
     initialValue: edge.weight,
     callback: (value) => {
       const weight = Number(value)
+
       if (isNaN(weight)) return
+
+      // En Johnson no permitir pesos negativos
+      // En Johnson no permitir pesos negativos
+      if (canvasMode.value === 'johnson' && weight < 0) {
+
+        setTimeout(() => {
+          openModal({
+            title: '⚠️ Peso no permitido',
+            message: 'En Johnson no se permiten valores negativos. Ingresa un valor mayor o igual a 0.',
+            type: 'confirm'
+          })
+        }, 150)
+
+        return
+      }
+
       const index = edges.value.findIndex(e => e.id === edge.id)
+
       if (index !== -1) {
-        edges.value[index] = { ...edges.value[index], weight }
+        edges.value[index] = {
+          ...edges.value[index],
+          weight
+        }
       }
     }
   })
