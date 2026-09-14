@@ -83,11 +83,12 @@
           <span>Matriz</span>
         </button>
 
-        <button @click="$emit('show-instructions')" class="btn-text">
+        <button @click="$emit('show-instructions', esJohnson ? 'johnson' : 'grafos')" class="btn-text">
           <BookOpen class="btn-icon" />
           <span>Manual</span>
         </button>
         <button v-if="esJohnson" @click="ejecutarJohnson" class="btn-text">
+          <Play class="btn-icon" />
           Ejecutar Johnson
         </button>
 
@@ -347,7 +348,8 @@ import {
   Link,
   Hand,
   Eraser,
-  Pencil
+  Pencil,
+  Play
 } from '@lucide/vue'
 
 import { calcularJohnson } from './utils/johnson'
@@ -548,19 +550,13 @@ const resetJohnson = () => {
 // ======================================
 
 watch(
-
-  () => props.nodes.length,
-
-  (cantidad, anterior) => {
-
-    if (anterior > 0 && cantidad === 0) {
-
-      resetJohnson()
-
-    }
-
+  () => [
+    props.nodes.map(node => `${node.id}:${node.label}:${node.x}:${node.y}`).join('|'),
+    props.edges.map(edge => `${edge.id}:${edge.sourceId}:${edge.targetId}:${edge.weight}`).join('|')
+  ],
+  () => {
+    resetJohnson()
   }
-
 )
 
 
@@ -614,6 +610,21 @@ const animarCaminoCritico = () => {
 
 const ejecutarJohnson = () => {
   try {
+    if (props.nodes.length === 0) {
+      mostrarAlerta(
+        'Lienzo vacio',
+        'Crea nodos antes de ejecutar Johnson.'
+      )
+      return
+    }
+
+    if (props.edges.length === 0) {
+      mostrarAlerta(
+        'Sin conexiones',
+        'Crea al menos una arista antes de ejecutar Johnson.'
+      )
+      return
+    }
 
     // 1. Ejecutar algoritmo
     johnsonResult.value = calcularJohnson(
@@ -634,7 +645,11 @@ const ejecutarJohnson = () => {
     animarCaminoCritico()
 
   } catch (error) {
-    alert(error.message)
+    mostrarAlerta(
+      'No se pudo ejecutar Johnson',
+      error.message,
+      'danger'
+    )
   }
 }
 
@@ -1192,6 +1207,10 @@ const confirmClear = () => {
 
 .canvas-alert-warning {
   border-color: #f59e0b;
+}
+
+.canvas-alert-danger {
+  border-color: #ef4444;
 }
 
 .canvas-alert-icon {

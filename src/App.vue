@@ -103,11 +103,15 @@
     <div v-if="showGraphSelector" class="graph-selector-overlay" @click.self="showGraphSelector = false">
       <div class="graph-selector-modal">
         <div class="graph-selector-header">
-          <h3>Cargar Grafo Guardado</h3>
+          <h3>{{ selectedAlgorithm === 'johnson' ? 'Cargar Grafo Johnson' : 'Cargar Grafo Guardado' }}</h3>
           <button @click="showGraphSelector = false" class="btn-close-selector">✕</button>
         </div>
         <div class="assignment-selector-info">
-          En este modo puedes crear grafos con aristas de ida y vuelta, auto-bucles y pesos negativos.
+          {{
+            selectedAlgorithm === 'johnson'
+              ? 'En Johnson crea un grafo dirigido aciclico con pesos no negativos para calcular ruta critica, ida, regreso y holguras.'
+              : 'En este modo puedes crear grafos con aristas de ida y vuelta, auto-bucles y pesos negativos.'
+          }}
         </div>
         <div class="graph-selector-list">
           <div v-for="(graph, index) in savedGraphs" :key="index" class="graph-item" @click="loadSelectedGraph(index)">
@@ -125,7 +129,7 @@
           <div class="graph-item graph-item-new" @click="createNewGraph">
             <div class="graph-item-info">
               <span class="graph-item-name graph-item-name-new">
-                ➕ Crear Nuevo Grafo
+                {{ selectedAlgorithm === 'johnson' ? 'Crear Nuevo Grafo Johnson' : 'Crear Nuevo Grafo' }}
               </span>
               <span class="graph-item-date">Empezar desde cero</span>
             </div>
@@ -703,6 +707,7 @@ const loadSavedAssignmentGraphsList = () => {
 const loadSelectedGraph = (index) => {
   const graph = savedGraphs.value[index]
   if (graph) {
+    canvasMode.value = graph.mode || (selectedAlgorithm.value === 'johnson' ? 'johnson' : 'normal')
     nodes.value = JSON.parse(JSON.stringify(graph.nodes))
     edges.value = JSON.parse(JSON.stringify(graph.edges))
     optimalAssignmentEdges.value = []
@@ -788,6 +793,7 @@ const deleteSavedAssignmentGraph = (index) => {
 }
 
 const createNewGraph = () => {
+  canvasMode.value = selectedAlgorithm.value === 'johnson' ? 'johnson' : 'normal'
   nodes.value = []
   edges.value = []
   optimalAssignmentEdges.value = []
@@ -814,9 +820,11 @@ const backToWelcome = () => {
 }
 
 const showInstructionsModal = (manual = 'grafos') => {
-  const file = manual === 'asignacion'
-    ? '/manual_asignacion.pdf'
-    : '/Manual_Graphix_Dark.pdf'
+  const file = {
+    asignacion: '/manual_asignacion.pdf',
+    johnson: '/manual_grafos.pdf',
+    grafos: '/Manual_Graphix_Dark.pdf'
+  }[manual] || '/Manual_Graphix_Dark.pdf'
 
   window.open(file, '_blank')
 }
