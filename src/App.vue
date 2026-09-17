@@ -5,9 +5,11 @@
       @toggle-theme="toggleTheme" />
 
     <!-- Views -->
-    <HomeView v-if="currentView === 'home'" mode="home" @select="onSelectAlgorithm" />
+    <HomeView v-if="currentView === 'home'" @select="onSelectAlgorithm" @navigate="goTo" />
 
-    <HomeView v-else-if="currentView === 'algoritmos'" mode="algoritmos" @select="onSelectAlgorithm" />
+    <TheoryView v-else-if="currentView === 'teoria'" />
+
+    <InteractiveView v-else-if="currentView === 'interactivos'" @select="onSelectAlgorithm" />
 
     <AboutView v-else-if="currentView === 'about'" />
 
@@ -203,6 +205,8 @@
 import { ref, onMounted, nextTick, watch } from 'vue'
 import Navbar from './components/Navbar.vue'
 import HomeView from './components/HomeView.vue'
+import TheoryView from './components/TheoryView.vue'
+import InteractiveView from './components/InteractiveView.vue'
 import AboutView from './components/AboutView.vue'
 import GraphCanvas from './components/GraphCanvas.vue'
 import CustomModal from './components/CustomModal.vue'
@@ -218,31 +222,7 @@ const optimalAssignmentEdges = ref([])
 const showAssignmentGraphSelector = ref(false)
 const savedAssignmentGraphs = ref([])
 const canvasMode = ref('normal')
-const scrollToAlgorithms = () => {
-  const carousel = document.getElementById('algorithms-carousel')
-  carousel?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-}
-
 const goTo = async (view) => {
-  // Si es "algoritmos" -> scroll a "¿Qué es un algoritmo?"
-  if (view === 'algoritmos') {
-    currentView.value = 'home'
-    await nextTick()
-    const section = document.getElementById('que-es-algoritmo')
-    section?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    return
-  }
-
-  // Si es "herramientas" -> scroll al carrusel
-  if (view === 'herramientas') {
-    currentView.value = 'home'
-    await nextTick()
-    const carousel = document.getElementById('algorithms-carousel')
-    carousel?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    return
-  }
-
-  // Para el resto (home, about, etc.)
   currentView.value = view
   if (view === 'home') {
     await nextTick()
@@ -389,6 +369,23 @@ const handleCreateEdgeRequest = ({ sourceId, targetId }) => {
   if (existingEdge) {
     handleEditEdgeRequest(existingEdge)
     return
+  }
+
+  // Regla "Duplicidad": un nodo no puede conectarse a OTRO nodo que tenga
+  // exactamente el mismo nombre (sensible a mayúsculas/minúsculas: "A" no
+  // puede conectarse a otra "A", pero sí puede conectarse a "a"). No aplica
+  // a los bucles (un nodo conectándose a sí mismo), que siguen permitidos.
+  if (sourceId !== targetId) {
+    const sourceNode = nodes.value.find(n => n.id === sourceId)
+    const targetNode = nodes.value.find(n => n.id === targetId)
+    if (sourceNode && targetNode && sourceNode.label === targetNode.label) {
+      openModal({
+        title: '⚠️ Conexión no permitida (Duplicidad)',
+        message: `No puedes conectar "${sourceNode.label}" con otro nodo que tenga exactamente el mismo nombre. Cambia el nombre de uno de los dos, o usa mayúsculas/minúsculas distintas (por ejemplo "A" y "a" sí se pueden conectar).`,
+        type: 'confirm'
+      })
+      return
+    }
   }
 
   openModal({

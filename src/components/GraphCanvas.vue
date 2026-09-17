@@ -78,6 +78,10 @@
           <Save class="btn-icon" />
           <span>Guardar</span>
         </button>
+        <button @click="$emit('open-load')" class="btn-text btn-load-graph" title="Abrir un grafo ya guardado">
+          <FolderOpen class="btn-icon" />
+          <span>Cargar</span>
+        </button>
         <button @click="$emit('show-matrix')" class="btn-text btn-matrix">
           <Grid3x3 class="btn-icon" />
           <span>Matriz</span>
@@ -349,7 +353,8 @@ import {
   Hand,
   Eraser,
   Pencil,
-  Play
+  Play,
+  FolderOpen
 } from '@lucide/vue'
 
 import { calcularJohnson } from './utils/johnson'
@@ -374,6 +379,7 @@ const emit = defineEmits([
   'show-instructions',
   'show-matrix',
   'save',
+  'open-load',
   'clear',
   'create-node',
   'create-edge',
@@ -1586,6 +1592,18 @@ const confirmClear = () => {
   background-color: rgba(22, 163, 74, 0.15);
   border-color: rgba(74, 222, 128, 0.35);
   color: #4ade80;
+}
+
+.btn-load-graph {
+  background-color: #dbeafe;
+  border-color: #93c5fd;
+  color: #2563eb;
+}
+
+[data-theme='dark'] .btn-load-graph {
+  background-color: rgba(37, 99, 235, 0.15);
+  border-color: rgba(96, 165, 250, 0.35);
+  color: #60a5fa;
 }
 
 @media (min-width: 640px) {
