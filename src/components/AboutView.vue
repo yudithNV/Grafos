@@ -55,6 +55,15 @@
               {{ selectedMember.email }}
             </a>
           </div>
+          <div class="modal-email-section">
+            <span class="modal-email-label">
+              <Phone class="modal-email-icon" />
+              Número de contacto:
+            </span>
+            <a :href="`tel:${selectedMember.phone.replace(/\s/g, '')}`" class="modal-email-link">
+              {{ selectedMember.phone }}
+            </a>
+          </div>
 
           <p v-if="selectedMember.bio" class="modal-bio">
             {{ selectedMember.bio }}
@@ -68,7 +77,11 @@
 <script setup>
 import { ref } from 'vue'
 import CanvasBackground from './CanvasBackground.vue'
-import { Mail } from '@lucide/vue'
+import { Mail, Phone } from '@lucide/vue'
+import yerkoImage from '../assets/team/yerko.jpg'
+import jorgeImage from '../assets/team/jorge.jpg'
+import yudithImage from '../assets/team/yudith.jpg'
+import jesusImage from '../assets/team/jesus.jpg'
 
 const showModal = ref(false)
 const selectedMember = ref(null)
@@ -78,28 +91,32 @@ const teamMembers = ref([
     id: 1,
     name: 'Cano Poma, Yerko',
     email: 'yerko.cano@ucb.edu.bo',
-    image: '/src/assets/team/yerko.jpg',
+    phone: '+591 735764434', // 👈 añadir
+    image: yerkoImage,
     bio: 'Sobreviviendo a los grafos y a los bugs de última hora.'
   },
   {
     id: 2,
     name: 'Flores Gutierrez, Jorge',
     email: 'jorge.flores@ucb.edu.bo',
-    image: '/src/assets/team/jorge.jpg',
+    phone: '+591 75850339', // 👈 añadir
+    image: jorgeImage,
     bio: 'Amante del café, las desveladas y los algoritmos que tardan más de lo esperado en correr.'
   },
   {
     id: 3,
     name: 'Noa Vargas, Yudith',
     email: 'yudith.noa@ucb.edu.bo',
-    image: '/src/assets/team/yudith.jpg',
+    phone: '+591 61225796', // 👈 añadir
+    image: yudithImage,
     bio: 'Intentando que la interfaz se vea bonita y no explote cuando alguien dibuje un grafo mal.'
   },
   {
     id: 4,
     name: 'Carlier Fernandez, Jesus',
     email: 'jesus.carlier@ucb.edu.bo',
-    image: '/src/assets/team/jesus.jpg',
+    phone: '+591 75247905', // 👈 añadir
+    image: jesusImage,
     bio: 'Otro miembro más del grupo intentando sobrevivir al semestre.'
   }
 ])
@@ -231,6 +248,7 @@ const closeMemberModal = () => {
   transition: all 0.2s ease;
   cursor: pointer;
   position: relative;
+  min-width: 0;
 }
 
 .team-member:hover {
@@ -260,6 +278,8 @@ const closeMemberModal = () => {
   font-size: 0.9rem;
   font-weight: 500;
   flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .member-email {
@@ -304,6 +324,8 @@ const closeMemberModal = () => {
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   animation: slideUp 0.3s ease;
   position: relative;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
 }
 
 @keyframes slideUp {

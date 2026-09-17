@@ -12,13 +12,18 @@
       <span class="brand-name">Graphix</span>
     </button>
 
-    <div class="navbar-links">
+    <button class="menu-toggle" @click="menuOpen = !menuOpen" :aria-expanded="menuOpen" aria-label="Abrir menú">
+      <X v-if="menuOpen" class="menu-icon" />
+      <Menu v-else class="menu-icon" />
+    </button>
+
+    <div class="navbar-links" :class="{ 'navbar-links-open': menuOpen }">
       <button
         v-for="item in navItems"
         :key="item.id"
         class="nav-link"
         :class="{ 'nav-link-active': current === item.id }"
-        @click="$emit('navigate', item.id)"
+        @click="navigateTo(item.id)"
       >
         {{ item.label }}
       </button>
@@ -36,19 +41,25 @@
 </template>
 
 <script setup>
-import { Sun, Moon } from '@lucide/vue'
+import { ref } from 'vue'
+import { Menu, Moon, Sun, X } from '@lucide/vue'
 
 defineProps({
   current: { type: String, default: 'home' },
   theme: { type: String, default: 'light' }
 })
 
-defineEmits(['navigate', 'toggle-theme'])
+const emit = defineEmits(['navigate', 'toggle-theme'])
+const menuOpen = ref(false)
+const navigateTo = (id) => {
+  menuOpen.value = false
+  emit('navigate', id)
+}
 
 const navItems = [
   { id: 'home', label: 'Inicio' },
-  { id: 'algoritmos', label: 'Algoritmos' },
-  { id: 'herramientas', label: 'Herramientas' },
+  { id: 'teoria', label: 'Fundamentos' },
+  { id: 'interactivos', label: 'Algoritmos Interactivos' },
   { id: 'about', label: 'Quiénes somos' }
 ]
 </script>
@@ -62,8 +73,8 @@ const navItems = [
   padding: 0.75rem 1.5rem;
   
   /* ===== EFECTO GLASSMORPHISM ===== */
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(20px);
+  background: rgba(255, 255, 255, 0);
+  backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
@@ -159,6 +170,8 @@ const navItems = [
   flex: 1;
   justify-content: center;
 }
+.menu-toggle { display: none; border: 1px solid var(--border-color); border-radius: .55rem; padding: .45rem; background: var(--bg-surface); color: var(--text-primary); cursor: pointer; }
+.menu-icon { width: 1.2rem; height: 1.2rem; }
 
 .nav-link {
   padding: 0.5rem 0.9rem;
@@ -259,39 +272,33 @@ const navItems = [
   height: 1.1rem;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 820px) {
   .navbar {
     padding: 0.6rem 0.85rem;
+    flex-wrap: wrap;
   }
   .brand-name {
     font-size: 1rem;
   }
+  .navbar-brand { flex: 1; }
+  .menu-toggle { display: flex; order: 2; }
+  .theme-toggle { order: 3; }
   .navbar-links {
-    gap: 0.1rem;
-  }
-  .nav-link {
-    padding: 0.45rem 0.55rem;
-    font-size: 0.75rem;
-  }
-}
-
-@media (max-width: 420px) {
-  .navbar {
-    flex-wrap: wrap;
-    justify-content: center;
-    row-gap: 0.5rem;
-  }
-  .navbar-brand {
-    order: 1;
-    flex: 1;
-  }
-  .theme-toggle {
-    order: 2;
-  }
-  .navbar-links {
-    order: 3;
+    order: 4;
     flex-basis: 100%;
-    justify-content: center;
+    display: none;
+    flex-direction: column;
+    align-items: stretch;
+    gap: .25rem;
+    padding: .65rem 0 .15rem;
+    border-top: 1px solid var(--border-color);
+  }
+  .navbar-links-open { display: flex; }
+  .nav-link {
+    width: 100%;
+    padding: .7rem .8rem;
+    text-align: left;
+    font-size: .85rem;
   }
 }
 </style>
