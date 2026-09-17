@@ -1,12 +1,13 @@
 <template>
-  <div class="home-view">
-    <!-- BLOQUE 1: BANNER HERO CON ÓRBITAS DENTRO DEL TÍTULO -->
+  <main class="home-view">
+    <!-- HERO PERSONALIZADO CON ÓRBITAS ANIMADAS -->
     <section class="hero-banner">
       <CanvasBackground :show-lines="false" :ball-count="50" />
 
       <div class="hero-orbit-container">
         <h1 class="home-title">
           Graphix
+          <div class="glow-behind-title"></div>
           <div class="orbit orbit-1"></div>
           <div class="orbit orbit-2"></div>
           <div class="orbit orbit-3"></div>
@@ -29,147 +30,64 @@
           <div class="orbit orbit-20"></div>
         </h1>
 
-        <template v-if="mode === 'home'">
-          <p class="home-subtitle">
-            Simulador interactivo para diseñar, conectar y analizar grafos. Explora la teoría de grafos y poner a prueba algoritmos complejos en tiempo real.
-          </p>
-        </template>
-        <template v-else>
-          <p class="home-subtitle">
-            Elige un algoritmo para abrir su pizarra interactiva.
-          </p>
-        </template>
+        <p class="home-subtitle">
+          Simulador interactivo para diseñar, conectar y analizar grafos. Explora la teoría
+          de grafos y pon a prueba algoritmos complejos en tiempo real.
+        </p>
       </div>
     </section>
 
-    <!-- BLOQUE 2: SECCIÓN DE CONTENIDO -->
-    <section class="content-section" v-if="mode === 'home'">
-      <CanvasBackground />
-      <div class="content-container">
-        <!-- Fila con explicación + video -->
-        <div id="que-es-algoritmo" class="explainer-row">
-          <div class="explainer">
-            <h2 class="explainer-title">¿Qué es un algoritmo?</h2>
-            <p class="explainer-text">
-              Un algoritmo es una secuencia ordenada y finita de pasos que resuelve un
-              problema o realiza una tarea. En el contexto de los grafos, un algoritmo
-              recorre nodos y aristas siguiendo reglas específicas —por ejemplo, para
-              encontrar el camino más corto, detectar ciclos o asignar recursos de forma
-              óptima. Explora los algoritmos disponibles abajo.
-            </p>
-          </div>
-
-          <div class="explainer-video">
-            <iframe
-              :src="videoUrl"
-              title="¿Qué es un algoritmo?"
-              frameborder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              referrerpolicy="strict-origin-when-cross-origin"
-              allowfullscreen
-            ></iframe>
-          </div>
-        </div>
-
-        <!-- Grid: dos bloques lado a lado -->
-        <div class="info-grid">
-          <!-- Bloque: elementos de un grafo -->
-          <div class="info-block">
-            <h2 class="explainer-title">Elementos de un grafo</h2>
-            <p class="explainer-text">
-              Un grafo es una estructura formada por <strong>nodos</strong> y
-              <strong>aristas</strong>. Sirve para modelar relaciones entre elementos.
-            </p>
-            <ul class="info-list">
-              <li>
-                <strong>Vértices o Nodos (V):</strong> son los puntos individuales que
-                representan a las entidades o elementos de la red (por ejemplo: ciudades,
-                personas, computadoras o tareas).
-              </li>
-              <li>
-                <strong>Aristas o Arcos (E):</strong> son las líneas que conectan un nodo
-                con otro, representando la relación o interacción entre ellos (por ejemplo:
-                carreteras, amistad, cables de red).
-              </li>
-            </ul>
-
-            <img
-              src="/elementos.png.jpg"
-              alt="Elementos de un grafo"
-              class="info-image"
-            />
-          </div>
-
-          <!-- Bloque: tipos de grafos según sus aristas -->
-          <div class="info-block">
-            <h2 class="explainer-title">Tipos de Grafos según sus aristas</h2>
-
-            <p class="explainer-text">
-              Dependiendo de cómo se comportan sus conexiones (aristas), los grafos se clasifican principalmente en:
-            </p>
-            <ul class="info-list">
-              <li><strong>Dirigido:</strong> las aristas tienen dirección.</li>
-              <li><strong>No dirigido:</strong> las aristas no tienen dirección.</li>
-              <li><strong>Ponderado:</strong> las aristas tienen un peso o valor.</li>
-              <li><strong>No ponderado:</strong> las aristas no tienen un peso o valor.</li>
-            </ul>
-
-            <img
-              src="/tipos.png.jpg"
-              alt="Tipos de grafos según sus aristas"
-              class="info-image"
-            />
-          </div>
-        </div>
-
-        <div id="algorithms-carousel" class="algorithms-anchor">
-          <h2 class="tools-title">Herramientas</h2>
-          <AlgorithmCarousel @select="(id) => $emit('select', id)" />
-        </div>
+    <!-- RESTO DEL CONTENIDO DEL SEGUNDO ARCHIVO -->
+    <section class="home-section">
+      <div class="section-heading">
+        <div><span class="eyebrow">UNA RUTA CLARA</span><h2>Todo lo que necesitas para aprender</h2></div>
+        <p>Estudia el concepto, llévalo a la práctica y comprueba tus resultados en un mismo espacio.</p>
+      </div>
+      <div class="learning-grid">
+        <article class="learning-card">
+          <div class="card-icon purple"><BookOpen :size="22" /></div>
+          <span class="card-number">01</span>
+          <h3>Fundamentos sólidos</h3>
+          <p>Definiciones, representaciones, tipos de grafos y complejidad explicados con ejemplos.</p>
+          <button @click="$emit('navigate', 'teoria')">Ir a Fundamentos <ArrowUpRight :size="16" /></button>
+        </article>
+        <article class="learning-card featured">
+          <div class="card-icon pink"><MousePointer2 :size="22" /></div>
+          <span class="card-number">02</span>
+          <h3>Experimentación visual</h3>
+          <p>Dibuja grafos, asigna pesos y observa cómo se comportan los algoritmos en tiempo real.</p>
+          <button @click="$emit('navigate', 'interactivos')">Abrir pizarras <ArrowUpRight :size="16" /></button>
+        </article>
+        <article class="learning-card">
+          <div class="card-icon blue"><GraduationCap :size="22" /></div>
+          <span class="card-number">03</span>
+          <h3>Aprendizaje activo</h3>
+          <p>Relaciona la teoría con decisiones concretas y construye intuición para resolver problemas.</p>
+          <button @click="$emit('navigate', 'about')">Conocer el proyecto <ArrowUpRight :size="16" /></button>
+        </article>
       </div>
     </section>
 
-    <section class="content-section" v-else>
-      
-      <CanvasBackground />
-      
-      <div class="content-container">
-        
-        <div id="algorithms-carousel" class="algorithms-anchor">
-          <h2 class="tools-title">Herramientas</h2>
-          <AlgorithmCarousel @select="(id) => $emit('select', id)" />
-        </div>
+    <section class="home-section compact-section">
+      <div class="section-heading centered"><div><span class="eyebrow">EN POCAS PALABRAS</span><h2>Una plataforma, tres momentos de aprendizaje</h2></div></div>
+      <div class="steps">
+        <div><span>1</span><h3>Comprende</h3><p>Consulta los conceptos clave antes de comenzar.</p></div>
+        <div><span>2</span><h3>Construye</h3><p>Modela tu propio grafo con nodos, conexiones y pesos.</p></div>
+        <div><span>3</span><h3>Analiza</h3><p>Interpreta el resultado y verifica cada decisión.</p></div>
       </div>
     </section>
-  </div>
+  </main>
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import AlgorithmCarousel from './AlgorithmCarousel.vue'
+import { ArrowRight, ArrowUpRight, BookOpen, CheckCircle2, GraduationCap, MousePointer2 } from '@lucide/vue'
 import CanvasBackground from './CanvasBackground.vue'
 
-defineProps({
-  mode: { type: String, default: 'home' }
-})
-
-defineEmits(['select'])
-
-// 👇 Cambia esto por el link de YouTube que quieras
-const youtubeLink = 'https://www.youtube.com/watch?v=f10jKIslSUY'
-
-// Convierte cualquier formato de link de YouTube a URL de embed
-const videoUrl = computed(() => {
-  const url = youtubeLink
-  const match = url.match(
-    /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/
-  )
-  const id = match ? match[1] : ''
-  return `https://www.youtube.com/embed/${id}`
-})
+defineEmits(['select', 'navigate'])
 </script>
 
 <style scoped>
+/* ===== HERO BANNER PERSONALIZADO ===== */
 .home-view {
   width: 100%;
   background-color: var(--bg-body);
@@ -177,7 +95,6 @@ const videoUrl = computed(() => {
   flex-direction: column;
 }
 
-/* ===== BLOQUE 1: BANNER HERO ===== */
 .hero-banner {
   position: relative;
   overflow: hidden;
@@ -200,6 +117,22 @@ const videoUrl = computed(() => {
   align-items: center;
   text-align: center;
   padding: 3rem 1rem;
+}
+
+/* ===== NIEBLA MORADA DETRÁS DEL TÍTULO ===== */
+.glow-behind-title {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 600px;
+  height: 300px;
+  background: var(--accent-solid);
+  opacity: 0.16;
+  filter: blur(70px);
+  z-index: -1;
+  pointer-events: none;
+  border-radius: 50%;
 }
 
 /* ===== TÍTULO CON ÓRBITAS DENTRO ===== */
@@ -344,189 +277,40 @@ const videoUrl = computed(() => {
   to { transform: rotateY(-360deg); }
 }
 
-/* ===== BLOQUE 2: SECCIÓN DE CONTENIDO ===== */
-.content-section {
-  position: relative;
-  overflow: hidden;
-  width: 100%;
-  background-color: var(--bg-surface-subtle, rgba(255, 255, 255, 0.02));
-  border-top: 1px solid var(--border-color);
-  display: flex;
-  justify-content: center;
-  padding: 4rem 1rem 5rem;
-}
+/* ===== RESTO DEL CONTENIDO ===== */
+.eyebrow { color: var(--accent-solid); font-size: .72rem; font-weight: 800; letter-spacing: .16em; }
 
-.content-container {
-  position: relative;
-  z-index: 2;
-  width: 100%;
-  max-width: 60rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-}
+.home-section { max-width: 1160px; margin: 0 auto; padding: 5rem 1.5rem; }
+.section-heading { display: flex; justify-content: space-between; align-items: end; gap: 2rem; margin-bottom: 2rem; }
+h2 { font-size: clamp(1.8rem, 3vw, 2.5rem); letter-spacing: -.04em; margin: .6rem 0 0; }
+.section-heading > p { max-width: 390px; color: var(--text-secondary); line-height: 1.6; margin: 0; }
 
-.algorithms-anchor {
-  width: 100%;
-  scroll-margin-top: 5.5rem;
-}
+.learning-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+.learning-card { position: relative; padding: 1.5rem; min-height: 220px; border: 1px solid var(--border-color); border-radius: 1rem; background: var(--bg-surface); }
+.learning-card.featured { background: linear-gradient(145deg, var(--bg-surface), var(--accent-soft-bg)); border-color: color-mix(in srgb, var(--accent-solid) 45%, var(--border-color)); }
 
-.tools-title {
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: var(--text-primary);
-  margin: 0 0 1.5rem;
-  text-align: center;
-}
+.card-icon { width: 2.7rem; height: 2.7rem; border-radius: .75rem; display: grid; place-items: center; margin-bottom: 1.3rem; }
+.purple { color: #a855f7; background: #a855f722; }
+.pink { color: #ec4899; background: #ec489922; }
+.blue { color: #06b6d4; background: #06b6d422; }
 
-/* ===== Fila explicación + video ===== */
-.explainer-row {
-  display: flex;
-  align-items: stretch;
-  gap: 2rem;
-  width: 100%;
-  margin-bottom: 3rem;
-  text-align: left;
-}
+.card-number { position: absolute; top: 1.5rem; right: 1.5rem; color: var(--text-secondary); font-size: .75rem; }
+.learning-card h3, .steps h3 { margin: 0 0 .5rem; }
+.learning-card p, .steps p { color: var(--text-secondary); line-height: 1.55; font-size: .9rem; margin: 0 0 1.2rem; }
+.learning-card button { display: inline-flex; align-items: center; gap: .35rem; border: 0; padding: 0; color: var(--accent-solid); background: none; font: inherit; font-size: .82rem; font-weight: 700; cursor: pointer; }
 
-.explainer {
-  flex: 1 1 50%;
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border-color);
-  border-radius: 1.25rem;
-  padding: 1.75rem 2rem;
-  margin-bottom: 0;
-  text-align: left;
-}
+.compact-section { padding-top: 1rem; }
+.centered { justify-content: center; text-align: center; }
+.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; text-align: center; }
+.steps > div { padding: 1.5rem; }
+.steps span { display: grid; place-items: center; width: 2.3rem; height: 2.3rem; margin: 0 auto 1rem; border-radius: 50%; color: #fff; font-weight: 800; background: linear-gradient(135deg, var(--accent-start), var(--accent-end)); }
 
-.explainer-title {
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0 0 0.6rem;
-}
-
-.explainer-text {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  line-height: 1.65;
-  margin: 0;
-}
-
-/* ===== Contenedor del video ===== */
-.explainer-video {
-  flex: 1 1 50%;
-  position: relative;
-  
-  border-radius: 1.25rem;
-  overflow: hidden;
-  border: 1px solid var(--border-color);
-  background-color: var(--bg-surface);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
-  aspect-ratio: 16 / 9;
-  align-self: center;
-}
-
-.explainer-video iframe {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  border: 0;
-  display: block;
-}
-
-[data-theme='dark'] .explainer-video {
-  box-shadow:
-    0 0 0 1px rgba(168, 85, 247, 0.15),
-    0 0 20px rgba(168, 85, 247, 0.15),
-    0 8px 30px rgba(0, 0, 0, 0.3);
-}
-
-/* ===== Bloque info (texto + imagen) ===== */
-.info-block {
-  width: 100%;
-  text-align: left;
-  margin-bottom: 3rem;
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border-color);
-  border-radius: 1.25rem;
-  padding: 1.75rem 2rem;
-}
-
-.info-subtitle {
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 1.25rem 0 0.5rem;
-}
-
-.info-list {
-  color: var(--text-secondary);
-  font-size: 0.9rem;
-  line-height: 1.65;
-  padding-left: 1.25rem;
-  margin: 0.75rem 0;
-}
-
-.info-list li {
-  margin-bottom: 0.5rem;
-}
-
-.info-note {
-  background-color: var(--accent-soft-bg);
-  border-left: 3px solid var(--accent-solid);
-  padding: 0.75rem 1rem;
-  border-radius: 0.5rem;
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  margin: 1rem 0;
-}
-
-.info-image {
-  width: 100%;
-  border-radius: 1rem;
-  margin-top: 1rem;
-  border: 1px solid var(--border-color);
-}
-
-/* ===== Grid de dos columnas para los bloques info ===== */
-.info-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2rem;
-  width: 100%;
-  margin-bottom: 3rem;
-}
-
-.info-grid .info-block {
-  margin-bottom: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Empuja la imagen al fondo del bloque para que ambas queden alineadas */
-.info-grid .info-block .info-image {
-  margin-top: auto;
-}
-
-/* ===== Responsive ===== */
+/* ===== RESPONSIVE ===== */
 @media (max-width: 900px) {
-  .explainer-row {
-    flex-direction: column;
-    gap: 1.5rem;
-  }
-  .explainer,
-  .explainer-video {
-    flex: 1 1 auto;
-    width: 100%;
-  }
-
-  .info-grid {
-    grid-template-columns: 1fr;
-    gap: 1.5rem;
-  }
+  .learning-grid { grid-template-columns: 1fr; }
+  .section-heading { display: block; }
+  .section-heading > p { margin-top: 1rem; }
+  .steps { grid-template-columns: 1fr; gap: 0; }
 }
 
 @media (max-width: 768px) {
@@ -535,17 +319,11 @@ const videoUrl = computed(() => {
     padding: 4rem 1rem 3rem;
   }
 
-  .content-section {
-    padding: 2.5rem 1rem 3rem;
-  }
+  .home-title { font-size: clamp(4rem, 20vw, 7rem); }
+}
 
-  .explainer,
-  .info-block {
-    padding: 1.25rem 1.5rem;
-  }
-
-  .explainer-row {
-    margin-bottom: 2rem;
-  }
+@media (max-width: 480px) {
+  .hero-banner { min-height: auto; }
+  .home-section { padding-left: 1rem; padding-right: 1rem; }
 }
 </style>
