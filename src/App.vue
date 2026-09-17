@@ -23,6 +23,7 @@
       @show-instructions="showInstructionsModal"
       @show-matrix="showMatrixModal"
       @save="handleSaveGraph"
+      @open-load="openLoadFromCanvas"
       @clear="confirmClearCanvas"
       @create-node="handleCreateNodeRequest"
       @create-edge="handleCreateEdgeRequest"
@@ -40,6 +41,7 @@
       @show-instructions="showInstructionsModal"
       @show-matrix="showMatrixModal"
       @save="handleSaveGraph"
+      @open-load="openLoadFromCanvas"
       @clear="confirmClearCanvas"
       @create-node="handleCreateNodeRequest"
       @create-edge="handleCreateEdgeRequest"
@@ -59,6 +61,7 @@
       @show-instructions="showInstructionsModal"
       @show-matrix="showMatrixModal"
       @save="handleSaveGraph"
+      @open-load="openLoadAssignmentFromCanvas"
       @clear="confirmClearCanvas"
       @create-node="handleCreateNodeRequest"
       @create-edge="handleCreateEdgeRequest"
@@ -675,6 +678,19 @@ const onSelectAlgorithm = (id) => {
     message: 'Este algoritmo todavía está en construcción.',
     type: 'confirm'
   })
+}
+
+// Abre el selector de grafos guardados SIN salir del lienzo (Pizarra / Johnson).
+const openLoadFromCanvas = () => {
+  currentGraphIndex.value = -1
+  loadSavedGraphsList()
+  showGraphSelector.value = true
+}
+
+// Igual que arriba, pero para el selector propio del modo Asignación.
+const openLoadAssignmentFromCanvas = () => {
+  loadSavedAssignmentGraphsList()
+  showAssignmentGraphSelector.value = true
 }
 
 const loadSavedGraphsList = () => {
