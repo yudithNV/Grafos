@@ -78,6 +78,10 @@
 import { ref } from 'vue'
 import CanvasBackground from './CanvasBackground.vue'
 import { Mail, Phone } from '@lucide/vue'
+import yerkoImage from '../assets/team/yerko.jpg'
+import jorgeImage from '../assets/team/jorge.jpg'
+import yudithImage from '../assets/team/yudith.jpg'
+import jesusImage from '../assets/team/jesus.jpg'
 
 const showModal = ref(false)
 const selectedMember = ref(null)
@@ -88,7 +92,7 @@ const teamMembers = ref([
     name: 'Cano Poma, Yerko',
     email: 'yerko.cano@ucb.edu.bo',
     phone: '+591 735764434', // 👈 añadir
-    image: '/src/assets/team/yerko.jpg',
+    image: yerkoImage,
     bio: 'Sobreviviendo a los grafos y a los bugs de última hora.'
   },
   {
@@ -96,7 +100,7 @@ const teamMembers = ref([
     name: 'Flores Gutierrez, Jorge',
     email: 'jorge.flores@ucb.edu.bo',
     phone: '+591 75850339', // 👈 añadir
-    image: '/src/assets/team/jorge.jpg',
+    image: jorgeImage,
     bio: 'Amante del café, las desveladas y los algoritmos que tardan más de lo esperado en correr.'
   },
   {
@@ -104,7 +108,7 @@ const teamMembers = ref([
     name: 'Noa Vargas, Yudith',
     email: 'yudith.noa@ucb.edu.bo',
     phone: '+591 61225796', // 👈 añadir
-    image: '/src/assets/team/yudith.jpg',
+    image: yudithImage,
     bio: 'Intentando que la interfaz se vea bonita y no explote cuando alguien dibuje un grafo mal.'
   },
   {
@@ -112,7 +116,7 @@ const teamMembers = ref([
     name: 'Carlier Fernandez, Jesus',
     email: 'jesus.carlier@ucb.edu.bo',
     phone: '+591 75247905', // 👈 añadir
-    image: '/src/assets/team/jesus.jpg',
+    image: jesusImage,
     bio: 'Otro miembro más del grupo intentando sobrevivir al semestre.'
   }
 ])
