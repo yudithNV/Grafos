@@ -37,45 +37,50 @@
       </div>
     </section>
 
-    <!-- RESTO DEL CONTENIDO DEL SEGUNDO ARCHIVO -->
-    <section class="home-section">
-      <div class="section-heading">
-        <div><span class="eyebrow">UNA RUTA CLARA</span><h2>Todo lo que necesitas para aprender</h2></div>
-        <p>Estudia el concepto, llévalo a la práctica y comprueba tus resultados en un mismo espacio.</p>
-      </div>
-      <div class="learning-grid">
-        <article class="learning-card">
-          <div class="card-icon purple"><BookOpen :size="22" /></div>
-          <span class="card-number">01</span>
-          <h3>Fundamentos sólidos</h3>
-          <p>Definiciones, representaciones, tipos de grafos y complejidad explicados con ejemplos.</p>
-          <button @click="$emit('navigate', 'teoria')">Ir a Fundamentos <ArrowUpRight :size="16" /></button>
-        </article>
-        <article class="learning-card featured">
-          <div class="card-icon pink"><MousePointer2 :size="22" /></div>
-          <span class="card-number">02</span>
-          <h3>Experimentación visual</h3>
-          <p>Dibuja grafos, asigna pesos y observa cómo se comportan los algoritmos en tiempo real.</p>
-          <button @click="$emit('navigate', 'interactivos')">Abrir pizarras <ArrowUpRight :size="16" /></button>
-        </article>
-        <article class="learning-card">
-          <div class="card-icon blue"><GraduationCap :size="22" /></div>
-          <span class="card-number">03</span>
-          <h3>Aprendizaje activo</h3>
-          <p>Relaciona la teoría con decisiones concretas y construye intuición para resolver problemas.</p>
-          <button @click="$emit('navigate', 'about')">Conocer el proyecto <ArrowUpRight :size="16" /></button>
-        </article>
-      </div>
-    </section>
+    <!-- 👇 NUEVO CONTENEDOR CON FONDO DE CONSTELACIONES -->
+    <div class="sections-with-canvas">
+      <CanvasBackground />
 
-    <section class="home-section compact-section">
-      <div class="section-heading centered"><div><span class="eyebrow">EN POCAS PALABRAS</span><h2>Una plataforma, tres momentos de aprendizaje</h2></div></div>
-      <div class="steps">
-        <div><span>1</span><h3>Comprende</h3><p>Consulta los conceptos clave antes de comenzar.</p></div>
-        <div><span>2</span><h3>Construye</h3><p>Modela tu propio grafo con nodos, conexiones y pesos.</p></div>
-        <div><span>3</span><h3>Analiza</h3><p>Interpreta el resultado y verifica cada decisión.</p></div>
-      </div>
-    </section>
+      <!-- RESTO DEL CONTENIDO -->
+      <section class="home-section">
+        <div class="section-heading">
+          <div><span class="eyebrow">UNA RUTA CLARA</span><h2>Todo lo que necesitas para aprender</h2></div>
+          <p>Estudia el concepto, llévalo a la práctica y comprueba tus resultados en un mismo espacio.</p>
+        </div>
+        <div class="learning-grid">
+          <article class="learning-card">
+            <div class="card-icon purple"><BookOpen :size="22" /></div>
+            <span class="card-number">01</span>
+            <h3>Fundamentos sólidos</h3>
+            <p>Definiciones, representaciones, tipos de grafos y complejidad explicados con ejemplos.</p>
+            <button @click="$emit('navigate', 'teoria')">Ir a Fundamentos <ArrowUpRight :size="16" /></button>
+          </article>
+          <article class="learning-card featured">
+            <div class="card-icon pink"><MousePointer2 :size="22" /></div>
+            <span class="card-number">02</span>
+            <h3>Experimentación visual</h3>
+            <p>Dibuja grafos, asigna pesos y observa cómo se comportan los algoritmos en tiempo real.</p>
+            <button @click="$emit('navigate', 'interactivos')">Abrir pizarras <ArrowUpRight :size="16" /></button>
+          </article>
+          <article class="learning-card">
+            <div class="card-icon blue"><GraduationCap :size="22" /></div>
+            <span class="card-number">03</span>
+            <h3>Aprendizaje activo</h3>
+            <p>Relaciona la teoría con decisiones concretas y construye intuición para resolver problemas.</p>
+            <button @click="$emit('navigate', 'about')">Conocer el proyecto <ArrowUpRight :size="16" /></button>
+          </article>
+        </div>
+      </section>
+
+      <section class="home-section compact-section">
+        <div class="section-heading centered"><div><span class="eyebrow">EN POCAS PALABRAS</span><h2>Una plataforma, tres momentos de aprendizaje</h2></div></div>
+        <div class="steps">
+          <div><span>1</span><h3>Comprende</h3><p>Consulta los conceptos clave antes de comenzar.</p></div>
+          <div><span>2</span><h3>Construye</h3><p>Modela tu propio grafo con nodos, conexiones y pesos.</p></div>
+          <div><span>3</span><h3>Analiza</h3><p>Interpreta el resultado y verifica cada decisión.</p></div>
+        </div>
+      </section>
+    </div>
   </main>
 </template>
 
@@ -105,6 +110,18 @@ defineEmits(['select', 'navigate'])
   align-items: center;
   padding: 5rem 1rem 4rem;
   background-color: var(--bg-body);
+}
+
+/* ===== NUEVO CONTENEDOR CON CANVAS DE FONDO ===== */
+.sections-with-canvas {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--bg-body);
+}
+
+.sections-with-canvas > .home-section {
+  position: relative;
+  z-index: 2;
 }
 
 .hero-orbit-container {
