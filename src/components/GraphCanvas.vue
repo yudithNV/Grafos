@@ -28,6 +28,62 @@
       </div>
     </Transition>
 
+    <!-- ================================= -->
+    <!-- SELECTOR JOHNSON -->
+    <!-- ================================= -->
+
+    <Transition name="johnson-modal">
+      <div v-if="mostrarSelectorJohnson" class="johnson-selector-overlay" @click.self="cerrarSelectorJohnson">
+        <div class="johnson-selector-card">
+
+          <button class="johnson-selector-close" @click="cerrarSelectorJohnson">
+            ×
+          </button>
+
+          <div class="johnson-selector-header">
+            <div class="johnson-selector-icon">
+              <Play />
+            </div>
+
+            <h3>Ejecutar Johnson</h3>
+
+            <p>
+              Selecciona el tipo de cálculo
+            </p>
+          </div>
+
+          <div class="johnson-selector-options">
+
+            <!-- MAXIMIZAR -->
+            <button class="johnson-option johnson-option-max" @click="seleccionarTipoJohnson('maximizar')">
+              <div class="johnson-option-symbol">
+                ↗
+              </div>
+
+              <strong>Maximizar</strong>
+
+             
+            </button>
+
+            <!-- MINIMIZAR -->
+            <button class="johnson-option johnson-option-min" @click="seleccionarTipoJohnson('minimizar')">
+              <div class="johnson-option-symbol">
+                ↘
+              </div>
+
+              <strong>Minimizar</strong>
+
+              
+            </button>
+
+          </div>
+
+        </div>
+      </div>
+    </Transition>
+
+
+
     <!-- Barra de Herramientas Superior (simplificada) -->
     <div class="canvas-header">
       <div class="header-left">
@@ -64,10 +120,15 @@
 
         <!-- SOLO JOHNSON -->
         <div v-if="esJohnson && johnsonActivo" class="stat-badge stat-critical">
-          Ruta crítica:
+
+          {{ tipoJohnson === 'minimizar'
+            ? 'Ruta mínima:'
+            : 'Ruta crítica:' }}
+
           <strong class="stat-critical-number">
             {{ johnsonResult?.duracionProyecto }}
           </strong>
+
         </div>
 
       </div>
@@ -87,9 +148,14 @@
           <BookOpen class="btn-icon" />
           <span>Manual</span>
         </button>
-        <button v-if="esJohnson" @click="ejecutarJohnson" class="btn-text">
+        <button v-if="esJohnson" @click="abrirSelectorJohnson" class="btn-text">
           <Play class="btn-icon" />
           Ejecutar Johnson
+        </button>
+
+        <button v-if="esJohnson && johnsonActivo" @click="detenerJohnson" class="btn-text btn-stop">
+          <Square class="btn-icon" />
+          STOP
         </button>
 
 
@@ -173,19 +239,10 @@
           <!-- Dibujo de las Aristas -->
           <g v-for="edge in processedEdges" :key="edge.id" class="edge-group">
             <!-- Arista Principal -->
-            <path
-              :d="edge.path"
-              fill="none"
-              :stroke="edge.customColor || edge.color"
-              stroke-width="3"
-              class="edge-path"
-              :class="{ 'edge-highlight': hoveredEdgeId === edge.id }"
-              :marker-end="`url(#${edge.markerId})`"
-              @mousedown.stop="onEdgeMouseDown(edge, $event)"
-              @touchstart.stop.prevent="onEdgeTouchStart(edge, $event)"
-              @mouseenter="hoveredEdgeId = edge.id"
-              @mouseleave="hoveredEdgeId = null"
-            />
+            <path :d="edge.path" fill="none" :stroke="edge.customColor || edge.color" stroke-width="3" class="edge-path"
+              :class="{ 'edge-highlight': hoveredEdgeId === edge.id }" :marker-end="`url(#${edge.markerId})`"
+              @mousedown.stop="onEdgeMouseDown(edge, $event)" @touchstart.stop.prevent="onEdgeTouchStart(edge, $event)"
+              @mouseenter="hoveredEdgeId = edge.id" @mouseleave="hoveredEdgeId = null" />
 
             <!-- Área sensible táctil más ancha para facilitar clicks -->
             <path :d="edge.path" fill="none" stroke="transparent" stroke-width="40" class="edge-touch-area"
@@ -202,24 +259,17 @@
               stroke-width="4.5" class="critical-edge-path" marker-end="url(#arrow-critical)" />
 
             <!-- Burbuja de Peso de la Arista -->
-            <g
-              :transform="`translate(${edge.labelX}, ${edge.labelY})`"
-              class="edge-label-group"
-              @mousedown.stop="onEdgeMouseDown(edge, $event)"
-              @touchstart.stop.prevent="onEdgeTouchStart(edge, $event)"
-            >
-              <text v-if="johnsonActivo && getHolguraEdge(edge.id) !== null" y="-22" class="edge-holgura">
+            <g :transform="`translate(${edge.labelX}, ${edge.labelY})`" class="edge-label-group"
+              @mousedown.stop="onEdgeMouseDown(edge, $event)" @touchstart.stop.prevent="onEdgeTouchStart(edge, $event)">
+              <text v-if="
+                johnsonActivo &&
+                tipoJohnson === 'maximizar' &&
+                getHolguraEdge(edge.id) !== null
+              " y="-22" class="edge-holgura">
                 H = {{ getHolguraEdge(edge.id) }}
               </text>
-              <rect
-                :x="-edge.rectW / 2"
-                :y="-12"
-                :width="edge.rectW"
-                :height="24"
-                rx="6"
-                class="edge-rect"
-                :stroke="edge.customColor || edge.color"
-              />
+              <rect :x="-edge.rectW / 2" :y="-12" :width="edge.rectW" :height="24" rx="6" class="edge-rect"
+                :stroke="edge.customColor || edge.color" />
               <text dy="5" class="edge-text" :fill="edge.customColor || edge.color">
                 {{ edge.weight }}
               </text>
@@ -233,19 +283,12 @@
               'node-dragging': draggedNodeId === node.id,
               'node-hover': hoveredNodeId === node.id,
               'node-delete-mode': activeTool === 'delete'
-            }"
-            @mousedown.stop="onNodeMouseDown(node, $event)"
-            @touchstart.stop.prevent="onNodeTouchStart(node, $event)"
-            @mouseenter="hoveredNodeId = node.id"
-            @mouseleave="hoveredNodeId = null"
-          >
+            }" @mousedown.stop="onNodeMouseDown(node, $event)"
+            @touchstart.stop.prevent="onNodeTouchStart(node, $event)" @mouseenter="hoveredNodeId = node.id"
+            @mouseleave="hoveredNodeId = null">
             <template v-if="!johnsonActivo">
-            <!-- Círculo del Nodo -->
-            <circle 
-              r="28" 
-              class="node-circle"
-              :style="{ stroke: node.color || '#94a3b8' }"
-            />
+              <!-- Círculo del Nodo -->
+              <circle r="28" class="node-circle" :style="{ stroke: node.color || '#94a3b8' }" />
 
               <text dy="6" class="node-text">
                 {{ truncateLabel(node.label) }}
@@ -274,28 +317,53 @@
                   {{ truncateLabel(node.label) }}
                 </text>
 
-                <!-- Línea vertical -->
-                <line x1="0" y1="-2" x2="0" y2="27" class="johnson-divider" />
+                <!-- Línea vertical solo para Maximizar -->
+                <line v-if="tipoJohnson === 'maximizar'" x1="0" y1="-2" x2="0" y2="27" class="johnson-divider" />
 
-                <!-- VALOR IDA -->
-                <text x="-15" y="10" class="johnson-value">
-                  {{ johnsonResult?.ida?.[node.id] }}
-                </text>
+                <!-- ================================= -->
+                <!-- MAXIMIZAR -->
+                <!-- ================================= -->
 
-                <!-- VALOR REGRESO -->
-                <text x="15" y="10" class="johnson-value">
-                  {{ johnsonResult?.regreso?.[node.id] }}
-                </text>
+                <template v-if="tipoJohnson === 'maximizar'">
 
-                <!-- IDA -->
-                <text x="-15" y="25" class="johnson-label">
-                  IDA
-                </text>
+                  <!-- VALOR IDA -->
+                  <text x="-15" y="10" class="johnson-value">
+                    {{ johnsonResult?.ida?.[node.id] }}
+                  </text>
 
-                <!-- REG -->
-                <text x="15" y="25" class="johnson-label">
-                  REG
-                </text>
+                  <!-- VALOR REGRESO -->
+                  <text x="15" y="10" class="johnson-value">
+                    {{ johnsonResult?.regreso?.[node.id] }}
+                  </text>
+
+                  <!-- IDA -->
+                  <text x="-15" y="25" class="johnson-label">
+                    IDA
+                  </text>
+
+                  <!-- REG -->
+                  <text x="15" y="25" class="johnson-label">
+                    REG
+                  </text>
+
+                </template>
+
+
+                <!-- ================================= -->
+                <!-- MINIMIZAR -->
+                <!-- ================================= -->
+
+                <template v-else>
+
+                  <text x="0" y="11" class="johnson-value">
+                    {{ johnsonResult?.ida?.[node.id] }}
+                  </text>
+
+                  <text x="0" y="26" class="johnson-label">
+                    MÍN
+                  </text>
+
+                </template>
 
               </g>
 
@@ -349,6 +417,7 @@ import {
   Hand,
   Eraser,
   Pencil,
+  Square,
   Play
 } from '@lucide/vue'
 
@@ -452,6 +521,10 @@ const esJohnson = computed(() => {
 
 const johnsonActivo = ref(false)
 const johnsonResult = ref(null)
+
+// Selector Maximizar / Minimizar
+const mostrarSelectorJohnson = ref(false)
+const tipoJohnson = ref('maximizar')
 
 // ======================================
 // ANIMACIÓN DEL CAMINO CRÍTICO
@@ -559,8 +632,14 @@ watch(
   }
 )
 
+const detenerJohnson = () => {
+  resetJohnson()
+}
+
 
 const animarCaminoCritico = () => {
+
+
 
   // Reiniciar animación anterior
   if (criticalTimer) {
@@ -607,9 +686,42 @@ const animarCaminoCritico = () => {
   mostrarSiguiente()
 }
 
+const abrirSelectorJohnson = () => {
+  // Validar antes de abrir el selector
+  if (props.nodes.length === 0) {
+    mostrarAlerta(
+      'Lienzo vacío',
+      'Crea nodos antes de ejecutar Johnson.'
+    )
+    return
+  }
 
-const ejecutarJohnson = () => {
+  if (props.edges.length === 0) {
+    mostrarAlerta(
+      'Sin conexiones',
+      'Crea al menos una arista antes de ejecutar Johnson.'
+    )
+    return
+  }
+
+  mostrarSelectorJohnson.value = true
+}
+
+const cerrarSelectorJohnson = () => {
+  mostrarSelectorJohnson.value = false
+}
+
+const seleccionarTipoJohnson = (tipo) => {
+  tipoJohnson.value = tipo
+  mostrarSelectorJohnson.value = false
+
+  ejecutarJohnson(tipo)
+}
+
+
+const ejecutarJohnson = (tipo = 'maximizar') => {
   try {
+    tipoJohnson.value = tipo
     if (props.nodes.length === 0) {
       mostrarAlerta(
         'Lienzo vacio',
@@ -629,17 +741,31 @@ const ejecutarJohnson = () => {
     // 1. Ejecutar algoritmo
     johnsonResult.value = calcularJohnson(
       props.nodes,
-      props.edges
+      props.edges,
+      tipo
     )
 
     // 2. Mostrar T + holguras
     johnsonActivo.value = true
 
     // 3. Construir camino crítico ordenado
-    criticalPathEdges.value =
-      construirCaminoCritico(
-        johnsonResult.value
-      )
+    // 3. Elegir el camino según el modo
+    if (tipo === 'minimizar') {
+
+      // MINIMIZAR:
+      // usar el camino de menor valor
+      criticalPathEdges.value =
+        johnsonResult.value.caminoOptimo || []
+
+    } else {
+
+      // MAXIMIZAR:
+      // usar el camino crítico tradicional
+      criticalPathEdges.value =
+        construirCaminoCritico(
+          johnsonResult.value
+        )
+    }
 
     // 4. Animarlo
     animarCaminoCritico()
@@ -2085,6 +2211,7 @@ const confirmClear = () => {
 .line-pink {
   background-color: #ec4899;
 }
+
 /* ==========================================
    NODO JOHNSON MINIMALISTA
 ========================================== */
@@ -2202,10 +2329,7 @@ const confirmClear = () => {
   stroke-width: 3px;
 
   filter:
-    drop-shadow(0 0 3px #38d9ff)
-    drop-shadow(0 0 7px rgba(56, 217, 255, 0.75))
-    drop-shadow(0 0 12px rgba(99, 102, 241, 0.7))
-    drop-shadow(0 0 18px rgba(168, 85, 247, 0.45));
+    drop-shadow(0 0 3px #38d9ff) drop-shadow(0 0 7px rgba(56, 217, 255, 0.75)) drop-shadow(0 0 12px rgba(99, 102, 241, 0.7)) drop-shadow(0 0 18px rgba(168, 85, 247, 0.45));
 
   animation:
     johnson-node-glow 1.2s ease-in-out infinite alternate;
@@ -2216,8 +2340,7 @@ const confirmClear = () => {
   stroke: #38d9ff;
 
   filter:
-    drop-shadow(0 0 4px #38d9ff)
-    drop-shadow(0 0 8px #22d3ee);
+    drop-shadow(0 0 4px #38d9ff) drop-shadow(0 0 8px #22d3ee);
 }
 
 
@@ -2225,8 +2348,7 @@ const confirmClear = () => {
   stroke: #c084fc;
 
   filter:
-    drop-shadow(0 0 4px #c084fc)
-    drop-shadow(0 0 8px #8b5cf6);
+    drop-shadow(0 0 4px #c084fc) drop-shadow(0 0 8px #8b5cf6);
 }
 
 
@@ -2241,19 +2363,290 @@ const confirmClear = () => {
 
   from {
     filter:
-      drop-shadow(0 0 3px #38d9ff)
-      drop-shadow(0 0 7px rgba(56, 217, 255, 0.55))
-      drop-shadow(0 0 11px rgba(99, 102, 241, 0.5));
+      drop-shadow(0 0 3px #38d9ff) drop-shadow(0 0 7px rgba(56, 217, 255, 0.55)) drop-shadow(0 0 11px rgba(99, 102, 241, 0.5));
   }
 
   to {
     filter:
-      drop-shadow(0 0 5px #38d9ff)
-      drop-shadow(0 0 10px rgba(56, 217, 255, 0.85))
-      drop-shadow(0 0 16px rgba(99, 102, 241, 0.75))
-      drop-shadow(0 0 21px rgba(168, 85, 247, 0.45));
+      drop-shadow(0 0 5px #38d9ff) drop-shadow(0 0 10px rgba(56, 217, 255, 0.85)) drop-shadow(0 0 16px rgba(99, 102, 241, 0.75)) drop-shadow(0 0 21px rgba(168, 85, 247, 0.45));
   }
 
 }
 
+/* ==========================================
+   SELECTOR JOHNSON - MAXIMIZAR / MINIMIZAR
+========================================== */
+
+.johnson-selector-overlay {
+  position: absolute;
+  inset: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 20px;
+
+  background: rgba(5, 8, 20, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+
+  z-index: 150;
+}
+
+.johnson-selector-card {
+  position: relative;
+
+  width: min(520px, 100%);
+
+  padding: 26px;
+
+  background: var(--bg-surface);
+
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  border-radius: 20px;
+
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.35),
+    0 0 30px rgba(79, 124, 255, 0.12);
+}
+
+.johnson-selector-header {
+  text-align: center;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  margin-bottom: 22px;
+}
+
+.johnson-selector-icon {
+  width: 46px;
+  height: 46px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  margin-bottom: 10px;
+
+  border-radius: 14px;
+
+  background: rgba(56, 217, 255, 0.10);
+  border: 1px solid rgba(56, 217, 255, 0.25);
+
+  color: #38d9ff;
+
+  box-shadow:
+    0 0 15px rgba(56, 217, 255, 0.12);
+}
+
+.johnson-selector-icon svg {
+  width: 21px;
+  height: 21px;
+}
+
+.johnson-selector-header h3 {
+  margin: 0;
+
+  color: var(--text-primary);
+
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.johnson-selector-header p {
+  margin: 5px 0 0;
+
+  color: var(--text-secondary);
+
+  font-size: 12px;
+}
+
+.johnson-selector-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+
+  gap: 14px;
+}
+
+.johnson-option {
+  min-height: 150px;
+
+  padding: 18px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  gap: 8px;
+
+  background: var(--bg-surface-2);
+
+  border: 1px solid var(--border-color);
+  border-radius: 15px;
+
+  color: var(--text-primary);
+
+  cursor: pointer;
+
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.johnson-option:hover {
+  transform: translateY(-4px);
+}
+
+.johnson-option-max:hover {
+  border-color: #38d9ff;
+
+  background: rgba(56, 217, 255, 0.08);
+
+  box-shadow:
+    0 0 15px rgba(56, 217, 255, 0.15),
+    0 0 30px rgba(79, 124, 255, 0.10);
+}
+
+.johnson-option-min:hover {
+  border-color: #a855f7;
+
+  background: rgba(168, 85, 247, 0.08);
+
+  box-shadow:
+    0 0 15px rgba(168, 85, 247, 0.15),
+    0 0 30px rgba(99, 102, 241, 0.10);
+}
+
+.johnson-option-symbol {
+  width: 44px;
+  height: 44px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 12px;
+
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.johnson-option-max .johnson-option-symbol {
+  color: #38d9ff;
+  background: rgba(56, 217, 255, 0.10);
+}
+
+.johnson-option-min .johnson-option-symbol {
+  color: #c084fc;
+  background: rgba(168, 85, 247, 0.10);
+}
+
+.johnson-option strong {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.johnson-option span {
+  max-width: 150px;
+
+  color: var(--text-secondary);
+
+  font-size: 11px;
+  line-height: 1.4;
+
+  text-align: center;
+}
+
+.johnson-selector-close {
+  position: absolute;
+
+  top: 12px;
+  right: 14px;
+
+  width: 30px;
+  height: 30px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0;
+
+  border: none;
+  border-radius: 8px;
+
+  background: transparent;
+
+  color: var(--text-secondary);
+
+  font-size: 22px;
+
+  cursor: pointer;
+
+  transition: all 0.15s ease;
+}
+
+.johnson-selector-close:hover {
+  background: var(--bg-surface-2);
+  color: var(--text-primary);
+}
+
+/* Animación del selector */
+
+.johnson-modal-enter-active,
+.johnson-modal-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.johnson-modal-enter-from,
+.johnson-modal-leave-to {
+  opacity: 0;
+}
+
+/* Móvil */
+
+@media (max-width: 520px) {
+
+  .johnson-selector-card {
+    padding: 22px 16px;
+  }
+
+  .johnson-selector-options {
+    grid-template-columns: 1fr;
+  }
+
+  .johnson-option {
+    min-height: 120px;
+  }
+}
+
+
+/* ==========================================
+   BOTÓN STOP JOHNSON
+========================================== */
+
+.btn-stop {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 8px;
+  padding: 7px 12px;
+  transition: all 0.2s ease;
+}
+
+.btn-stop:hover {
+  background: rgba(239, 68, 68, 0.22);
+  border-color: #ef4444;
+}
+
+.btn-stop .btn-icon {
+  width: 16px;
+  height: 16px;
+}
 </style>
