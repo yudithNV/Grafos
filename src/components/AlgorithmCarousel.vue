@@ -100,6 +100,15 @@ const cards = [
   iconBg: 'linear-gradient(135deg, #6366f1, #06b6d4)',
   image: null,
   comingSoon: false
+  },
+  {
+    id: 'northwest',
+    title: 'Método Northwest',
+    desc: 'Construye una solución inicial para problemas de transporte usando disponibilidad, demanda y costos.',
+    icon: Network,
+    iconBg: 'linear-gradient(135deg, #8b5cf6, #ec4899)',
+    image: null,
+    comingSoon: false
 }
 ]
 
