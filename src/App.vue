@@ -39,6 +39,7 @@
       @back="backToWelcome"
       @show-instructions="showInstructionsModal"
       @show-matrix="showMatrixModal"
+      @show-saved="showSavedGraphs"
       @save="handleSaveGraph"
       @clear="confirmClearCanvas"
       @create-node="handleCreateNodeRequest"
@@ -58,6 +59,7 @@
       @back="backToWelcome"
       @show-instructions="showInstructionsModal"
       @show-matrix="showMatrixModal"
+      @show-saved="showSavedGraphs"
       @save="handleSaveGraph"
       @clear="confirmClearCanvas"
       @create-node="handleCreateNodeRequest"
@@ -807,6 +809,10 @@ const showInstructionsModal = (manual = 'grafos') => {
   }[manual] || '/Manual_Graphix_Dark.pdf'
 
   window.open(file, '_blank')
+}
+const showSavedGraphs = () => {
+  loadSavedGraphsList()
+  showGraphSelector.value = true
 }
 
 const showMatrixModal = () => {
