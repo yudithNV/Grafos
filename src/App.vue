@@ -69,6 +69,10 @@
       @clear-optimal="optimalAssignmentEdges = []"
       @solution-found="handleSolutionFound"
     />
+    <NorthwestCanvas
+      v-else-if="currentView === 'canvas' && selectedAlgorithm === 'northwest'"
+      @back="backToWelcome"
+    />
 
     <!-- Custom Modal -->
     <CustomModal
@@ -213,6 +217,7 @@ import CustomModal from './components/CustomModal.vue'
 import MatrixModal from './components/MatrixModal.vue'
 import Footer from './components/Footer.vue'
 import AssignmentCanvas from './components/AssignmentCanvas.vue'
+import NorthwestCanvas from './components/NorthwestCanvas.vue'
 
 // Routing
 
@@ -661,6 +666,12 @@ const onSelectAlgorithm = (id) => {
 
     return
   }
+
+  if (id === 'northwest') {
+    currentView.value = 'canvas'
+    return
+  }
+
   openModal({
     title: 'Próximamente',
     iconName: 'construction',    // ← agrega esto
