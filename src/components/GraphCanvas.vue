@@ -31,7 +31,7 @@
     <!-- Barra de Herramientas Superior (simplificada) -->
     <div class="canvas-header">
       <div class="header-left">
-        <button @click="$emit('back')" class="btn-icon-only" title="Volver a Inicio">
+        <button @click="$emit('back')" class="btn-icon-only" title="Volver a la página anterior">
           <ArrowLeft class="icon" />
         </button>
         <div class="header-info">
@@ -141,6 +141,7 @@
     <!-- Contenedor del Lienzo SVG -->
     <div class="canvas-container" ref="canvasContainerRef" @mousedown="onCanvasMouseDown"
       @touchstart="onCanvasTouchStart">
+      <StarryBackground />
       <svg ref="svgRef" class="svg-canvas" @mousemove="onMouseMove" @touchmove="onTouchMove" @mouseup="onMouseUp"
         @touchend="onTouchEnd">
         <!-- Grupo que contiene TODO (nodos + aristas + background) con transform para pan -->
@@ -327,6 +328,7 @@
 </template>
 
 <script setup>
+import StarryBackground from './StarryBackground.vue'
 import {
   ref,
   computed,
@@ -1864,19 +1866,33 @@ const confirmClear = () => {
 }
 
 .canvas-container {
+  position: relative;
+  background-color: #ffffff;  
   flex-grow: 1;
+  min-height: 0;
   width: 100%;
   height: 100%;
-  position: relative;
   cursor: crosshair;
   overflow: hidden;
   touch-action: none;
 }
 
+[data-theme='dark'] .canvas-container {
+  background-color: var(--bg-body);  /* oscuro normal */
+}
+.canvas-container > :deep(.starry-background) {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
 .svg-canvas {
+  display: block;
+  position: relative;
+  z-index: 1;
   width: 100%;
   height: 100%;
-  background-color: var(--bg-body);
+  background-color: transparent;
   background-image: radial-gradient(var(--border-color) 1px, transparent 1px);
   background-size: 24px 24px;
   touch-action: none;

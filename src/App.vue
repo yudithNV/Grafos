@@ -217,17 +217,26 @@ import AssignmentCanvas from './components/AssignmentCanvas.vue'
 // Routing
 
 const currentView = ref('home')
+const previousView = ref('home')
 const selectedAlgorithm = ref('grafos')
 const optimalAssignmentEdges = ref([])
 const showAssignmentGraphSelector = ref(false)
 const savedAssignmentGraphs = ref([])
 const canvasMode = ref('normal')
 const goTo = async (view) => {
+  if (view !== currentView.value) {
+    previousView.value = currentView.value
+  }
   currentView.value = view
   if (view === 'home') {
     await nextTick()
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
+}
+
+const openCanvas = () => {
+  previousView.value = currentView.value
+  currentView.value = 'canvas'
 }
 
 watch(currentView, (view) => {
@@ -693,7 +702,7 @@ const loadSelectedGraph = (index) => {
     optimalAssignmentEdges.value = []
     currentGraphIndex.value = graph._storageIndex ?? index
     showGraphSelector.value = false
-    currentView.value = 'canvas'
+    openCanvas()
   }
 }
 
@@ -705,7 +714,7 @@ const loadSelectedAssignmentGraph = (index) => {
     optimalAssignmentEdges.value = []
     currentGraphIndex.value = index
     showAssignmentGraphSelector.value = false
-    currentView.value = 'canvas'
+    openCanvas()
   }
 }
 
@@ -779,7 +788,7 @@ const createNewGraph = () => {
   optimalAssignmentEdges.value = []
   currentGraphIndex.value = -1
   showGraphSelector.value = false
-  currentView.value = 'canvas'
+  openCanvas()
 }
 
 const createNewAssignmentGraph = () => {
@@ -788,7 +797,7 @@ const createNewAssignmentGraph = () => {
   optimalAssignmentEdges.value = []
   currentGraphIndex.value = -1
   showAssignmentGraphSelector.value = false
-  currentView.value = 'canvas'
+  openCanvas()
 }
 
 const handleSolutionFound = (result) => {
@@ -796,7 +805,7 @@ const handleSolutionFound = (result) => {
 }
 
 const backToWelcome = () => {
-  currentView.value = 'home'
+  currentView.value = previousView.value || 'home'
 }
 
 const showInstructionsModal = (manual = 'grafos') => {
