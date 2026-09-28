@@ -1,5 +1,8 @@
 <template>
   <main class="northwest-view">
+    <!-- Fondo estrellado igual que en el lienzo de grafos -->
+    <StarryBackground class="starry-background" />
+
     <header class="northwest-header">
       <button class="back-button" @click="$emit('back')">← Volver</button>
       <div>
@@ -77,6 +80,7 @@
 
 <script setup>
 import { computed, ref } from 'vue'
+import StarryBackground from './StarryBackground.vue'
 
 defineEmits(['back'])
 
@@ -178,15 +182,32 @@ function finish() {
 <style scoped>
 /* === CONTENEDOR PRINCIPAL === */
 .northwest-view {
+  position: relative;
   min-height: 100vh;
   padding: 5rem clamp(1rem, 4vw, 4rem);
   background: var(--bg-body);
   color: var(--text-primary);
-  /* Permitir scroll vertical si el contenido crece */
   overflow-y: auto;
-  /* Asegurar que ocupe todo el ancho y alto disponible */
   width: 100%;
   box-sizing: border-box;
+}
+
+/* Fondo estrellado igual que en el lienzo de grafos */
+.northwest-view > :deep(.starry-background) {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Todo el contenido por encima del fondo */
+.northwest-header,
+.controls,
+.warning,
+.board-card,
+.step-card {
+  position: relative;
+  z-index: 1;
 }
 
 /* === HEADER === */
@@ -197,7 +218,7 @@ function finish() {
   align-items: flex-start;
   gap: 1rem;
   justify-content: space-between;
-  flex-wrap: wrap; /* Permitir que los elementos se acomoden en pantallas pequeñas */
+  flex-wrap: wrap;
 }
 .northwest-header h1 {
   margin: .5rem 0;
@@ -300,7 +321,6 @@ function finish() {
 /* === TABLA === */
 .table-scroll {
   overflow-x: auto;
-  /* Asegurar que el scroll horizontal funcione bien */
   -webkit-overflow-scrolling: touch;
 }
 .transport-table {
@@ -390,7 +410,7 @@ function finish() {
 /* === RESPONSIVE === */
 @media (max-width: 650px) {
   .northwest-view {
-    padding: 2rem 1rem; /* Reducir padding en móviles */
+    padding: 2rem 1rem;
   }
   .northwest-header {
     display: grid;

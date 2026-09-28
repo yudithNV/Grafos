@@ -9,7 +9,7 @@
         </button>
         <div class="header-info">
           <h2 class="header-title">
-            Lienzo de Grafo
+            Pizzara de Asignación
             <span class="status-indicator"></span>
           </h2>
           <p class="header-subtitle">
@@ -199,7 +199,7 @@
               r="28" 
               class="node-circle" 
               :class="{ 'node-circle-optimal': isNodeInOptimal(node.id) }"
-              :style="{ stroke: node.color || '#94a3b8' }"
+              :style="{ '--node-color': node.color || '#94a3b8' }"
             />
             <text class="node-text" y="1" dominant-baseline="middle">
               {{ truncateLabel(node.label) }}
@@ -1214,9 +1214,19 @@ const onTouchEnd = () => {
 
 .node-circle {
   fill: var(--bg-surface);
-  stroke: var(--text-secondary);
+  stroke: var(--node-color, var(--text-secondary));
   stroke-width: 2.5px;
   transition: all 0.15s ease-in-out;
+
+  filter:
+    drop-shadow(0 0 2px var(--node-color, #94a3b8))
+    drop-shadow(0 0 6px rgba(148, 163, 184, 0.35));
+}
+
+[data-theme='light'] .node-circle {
+  filter:
+    drop-shadow(0 0 3px rgba(168, 85, 247, 0.20))
+    drop-shadow(0 0 6px rgba(168, 85, 247, 0.10));
 }
 
 .node-circle-optimal {

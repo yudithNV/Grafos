@@ -668,7 +668,7 @@ const onSelectAlgorithm = (id) => {
   }
 
   if (id === 'northwest') {
-    currentView.value = 'canvas'
+    openCanvas()
     return
   }
 
