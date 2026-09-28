@@ -3,7 +3,7 @@
     <div class="night">
       <!-- Generamos 40 estrellas fugaces distribuidas por toda la pantalla -->
       <div 
-        v-for="n in 40" 
+        v-for="n in 25" 
         :key="n" 
         class="shooting_star"
         :style="getRandomStyle()"
@@ -15,10 +15,13 @@
 <script setup>
 // Genera posiciones aleatorias en porcentaje y retrasos variados (más lentos)
 const getRandomStyle = () => {
-  const randomTop = Math.random() * 100;   // De 0% a 100% de la altura
-  const randomLeft = Math.random() * 100;  // De 0% a 100% del ancho
-  const randomDelay = Math.random() * 9000; // Retraso aleatorio hasta 9 segundos
-  const randomDuration = Math.random() * 4000 + 4000; // Duración entre 4s y 8s (más lento y sutil)
+  // Usamos un rango de 5% a 95% (en vez de 0 a 100) para evitar que nazcan pegadas a los bordes exactos,
+  // y aseguramos una distribución más limpia.
+  const randomTop = Math.random() * 90 + 5;   
+  const randomLeft = Math.random() * 90 + 5;  
+  
+  const randomDelay = Math.random() * 15000; // Retrasos más amplios para que salgan muy espaciadas en el tiempo
+  const randomDuration = Math.random() * 4000 + 4000; // Duración entre 4s y 8s
 
   return {
     top: `${randomTop}%`,
