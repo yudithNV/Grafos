@@ -34,6 +34,10 @@
           <Save class="btn-icon" />
           <span>Guardar</span>
         </button>
+        <button @click="$emit('open-load')" class="btn-text btn-load-graph">
+          <FolderOpen class="btn-icon" />
+          <span>Cargar</span>
+        </button>
         <button @click="$emit('show-matrix')" class="btn-text btn-matrix">
           <Grid3x3 class="btn-icon" />
           <span>Matriz</span>
@@ -42,6 +46,7 @@
           <BookOpen class="btn-icon" />
           <span>Manual</span>
         </button>
+        
         <button @click="confirmClear" class="btn-text btn-danger">
           <Trash2 class="btn-icon" />
           <span>Limpiar</span>
@@ -263,6 +268,7 @@ import {
   Trash2,
   BookOpen,
   Info,
+  FolderOpen,
   MousePointerClick,
   Grid3x3,
   Save,
@@ -288,6 +294,7 @@ const emit = defineEmits([
   'back',
   'show-instructions',
   'show-matrix',
+  'open-load',
   'save',
   'clear',
   'create-node',

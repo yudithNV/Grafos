@@ -33,6 +33,7 @@
       @show-instructions="showInstructionsModal"
       @show-matrix="showMatrixModal"
       @save="handleSaveGraph"
+      @open-load="showGraphSelector = true"
       @clear="confirmClearCanvas"
       @create-node="handleCreateNodeRequest"
       @create-edge="handleCreateEdgeRequest"
@@ -52,6 +53,7 @@
       @show-instructions="showInstructionsModal"
       @show-matrix="showMatrixModal"
       @save="handleSaveGraph"
+      @open-load="showAssignmentGraphSelector = true"
       @clear="confirmClearCanvas"
       @create-node="handleCreateNodeRequest"
       @create-edge="handleCreateEdgeRequest"
@@ -568,26 +570,53 @@ const loadSavedAssignmentGraphsList = () => {
 }
 
 const loadSelectedGraph = (index) => {
-  const graph = savedGraphs.value[index]
-  if (graph) {
-    nodes.value = JSON.parse(JSON.stringify(graph.nodes))
-    edges.value = JSON.parse(JSON.stringify(graph.edges))
-    optimalAssignmentEdges.value = []
-    currentGraphIndex.value = index
-    showGraphSelector.value = false
-    currentView.value = 'canvas'
+  const executeLoad = () => {
+    const graph = savedGraphs.value[index]
+    if (graph) {
+      nodes.value = JSON.parse(JSON.stringify(graph.nodes))
+      edges.value = JSON.parse(JSON.stringify(graph.edges))
+      optimalAssignmentEdges.value = []
+      currentGraphIndex.value = index
+      showGraphSelector.value = false
+      currentView.value = 'canvas'
+    }
+  }
+
+  // Si ya estamos en el lienzo y hay contenido, pedir confirmación previa
+  if (currentView.value === 'canvas' && (nodes.value.length > 0 || edges.value.length > 0)) {
+    openModal({
+      title: 'Confirmar Carga de Pizarra',
+      message: '¿Estás seguro que quieres cargar una nueva pizarra? Reemplazará la pizarra actual.',
+      type: 'confirm',
+      callback: () => executeLoad()
+    })
+  } else {
+    executeLoad()
   }
 }
 
 const loadSelectedAssignmentGraph = (index) => {
-  const graph = savedAssignmentGraphs.value[index]
-  if (graph) {
-    nodes.value = JSON.parse(JSON.stringify(graph.nodes))
-    edges.value = JSON.parse(JSON.stringify(graph.edges))
-    optimalAssignmentEdges.value = []
-    currentGraphIndex.value = index
-    showAssignmentGraphSelector.value = false
-    currentView.value = 'canvas'
+  const executeLoad = () => {
+    const graph = savedAssignmentGraphs.value[index]
+    if (graph) {
+      nodes.value = JSON.parse(JSON.stringify(graph.nodes))
+      edges.value = JSON.parse(JSON.stringify(graph.edges))
+      optimalAssignmentEdges.value = []
+      currentGraphIndex.value = index
+      showAssignmentGraphSelector.value = false
+      currentView.value = 'canvas'
+    }
+  }
+
+  if (currentView.value === 'canvas' && (nodes.value.length > 0 || edges.value.length > 0)) {
+    openModal({
+      title: 'Confirmar Carga de Pizarra',
+      message: '¿Estás seguro que quieres cargar una nueva pizarra? Reemplazará la pizarra actual.',
+      type: 'confirm',
+      callback: () => executeLoad()
+    })
+  } else {
+    executeLoad()
   }
 }
 
@@ -632,21 +661,47 @@ const deleteSavedAssignmentGraph = (index) => {
 }
 
 const createNewGraph = () => {
-  nodes.value = []
-  edges.value = []
-  optimalAssignmentEdges.value = []
-  currentGraphIndex.value = -1
-  showGraphSelector.value = false
-  currentView.value = 'canvas'
+  const executeCreate = () => {
+    nodes.value = []
+    edges.value = []
+    optimalAssignmentEdges.value = []
+    currentGraphIndex.value = -1
+    showGraphSelector.value = false
+    currentView.value = 'canvas'
+  }
+
+  if (currentView.value === 'canvas' && (nodes.value.length > 0 || edges.value.length > 0)) {
+    openModal({
+      title: 'Confirmar Nueva Pizarra',
+      message: '¿Estás seguro que quieres cargar una nueva pizarra? Reemplazará la pizarra actual.',
+      type: 'confirm',
+      callback: () => executeCreate()
+    })
+  } else {
+    executeCreate()
+  }
 }
 
 const createNewAssignmentGraph = () => {
-  nodes.value = []
-  edges.value = []
-  optimalAssignmentEdges.value = []
-  currentGraphIndex.value = -1
-  showAssignmentGraphSelector.value = false
-  currentView.value = 'canvas'
+  const executeCreate = () => {
+    nodes.value = []
+    edges.value = []
+    optimalAssignmentEdges.value = []
+    currentGraphIndex.value = -1
+    showAssignmentGraphSelector.value = false
+    currentView.value = 'canvas'
+  }
+
+  if (currentView.value === 'canvas' && (nodes.value.length > 0 || edges.value.length > 0)) {
+    openModal({
+      title: 'Confirmar Nueva Pizarra',
+      message: '¿Estás seguro que quieres cargar una nueva pizarra? Reemplazará la pizarra actual.',
+      type: 'confirm',
+      callback: () => executeCreate()
+    })
+  } else {
+    executeCreate()
+  }
 }
 
 const handleSolutionFound = (result) => {

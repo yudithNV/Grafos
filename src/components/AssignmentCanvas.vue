@@ -36,13 +36,19 @@
           <Save class="btn-icon" />
           <span>Guardar</span>
         </button>
+
+        <button @click="$emit('open-load')" class="btn-text btn-load-graph">
+          <FolderOpen class="btn-icon" />
+          <span>Cargar</span>
+        </button>
+                
         <button @click="showMatrixModal = true" class="btn-text btn-matrix">
           <Grid3x3 class="btn-icon" />
           <span>Matriz</span>
         </button>
         <button @click="openSolverChoiceModal" class="btn-text btn-resolver">
           <Sparkles class="btn-icon" />
-          <span>➕ Resolver</span>
+          <span> Resolver</span>
         </button>
         <button @click="$emit('show-instructions')" class="btn-text">
           <BookOpen class="btn-icon" />
@@ -363,7 +369,12 @@ import {
   Eraser,
   Pencil,
   Sparkles,
-  X
+  X,
+  Loader,
+  Loader2,
+  LoaderCircle,
+  FolderOpen,
+  Upload
 } from '@lucide/vue'
 import AssignmentMatrix from './AssignmentMatrixModal.vue'
 import AssignmentWarning from './AssignmentWarning.vue'
@@ -937,6 +948,12 @@ const onTouchEnd = () => {
   background-color: #dcfce7;
   border-color: #86efac;
   color: #16a34a;
+}
+
+.btn-load-graph {
+  background-color: #0224e7;
+  border-color: #00629b;
+  color: #0295eb;
 }
 
 [data-theme='dark'] .btn-save-graph {
