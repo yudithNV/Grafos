@@ -71,7 +71,10 @@
     />
     <NorthwestCanvas
       v-else-if="currentView === 'canvas' && selectedAlgorithm === 'northwest'"
+      :initial-data="northwestData"
       @back="backToWelcome"
+      @save="handleSaveNorthwest"
+      @show-instructions="showInstructionsModal"
     />
 
     <!-- Custom Modal -->
@@ -203,6 +206,21 @@
       </div>
     </div>
   </div>
+      <!-- Selector de problemas Northwest -->
+    <SavedListModal
+      :show="showNorthwestSelector"
+      title="Cargar Problema Northwest"
+      info="Guarda tus tablas de disponibilidad, demanda y costos para retomarlas después."
+      item-label="Problema"
+      new-label="➕ Crear Nuevo Problema"
+      header-bg="linear-gradient(135deg, #8b5cf6, #ec4899)"
+      :items="northwestItems"
+      :stats="(p) => [`${p.data.originCount} orígenes`, `${p.data.destinationCount} destinos`]"
+      @load="loadNorthwest"
+      @create="createNorthwest"
+      @delete="deleteNorthwest"
+      @close="showNorthwestSelector = false"
+    />
 </template>
 
 <script setup>
@@ -218,6 +236,8 @@ import MatrixModal from './components/MatrixModal.vue'
 import Footer from './components/Footer.vue'
 import AssignmentCanvas from './components/AssignmentCanvas.vue'
 import NorthwestCanvas from './components/NorthwestCanvas.vue'
+import SavedListModal from './components/SavedListModal.vue'
+import { useSavedList } from './useSavedList'
 
 // Routing
 
@@ -228,6 +248,18 @@ const optimalAssignmentEdges = ref([])
 const showAssignmentGraphSelector = ref(false)
 const savedAssignmentGraphs = ref([])
 const canvasMode = ref('normal')
+// Northwest: lista de problemas guardados
+const {
+  items: northwestItems,
+  load: loadNorthwestList,
+  add: addNorthwest,
+  update: updateNorthwest,
+  remove: removeNorthwest
+} = useSavedList('savedNorthwestProblems')
+
+const showNorthwestSelector = ref(false)
+const northwestData = ref(null)
+const northwestIndex = ref(-1)
 const goTo = async (view) => {
   if (view !== currentView.value) {
     previousView.value = currentView.value
@@ -668,7 +700,8 @@ const onSelectAlgorithm = (id) => {
   }
 
   if (id === 'northwest') {
-    openCanvas()
+    loadNorthwestList()
+    showNorthwestSelector.value = true
     return
   }
 
@@ -813,6 +846,68 @@ const createNewAssignmentGraph = () => {
 
 const handleSolutionFound = (result) => {
   optimalAssignmentEdges.value = result.optimalEdgeIds || []
+}
+// ============ NORTHWEST ============
+
+const loadNorthwest = (i) => {
+  northwestData.value = JSON.parse(JSON.stringify(northwestItems.value[i].data))
+  northwestIndex.value = i
+  showNorthwestSelector.value = false
+  openCanvas()
+}
+
+const createNorthwest = () => {
+  northwestData.value = null
+  northwestIndex.value = -1
+  showNorthwestSelector.value = false
+  openCanvas()
+}
+
+const deleteNorthwest = (i) => {
+  openModal({
+    title: 'Confirmar Eliminación',
+    message: `¿Eliminar "${northwestItems.value[i].name}"? Esta acción no se puede deshacer.`,
+    type: 'confirm',
+    callback: () => {
+      removeNorthwest(i)
+      if (northwestIndex.value === i) northwestIndex.value = -1
+    }
+  })
+}
+
+const handleSaveNorthwest = (data) => {
+  const current = northwestItems.value[northwestIndex.value]
+  openModal({
+    title: 'Guardar Problema',
+    iconName: 'save',
+    label: 'Nombre del problema:',
+    placeholder: 'Ej. Problema clase 1...',
+    type: 'input',
+    initialValue: current?.name || 'Problema Northwest',
+    callback: (name) => {
+      const problemName = String(name).trim() || 'Problema Northwest'
+      const entry = {
+        name: problemName,
+        date: new Date().toLocaleString(),
+        data: JSON.parse(JSON.stringify(data))
+      }
+      if (northwestIndex.value >= 0) {
+        updateNorthwest(northwestIndex.value, entry)
+      } else {
+        addNorthwest(entry)
+        northwestIndex.value = northwestItems.value.length - 1
+      }
+
+      setTimeout(() => {
+        openModal({
+          title: 'Guardado Correctamente',
+          iconName: 'success',
+          message: `"${problemName}" guardado correctamente.`,
+          type: 'info'
+        })
+      }, 250)
+    }
+  })
 }
 
 const backToWelcome = () => {

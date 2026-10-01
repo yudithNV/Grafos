@@ -385,6 +385,10 @@ import AssignmentWarning from './AssignmentWarning.vue'
 
 const emit = defineEmits(['back', 'show-instructions', 'save', 'clear', 'solution-found'])
 
+const props = defineProps({
+  initialData: { type: Object, default: null }
+})
+
 const MAX_SIZE = 8
 
 /* ---------- Helpers ---------- */
@@ -658,6 +662,16 @@ function confirmClear() {
   resetAllocations()
   showClearModal.value = false
   emit('clear')
+}
+/* ---------- Cargar problema guardado ---------- */
+if (props.initialData) {
+  const d = props.initialData
+  originCount.value = d.originCount
+  destinationCount.value = d.destinationCount
+  costs.value = d.costs
+  availability.value = d.availability
+  demand.value = d.demand
+  resetAllocations()
 }
 </script>
 
