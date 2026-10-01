@@ -918,10 +918,10 @@ const backToWelcome = () => {
 
 const showInstructionsModal = (manual = 'grafos') => {
   const file = {
-    asignacion: '/manual_asignacion.pdf',
-    johnson: '/manual_grafos.pdf',
-    grafos: '/Manual_Graphix_Dark.pdf'
-  }[manual] || '/Manual_Graphix_Dark.pdf'
+    asignacion: '/Manual de Uso - Pizarra de Asignación.pdf',
+    johnson: '/Manual de Uso - Pizarra de Johnson.pdf',
+    grafos: '/Manual de Uso - Pizarra de Grafos.pdf'
+  }[manual] || '/Manual de Uso - Pizarra de Grafos.pdf'
 
   window.open(file, '_blank')
 }
