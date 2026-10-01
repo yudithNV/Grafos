@@ -1,33 +1,20 @@
 <template>
   <main class="home-view">
-    <!-- HERO PERSONALIZADO CON ÓRBITAS ANIMADAS -->
+    <!-- HERO CON FONDO DE ESTRELLAS 3D -->
     <section class="hero-banner">
-      <CanvasBackground :show-lines="false" :ball-count="50" />
+      <div class="stars">
+        <div
+          v-for="(style, i) in stars"
+          :key="i"
+          class="star"
+          :style="style"
+        ></div>
+      </div>
 
       <div class="hero-orbit-container">
         <h1 class="home-title">
           Graphix
           <div class="glow-behind-title"></div>
-          <div class="orbit orbit-1"></div>
-          <div class="orbit orbit-2"></div>
-          <div class="orbit orbit-3"></div>
-          <div class="orbit orbit-4"></div>
-          <div class="orbit orbit-5"></div>
-          <div class="orbit orbit-6"></div>
-          <div class="orbit orbit-7"></div>
-          <div class="orbit orbit-8"></div>
-          <div class="orbit orbit-9"></div>
-          <div class="orbit orbit-10"></div>
-          <div class="orbit orbit-11"></div>
-          <div class="orbit orbit-12"></div>
-          <div class="orbit orbit-13"></div>
-          <div class="orbit orbit-14"></div>
-          <div class="orbit orbit-15"></div>
-          <div class="orbit orbit-16"></div>
-          <div class="orbit orbit-17"></div>
-          <div class="orbit orbit-18"></div>
-          <div class="orbit orbit-19"></div>
-          <div class="orbit orbit-20"></div>
         </h1>
 
         <p class="home-subtitle">
@@ -89,10 +76,23 @@ import { ArrowRight, ArrowUpRight, BookOpen, CheckCircle2, GraduationCap, MouseP
 import CanvasBackground from './CanvasBackground.vue'
 
 defineEmits(['select', 'navigate'])
+
+// ===== ESTRELLAS 3D =====
+const STAR_COUNT = 800
+const BASE_RADIUS = 800
+
+const stars = Array.from({ length: STAR_COUNT }, () => {
+  const s = 0.2 + Math.random() * 1
+  const curR = BASE_RADIUS + Math.random() * 300
+  return {
+    transformOrigin: `0 0 ${curR}px`,
+    transform: `translate3d(0,0,-${curR}px) rotateY(${Math.random() * 360}deg) rotateX(${Math.random() * -50}deg) scale(${s},${s})`
+  }
+})
 </script>
 
 <style scoped>
-/* ===== HERO BANNER PERSONALIZADO ===== */
+/* ===== HERO BANNER ===== */
 .home-view {
   width: 100%;
   background-color: var(--bg-body);
@@ -101,6 +101,10 @@ defineEmits(['select', 'navigate'])
 }
 
 .hero-banner {
+  /* Modo claro (por defecto): tus colores originales */
+  --hero-bg: radial-gradient(220% 105% at top center, #1B2947 10%, #75517D 40%, #E96F92 65%, #F7F7B6);
+  --star-color: #F7F7B6;
+
   position: relative;
   overflow: hidden;
   width: 100%;
@@ -109,7 +113,52 @@ defineEmits(['select', 'navigate'])
   justify-content: center;
   align-items: center;
   padding: 5rem 1rem 4rem;
-  background-color: var(--bg-body);
+  background: var(--hero-bg);
+}
+
+/* Modo oscuro */
+[data-theme='dark'] .hero-banner {
+  --hero-bg: radial-gradient(220% 105% at top center, #05030f 10%, #150a33 40%, #331e57 68%, #6d36cb);
+  --star-color: #e9d5ff;
+}
+
+[data-theme='light'] .hero-banner {
+  --hero-bg: radial-gradient(220% 105% at top center, #1B2947 10%, #75517D 40%, #E96F92 65%, #F7F7B6);
+  --star-color: #F7F7B6;
+}
+
+/* ===== ESTRELLAS ===== */
+.stars {
+  transform: perspective(500px);
+  transform-style: preserve-3d;
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  perspective-origin: 50% 100%;
+  animation: stars-rotate 90s infinite linear;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.star {
+  width: 2px;
+  height: 2px;
+  background: var(--star-color);
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0 -300px;
+  transform: translate3d(0, 0, -300px);
+  backface-visibility: hidden;
+}
+
+@keyframes stars-rotate {
+  0% {
+    transform: perspective(400px) rotateZ(20deg) rotateX(-40deg) rotateY(0);
+  }
+  100% {
+    transform: perspective(400px) rotateZ(20deg) rotateX(-40deg) rotateY(-360deg);
+  }
 }
 
 /* ===== NUEVO CONTENEDOR CON CANVAS DE FONDO ===== */
@@ -136,7 +185,7 @@ defineEmits(['select', 'navigate'])
   padding: 3rem 1rem;
 }
 
-/* ===== NIEBLA MORADA DETRÁS DEL TÍTULO ===== */
+/* ===== BRILLO DETRÁS DEL TÍTULO ===== */
 .glow-behind-title {
   position: absolute;
   top: 50%;
@@ -144,48 +193,30 @@ defineEmits(['select', 'navigate'])
   transform: translate(-50%, -50%);
   width: 600px;
   height: 300px;
-  background: var(--accent-solid);
-  opacity: 0.16;
+  background: #ffffff;
+  opacity: 0.10;
   filter: blur(70px);
   z-index: -1;
   pointer-events: none;
   border-radius: 50%;
 }
 
-/* ===== TÍTULO CON ÓRBITAS DENTRO ===== */
+/* ===== TÍTULO ===== */
 .home-title {
   font-size: 3.5rem;
   font-weight: 800;
   letter-spacing: -0.03em;
   position: relative;
   display: inline-block;
-  transform-style: preserve-3d;
   margin: 0;
   padding: 0.5rem 1rem;
   z-index: 2;
-  transition: color 0.3s ease, filter 0.3s ease;
-}
-
-[data-theme='dark'] .home-title {
   color: #ffffff;
-  background: none;
   -webkit-text-fill-color: #ffffff;
   filter:
     drop-shadow(0 0 6px  rgba(255, 255, 255, 0.45))
     drop-shadow(0 0 16px rgba(255, 255, 255, 0.25))
-    drop-shadow(0 0 34px rgba(168, 85, 247, 0.25));
-}
-
-[data-theme='light'] .home-title {
-  background: linear-gradient(135deg, #7c3aed, #a855f7, #d946ef);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
-  filter:
-    drop-shadow(0 0 8px  rgba(168, 85, 247, 0.30))
-    drop-shadow(0 0 20px rgba(168, 85, 247, 0.18))
-    drop-shadow(0 0 38px rgba(217, 70, 239, 0.12));
+    drop-shadow(0 0 34px rgba(168, 85, 247, 0.30));
 }
 
 @media (min-width: 768px) {
@@ -203,95 +234,10 @@ defineEmits(['select', 'navigate'])
   line-height: 1.6;
   position: relative;
   z-index: 2;
-  transition: color 0.3s ease, text-shadow 0.3s ease;
-}
-
-[data-theme='dark'] .home-subtitle {
-  color: #f5f3ff;
+  color: #ffffff;
   text-shadow:
-    0 0 6px  rgba(255, 255, 255, 0.35),
-    0 0 14px rgba(255, 255, 255, 0.18),
-    0 0 28px rgba(168, 85, 247, 0.20);
-}
-
-[data-theme='light'] .home-subtitle {
-  color: #4c4373;
-  text-shadow:
-    0 0 8px  rgba(168, 85, 247, 0.12),
-    0 0 18px rgba(168, 85, 247, 0.06);
-}
-
-/* ===== ÓRBITAS ===== */
-.orbit {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  transform-style: preserve-3d;
-  z-index: 1;
-}
-
-.orbit:after {
-  content: '';
-  display: block;
-  border-radius: 50%;
-  animation: planet-rotate 10s linear infinite;
-  position: absolute;
-  top: 0;
-  left: 0;
-}
-
-.orbit-1  { animation: orbit-rotate 10s linear infinite; animation-delay: -6.8s; top: 56%;  left: 0.5%;  width: 99%; }
-.orbit-1:after  { animation-delay: -6.8s; height: 4px;  width: 4px;  background-color: #f59e0b; }
-.orbit-2  { animation: orbit-rotate 10s linear infinite; animation-delay: -0.3s; top: 77%;  left: 8%;    width: 84%; }
-.orbit-2:after  { animation-delay: -0.3s; height: 8px;  width: 8px;  background-color: #3b82f6; }
-.orbit-3  { animation: orbit-rotate 10s linear infinite; animation-delay: -2.3s; top: 48%;  left: 0%;    width: 100%; }
-.orbit-3:after  { animation-delay: -2.3s; height: 12px; width: 12px; background-color: #ef4444; }
-.orbit-4  { animation: orbit-rotate 10s linear infinite; animation-delay: -3.6s; top: 43%;  left: 0.5%;  width: 99%; }
-.orbit-4:after  { animation-delay: -3.6s; height: 5px;  width: 5px;  background-color: #10b981; }
-.orbit-5  { animation: orbit-rotate 10s linear infinite; animation-delay: -7.2s; top: 27%;  left: 5.5%;  width: 89%; }
-.orbit-5:after  { animation-delay: -7.2s; height: 6px;  width: 6px;  background-color: #8b5cf6; }
-.orbit-6  { animation: orbit-rotate 10s linear infinite; animation-delay: -1.7s; top: 24%;  left: 7%;    width: 86%; }
-.orbit-6:after  { animation-delay: -1.7s; height: 12px; width: 12px; background-color: #ec4899; }
-.orbit-7  { animation: orbit-rotate 10s linear infinite; animation-delay: -5.6s; top: 14%;  left: 15.5%; width: 69%; }
-.orbit-7:after  { animation-delay: -5.6s; height: 5px;  width: 5px;  background-color: #f97316; }
-.orbit-8  { animation: orbit-rotate 10s linear infinite; animation-delay: -5s;   top: 4%;   left: 30.5%; width: 39%; }
-.orbit-8:after  { animation-delay: -5s;   height: 6px;  width: 6px;  background-color: #06b6d4; }
-.orbit-9  { animation: orbit-rotate 10s linear infinite; animation-delay: -3.4s; top: 20%;  left: 10%;   width: 80%; }
-.orbit-9:after  { animation-delay: -3.4s; height: 12px; width: 12px; background-color: #d946ef; }
-.orbit-10 { animation: orbit-rotate 10s linear infinite; animation-delay: -8.2s; top: 40%;  left: 1%;    width: 98%; }
-.orbit-10:after { animation-delay: -8.2s; height: 9px;  width: 9px;  background-color: #84cc16; }
-.orbit-11 { animation: orbit-rotate 10s linear infinite; animation-delay: -2.2s; top: 83%;  left: 12.5%; width: 75%; }
-.orbit-11:after { animation-delay: -2.2s; height: 6px;  width: 6px;  background-color: #eab308; }
-.orbit-12 { animation: orbit-rotate 10s linear infinite; animation-delay: -0.1s; top: 87%;  left: 16.5%; width: 67%; }
-.orbit-12:after { animation-delay: -0.1s; height: 12px; width: 12px; background-color: #f472b6; }
-.orbit-13 { animation: orbit-rotate 10s linear infinite; animation-delay: -8s;   top: 17%;  left: 12%;   width: 76%; }
-.orbit-13:after { animation-delay: -8s;   height: 6px;  width: 6px;  background-color: #22d3ee; }
-.orbit-14 { animation: orbit-rotate 10s linear infinite; animation-delay: -3.4s; top: 92%;  left: 23.5%; width: 53%; }
-.orbit-14:after { animation-delay: -3.4s; height: 10px; width: 10px; background-color: #a78bfa; }
-.orbit-15 { animation: orbit-rotate 10s linear infinite; animation-delay: -0.6s; top: 85%;  left: 14.5%; width: 71%; }
-.orbit-15:after { animation-delay: -0.6s; height: 8px;  width: 8px;  background-color: #fb923c; }
-.orbit-16 { animation: orbit-rotate 10s linear infinite; animation-delay: -5s;   top: 14%;  left: 15%;   width: 70%; }
-.orbit-16:after { animation-delay: -5s;   height: 8px;  width: 8px;  background-color: #34d399; }
-.orbit-17 { animation: orbit-rotate 10s linear infinite; animation-delay: -9.6s; top: 79%;  left: 9%;    width: 82%; }
-.orbit-17:after { animation-delay: -9.6s; height: 11px; width: 11px; background-color: #f87171; }
-.orbit-18 { animation: orbit-rotate 10s linear infinite; animation-delay: -0.8s; top: 11%;  left: 18.5%; width: 63%; }
-.orbit-18:after { animation-delay: -0.8s; height: 7px;  width: 7px;  background-color: #60a5fa; }
-.orbit-19 { animation: orbit-rotate 10s linear infinite; animation-delay: -3.2s; top: 65%;  left: 2%;    width: 96%; }
-.orbit-19:after { animation-delay: -3.2s; height: 5px;  width: 5px;  background-color: #e879f9; }
-.orbit-20 { animation: orbit-rotate 10s linear infinite; animation-delay: -9.7s; top: 30%;  left: 4%;    width: 92%; }
-.orbit-20:after { animation-delay: -9.7s; height: 8px;  width: 8px;  background-color: #fbbf24; }
-
-@keyframes orbit-rotate {
-  from { transform: rotateY(0deg); }
-  to { transform: rotateY(360deg); }
-}
-
-@keyframes planet-rotate {
-  from { transform: rotateY(0deg); }
-  to { transform: rotateY(-360deg); }
+    0 1px 10px rgba(27, 41, 71, 0.55),
+    0 0 24px rgba(27, 41, 71, 0.35);
 }
 
 /* ===== RESTO DEL CONTENIDO ===== */

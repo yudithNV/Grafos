@@ -71,14 +71,14 @@ const navItems = [
   justify-content: space-between;
   gap: 1rem;
   padding: 0.75rem 1.5rem;
-  
+
   /* ===== EFECTO GLASSMORPHISM ===== */
   background: rgba(255, 255, 255, 0);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
-  
+
   /* ===== NAVBAR FIJO ===== */
   position: fixed;
   top: 0;
@@ -88,18 +88,18 @@ const navItems = [
   z-index: 1000;
 }
 
-/* Modo oscuro */
+/* ===== MODO OSCURO (sin cambios) ===== */
 [data-theme='dark'] .navbar {
   background: rgba(0, 0, 0, 0.3);
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
 }
 
-/* Modo claro más visible */
+/* ===== MODO CLARO: cristal azul marino (combina con el hero) ===== */
 [data-theme='light'] .navbar {
-  background: rgba(255, 255, 255, 0.5);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.03);
+  background: rgba(27, 41, 71, 0.70);
+  border-bottom: 1px solid rgba(247, 247, 182, 0.18);
+  box-shadow: 0 4px 30px rgba(27, 41, 71, 0.25);
 }
 
 .navbar-brand {
@@ -135,8 +135,7 @@ const navItems = [
 .brand-node-b { fill: #ec4899; }
 .brand-node-c { fill: var(--accent-end); }
 
-/* ===== NOMBRE DEL SISTEMA CON BRILLO ===== */
-/* ===== NOMBRE DEL SISTEMA CON BRILLO NEÓN BLANCO ===== */
+/* ===== NOMBRE DEL SISTEMA ===== */
 .brand-name {
   font-size: 1.15rem;
   font-weight: 800;
@@ -145,22 +144,20 @@ const navItems = [
   transition: all 0.3s ease;
 }
 
-/* Brillo neón blanco (modo oscuro - MÁS intenso) */
+/* Oscuro: blanco con brillo neón */
 [data-theme='dark'] .brand-name {
   color: #ffffff;
-  text-shadow: 
+  text-shadow:
     0 0 5px  #ffffff,
     0 0 10px #ffffff;
 }
 
-/* Brillo neón blanco (modo claro - MÁS suave) */
+/* Claro: blanco con brillo suave */
 [data-theme='light'] .brand-name {
-  color: #1a1a1a;              /* texto oscuro para que se lea en fondo claro */
-  text-shadow: 
-    0 0 5px  rgba(255, 255, 255, 0.9),
-    0 0 10px rgba(255, 255, 255, 0.7),
-    0 0 20px rgba(255, 255, 255, 0.5),
-    0 0 40px rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  text-shadow:
+    0 0 6px  rgba(255, 255, 255, 0.55),
+    0 0 14px rgba(233, 111, 146, 0.45);
 }
 
 .navbar-links {
@@ -170,8 +167,23 @@ const navItems = [
   flex: 1;
   justify-content: center;
 }
-.menu-toggle { display: none; border: 1px solid var(--border-color); border-radius: .55rem; padding: .45rem; background: var(--bg-surface); color: var(--text-primary); cursor: pointer; }
+
+.menu-toggle {
+  display: none;
+  border: 1px solid var(--border-color);
+  border-radius: .55rem;
+  padding: .45rem;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  cursor: pointer;
+}
 .menu-icon { width: 1.2rem; height: 1.2rem; }
+
+[data-theme='light'] .menu-toggle {
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
 
 .nav-link {
   padding: 0.5rem 0.9rem;
@@ -191,6 +203,16 @@ const navItems = [
   transform: translateY(-1px);
 }
 
+/* Claro: links blancos legibles sobre el cristal azul */
+[data-theme='light'] .nav-link {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+[data-theme='light'] .nav-link:hover {
+  color: #ffffff;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
+}
+
 /* ===== BOTÓN ACTIVO - SOLO LAS LETRAS BRILLAN ===== */
 .nav-link-active {
   font-weight: 600;
@@ -199,24 +221,25 @@ const navItems = [
   box-shadow: none !important;
 }
 
-/* ===== DARK: BLANCO con glow (un poco menos intenso que "Graphix") ===== */
+/* Oscuro: blanco con glow */
 [data-theme='dark'] .nav-link-active {
   color: #ffffff;
-  text-shadow: 
+  text-shadow:
     0 0 4px  rgba(255, 255, 255, 0.55),
     0 0 10px rgba(255, 255, 255, 0.30),
     0 0 20px rgba(168, 85, 247, 0.20);
 }
 
-/* ===== LIGHT: LILA (lo que ya tenías) ===== */
+/* Claro: blanco con glow rosado (paleta del hero) */
 [data-theme='light'] .nav-link-active {
-  color: var(--accent-solid);
-  text-shadow: 
-    0 0 10px rgba(168, 85, 247, 0.5),
-    0 0 20px rgba(168, 85, 247, 0.25);
+  color: #ffffff;
+  text-shadow:
+    0 0 6px  rgba(255, 255, 255, 0.55),
+    0 0 14px rgba(233, 111, 146, 0.65),
+    0 0 26px rgba(233, 111, 146, 0.35);
 }
 
-/* Línea indicadora debajo del texto activo (opcional, más elegante) */
+/* Línea indicadora debajo del texto activo */
 .nav-link-active::after {
   content: '';
   position: absolute;
@@ -228,16 +251,16 @@ const navItems = [
   border-radius: 2px;
 }
 
-/* Dark: línea blanca */
+/* Oscuro: línea blanca */
 [data-theme='dark'] .nav-link-active::after {
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.9), transparent);
   box-shadow: 0 0 10px rgba(255, 255, 255, 0.7);
 }
 
-/* Light: línea lila */
+/* Claro: línea crema/rosa */
 [data-theme='light'] .nav-link-active::after {
-  background: linear-gradient(90deg, transparent, var(--accent-solid), transparent);
-  box-shadow: 0 0 10px var(--accent-solid);
+  background: linear-gradient(90deg, transparent, #F7F7B6, transparent);
+  box-shadow: 0 0 10px rgba(233, 111, 146, 0.8);
 }
 
 .theme-toggle {
@@ -261,10 +284,22 @@ const navItems = [
   border-color: rgba(255, 255, 255, 0.05);
 }
 
+[data-theme='light'] .theme-toggle {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.28);
+  color: #ffffff;
+}
+
 .theme-toggle:hover {
   border-color: var(--accent-solid);
   color: var(--accent-solid);
   background: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme='light'] .theme-toggle:hover {
+  border-color: #F7F7B6;
+  color: #F7F7B6;
+  background: rgba(255, 255, 255, 0.18);
 }
 
 .theme-icon {
@@ -292,6 +327,9 @@ const navItems = [
     gap: .25rem;
     padding: .65rem 0 .15rem;
     border-top: 1px solid var(--border-color);
+  }
+  [data-theme='light'] .navbar-links {
+    border-top-color: rgba(255, 255, 255, 0.2);
   }
   .navbar-links-open { display: flex; }
   .nav-link {

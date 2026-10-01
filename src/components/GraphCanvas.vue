@@ -87,14 +87,13 @@
     <!-- Barra de Herramientas Superior (simplificada) -->
     <div class="canvas-header">
       <div class="header-left">
-
         <button @click="$emit('back')" class="btn-icon-only" title="Volver a Inicio">
           <ArrowLeft class="icon" />
         </button>
 
         <div class="header-info">
           <h2 class="header-title">
-            Lienzo de Grafo
+            Pizarra de {{ esJohnson ? 'Johnson' : 'Grafos' }}
             <span class="status-indicator"></span>
           </h2>
 
@@ -217,6 +216,7 @@
     <!-- Contenedor del Lienzo SVG -->
     <div class="canvas-container" ref="canvasContainerRef" @mousedown="onCanvasMouseDown"
       @touchstart="onCanvasTouchStart">
+      <StarryBackground />
       <svg ref="svgRef" class="svg-canvas" @mousemove="onMouseMove" @touchmove="onTouchMove" @mouseup="onMouseUp"
         @touchend="onTouchEnd">
         <!-- Grupo que contiene TODO (nodos + aristas + background) con transform para pan -->
@@ -298,7 +298,7 @@
             @mouseleave="hoveredNodeId = null">
             <template v-if="!johnsonActivo">
               <!-- Círculo del Nodo -->
-              <circle r="28" class="node-circle" :style="{ stroke: node.color || '#94a3b8' }" />
+              <circle r="28" class="node-circle" :style="{ '--node-color': node.color || '#94a3b8' }" />
 
               <text dy="6" class="node-text">
                 {{ truncateLabel(node.label) }}
@@ -405,6 +405,7 @@
 </template>
 
 <script setup>
+import StarryBackground from './StarryBackground.vue'
 import {
   ref,
   computed,
@@ -2051,19 +2052,33 @@ const confirmClear = () => {
 }
 
 .canvas-container {
+  position: relative;
+  background-color: #ffffff;  
   flex-grow: 1;
+  min-height: 0;
   width: 100%;
   height: 100%;
-  position: relative;
   cursor: crosshair;
   overflow: hidden;
   touch-action: none;
 }
 
+[data-theme='dark'] .canvas-container {
+  background-color: var(--bg-body);  /* oscuro normal */
+}
+.canvas-container > :deep(.starry-background) {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
 .svg-canvas {
+  display: block;
+  position: relative;
+  z-index: 1;
   width: 100%;
   height: 100%;
-  background-color: var(--bg-body);
+  background-color: transparent;
   background-image: radial-gradient(var(--border-color) 1px, transparent 1px);
   background-size: 24px 24px;
   touch-action: none;
@@ -2106,9 +2121,21 @@ const confirmClear = () => {
 
 .node-circle {
   fill: var(--bg-surface);
-  stroke: var(--text-secondary);
+  stroke: var(--node-color, var(--text-secondary));
   stroke-width: 2.5px;
   transition: all 0.15s ease-in-out;
+
+  /* ✨ GLOW — modo oscuro (más suave y contenido) */
+  filter:
+    drop-shadow(0 0 2px var(--node-color, #94a3b8))
+    drop-shadow(0 0 6px rgba(148, 163, 184, 0.35));
+}
+
+/* ✨ GLOW — modo claro (muy sutil, sin saturar) */
+[data-theme='light'] .node-circle {
+  filter:
+    drop-shadow(0 0 3px rgba(168, 85, 247, 0.20))
+    drop-shadow(0 0 6px rgba(168, 85, 247, 0.10));
 }
 
 .node-text {

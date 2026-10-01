@@ -1,7 +1,7 @@
-//solver.js corregido
 /**
  * Utilidad para la resolucion del Algoritmo de Asignacion.
- * Filtra automaticamente las filas por Nodos Origen y las columnas por Nodos Destino.
+ * Construye una matriz completa entre nodos origen y destino y aplica el
+ * metodo hungaro sobre toda la matriz.
  */
 
 export const INF = Number.MAX_SAFE_INTEGER
@@ -32,21 +32,28 @@ export function solveAlgorithm(nodes, edges, mode = 'minimize') {
   const targetAssignments = Math.min(numRows, numCols)
 
   // 2. Obtener peso maximo para maximizacion
-  let maxWeight = 0
+  let maxWeight = -Infinity
   edges.forEach(e => {
-    const w = Number(e.weight) || 0
+    const parsedWeight = Number(e.weight)
+    const w = Number.isFinite(parsedWeight) ? parsedWeight : 0
     if (w > maxWeight) maxWeight = w
   })
+  if (!Number.isFinite(maxWeight)) maxWeight = 0
 
-  // 3. Construir Matriz Rectangular [numRows x numCols]
-  const rawCostMatrix = Array.from({ length: numRows }, () => Array(numCols).fill(INF))
-  const costMatrix = Array.from({ length: numRows }, () => Array(numCols).fill(INF))
+  // 3. Construir la matriz completa [numRows x numCols].
+  // Una combinacion sin arista representa un 0, igual que en la matriz
+  // mostrada por AssignmentMatrixModal.vue.
+  const rawCostMatrix = Array.from({ length: numRows }, () => Array(numCols).fill(0))
+  const costMatrix = Array.from({ length: numRows }, () => Array(numCols).fill(0))
+  const edgeMatrix = Array.from({ length: numRows }, () => Array(numCols).fill(null))
 
   edges.forEach(edge => {
     const rIdx = sourceNodes.findIndex(n => n.id === edge.sourceId)
     const cIdx = targetNodes.findIndex(n => n.id === edge.targetId)
-    if (rIdx !== -1 && cIdx !== -1) {
-      const w = Number(edge.weight) || 0
+    if (rIdx !== -1 && cIdx !== -1 && edgeMatrix[rIdx][cIdx] === null) {
+      const parsedWeight = Number(edge.weight)
+      const w = Number.isFinite(parsedWeight) ? parsedWeight : 0
+      edgeMatrix[rIdx][cIdx] = edge
       rawCostMatrix[rIdx][cIdx] = w
       costMatrix[rIdx][cIdx] = mode === 'minimize' ? w : (maxWeight - w)
     }
@@ -90,11 +97,17 @@ export function solveAlgorithm(nodes, edges, mode = 'minimize') {
     matrix: rowReducedMatrix.map(r => [...r])
   })
 
-  // 5. Reduccion por Columnas (Beta)
-  const beta = Array.from({ length: numCols }, (_, j) => {
-    const col = rowReducedMatrix.map(r => r[j]).filter(v => v !== INF)
-    return col.length > 0 ? Math.min(...col) : 0
-  })
+  // 5. Reduccion por Columnas (Beta).
+  // En una matriz con mas columnas que filas, reducir cada columna
+  // individualmente elimina la diferencia entre alternativas de una misma
+  // fila (por ejemplo [0, 2] se convierte en [0, 0]). La reduccion por
+  // filas ya es suficiente para el problema rectangular en ese sentido.
+  const beta = numRows < numCols
+    ? Array(numCols).fill(0)
+    : Array.from({ length: numCols }, (_, j) => {
+      const col = rowReducedMatrix.map(r => r[j]).filter(v => v !== INF)
+      return col.length > 0 ? Math.min(...col) : 0
+    })
 
   let finalMatrix = rowReducedMatrix.map(row =>
     row.map((val, j) => (val === INF ? INF : val - beta[j]))
@@ -109,12 +122,12 @@ export function solveAlgorithm(nodes, edges, mode = 'minimize') {
   })
 
   // 6. Emparejamiento por ceros + ajuste hungaro iterativo.
-  let matchTargetToSource = findZeroMatching(finalMatrix, costMatrix, numRows, numCols)
+  let matchTargetToSource = findZeroMatching(finalMatrix, numRows, numCols)
   let matchedCount = countMatches(matchTargetToSource)
   let iteration = 1
 
   while (matchedCount < targetAssignments) {
-    const cover = findMinimumZeroCover(finalMatrix, costMatrix, matchTargetToSource, numRows, numCols)
+    const cover = findMinimumZeroCover(finalMatrix, numRows, numCols)
     const lineCount = countCoveredLines(cover)
 
     pasos.push({
@@ -127,9 +140,14 @@ export function solveAlgorithm(nodes, edges, mode = 'minimize') {
       coveredCols: [...cover.coveredCols]
     })
 
-    if (lineCount >= targetAssignments) break
+    if (lineCount >= targetAssignments) {
+      // En una matriz rectangular, esta es la condicion de optimalidad.
+      // El matching ya debe tener targetAssignments pares si la matriz
+      // completa es factible.
+      break
+    }
 
-    const minUncovered = findMinUncovered(finalMatrix, costMatrix, cover.coveredRows, cover.coveredCols, numRows, numCols)
+    const minUncovered = findMinUncovered(finalMatrix, cover.coveredRows, cover.coveredCols, numRows, numCols)
     if (minUncovered === INF) break
 
     finalMatrix = applyHungarianAdjustment(finalMatrix, cover.coveredRows, cover.coveredCols, minUncovered)
@@ -144,12 +162,12 @@ export function solveAlgorithm(nodes, edges, mode = 'minimize') {
       coveredCols: [...cover.coveredCols]
     })
 
-    matchTargetToSource = findZeroMatching(finalMatrix, costMatrix, numRows, numCols)
+    matchTargetToSource = findZeroMatching(finalMatrix, numRows, numCols)
     matchedCount = countMatches(matchTargetToSource)
     iteration++
   }
 
-  matchTargetToSource = findZeroMatching(finalMatrix, costMatrix, numRows, numCols)
+  matchTargetToSource = findZeroMatching(finalMatrix, numRows, numCols)
 
   // 7. Extraer Asignaciones Optimas
   const uiAsignaciones = []
@@ -162,8 +180,8 @@ export function solveAlgorithm(nodes, edges, mode = 'minimize') {
       const sNode = sourceNodes[u]
       const tNode = targetNodes[v]
 
-      const edge = edges.find(e => e.sourceId === sNode.id && e.targetId === tNode.id)
-      const origWeight = edge ? (Number(edge.weight) || 0) : 0
+      const edge = edgeMatrix[u][v]
+      const origWeight = rawCostMatrix[u][v]
 
       if (edge) optimalEdgeIds.push(edge.id)
       totalCost += origWeight
@@ -197,12 +215,12 @@ export function solveAlgorithm(nodes, edges, mode = 'minimize') {
   }
 }
 
-function findZeroMatching(matrix, costMatrix, numRows, numCols) {
+function findZeroMatching(matrix, numRows, numCols) {
   const matchTargetToSource = Array(numCols).fill(-1)
 
   function dfsKuhn(u, visited) {
     for (let v = 0; v < numCols; v++) {
-      if (matrix[u][v] === 0 && costMatrix[u][v] !== INF && !visited[v]) {
+      if (matrix[u][v] === 0 && !visited[v]) {
         visited[v] = true
         if (matchTargetToSource[v] < 0 || dfsKuhn(matchTargetToSource[v], visited)) {
           matchTargetToSource[v] = u
@@ -229,7 +247,8 @@ function countCoveredLines(cover) {
   return cover.coveredRows.filter(Boolean).length + cover.coveredCols.filter(Boolean).length
 }
 
-function findMinimumZeroCover(matrix, costMatrix, matchTargetToSource, numRows, numCols) {
+function findMinimumZeroCover(matrix, numRows, numCols) {
+  const matchTargetToSource = findZeroMatching(matrix, numRows, numCols)
   const matchedRows = Array(numRows).fill(false)
   const markedRows = Array(numRows).fill(false)
   const markedCols = Array(numCols).fill(false)
@@ -250,7 +269,7 @@ function findMinimumZeroCover(matrix, costMatrix, matchTargetToSource, numRows, 
       if (!markedRows[i]) continue
 
       for (let j = 0; j < numCols; j++) {
-        if (matrix[i][j] === 0 && costMatrix[i][j] !== INF && !markedCols[j]) {
+        if (matrix[i][j] === 0 && !markedCols[j]) {
           markedCols[j] = true
           changed = true
         }
@@ -272,14 +291,14 @@ function findMinimumZeroCover(matrix, costMatrix, matchTargetToSource, numRows, 
   }
 }
 
-function findMinUncovered(matrix, costMatrix, coveredRows, coveredCols, numRows, numCols) {
+function findMinUncovered(matrix, coveredRows, coveredCols, numRows, numCols) {
   let min = INF
 
   for (let i = 0; i < numRows; i++) {
     if (coveredRows[i]) continue
 
     for (let j = 0; j < numCols; j++) {
-      if (!coveredCols[j] && costMatrix[i][j] !== INF && matrix[i][j] < min) {
+      if (!coveredCols[j] && matrix[i][j] < min) {
         min = matrix[i][j]
       }
     }
