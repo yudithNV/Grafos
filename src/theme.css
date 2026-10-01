@@ -59,3 +59,25 @@ body.canvas-lock {
   height: 100vh;
   overflow: hidden;
 }
+/* ===== ESTRELLAS DEL LIENZO ===== */
+:root {
+  /* Modo claro: estrellas moradas, fondo claro */
+  --starry-bg: radial-gradient(
+    ellipse at bottom,
+    rgba(255, 255, 255, 0.58) 0%,
+    rgba(255, 255, 255, 0.42) 100%
+  );
+  --star-color: rgba(139, 92, 246, 0.42);   /* morado */
+  --star-glow: rgba(168, 85, 247, 0.28);
+}
+
+[data-theme='dark'] {
+  /* Modo oscuro: estrellas blancas, fondo azul oscuro */
+  --starry-bg: radial-gradient(
+    ellipse at bottom,
+    rgba(27, 39, 53, 0.58) 0%,
+    rgba(9, 10, 15, 0.68) 100%
+  );
+  --star-color: rgba(255, 255, 255, 0.48);  /* blanco */
+  --star-glow: rgba(255, 255, 255, 0.32);
+}

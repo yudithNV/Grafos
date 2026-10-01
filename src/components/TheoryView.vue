@@ -4,7 +4,7 @@
     <div class="theory-shell">
       <header class="page-header">
         <span class="eyebrow">RUTA ACADÉMICA</span>
-        <h1>Fundamentos de teoría de grafos</h1>
+        <h1 class="theory-title">Fundamentos de teoría de grafos</h1>
         <p>Un recorrido progresivo desde el lenguaje básico hasta los algoritmos que puedes experimentar en Graphix.</p>
 
         <!-- ============ TABS ============ -->
@@ -86,7 +86,7 @@
                 <span class="video-label">🎬 Video recomendado</span>
                 <div class="video-wrapper">
                   <iframe
-                    src="https://www.youtube.com/embed/vnNFiNVy9KM"
+                    src="https://www.youtube.com/embed/F5Xjpg0-NhM"
                     title="Introducción a grafos"
                     loading="lazy"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -94,7 +94,7 @@
                   ></iframe>
                   <div class="video-placeholder">
                     <span>📺 Espacio reservado para video</span>
-                    <small>Pega aquí tu URL de YouTube</small>
+                    <small>URL de YouTube</small>
                   </div>
                 </div>
               </div>
@@ -207,6 +207,160 @@
                   <code>lista[u] = [(v, peso)]</code>
                 </div>
               </div>
+
+              <!-- ============ EJEMPLO PRÁCTICO: MISMO GRAFO, DOS ESTRUCTURAS ============ -->
+              <div class="representation-example">
+                <h3>Ejemplo práctico: el mismo grafo en dos estructuras</h3>
+                <p>
+                  Considera el siguiente grafo no dirigido y no ponderado de 4 nodos
+                  (<strong>A, B, C, D</strong>) con las aristas:
+                  <strong>A–B</strong>, <strong>A–C</strong>, <strong>B–D</strong> y <strong>C–D</strong>.
+                </p>
+
+                <!-- Diagrama del grafo -->
+                <div class="example-graph">
+                  <svg viewBox="0 0 300 200" class="example-graph-svg">
+                    <!-- Aristas -->
+                    <line x1="60" y1="50" x2="240" y2="50" class="edge-line" />
+                    <line x1="60" y1="50" x2="60" y2="150" class="edge-line" />
+                    <line x1="240" y1="50" x2="240" y2="150" class="edge-line" />
+                    <line x1="60" y1="150" x2="240" y2="150" class="edge-line" />
+
+                    <!-- Nodos -->
+                    <circle cx="60" cy="50" r="18" class="node-hollow" />
+                    <circle cx="240" cy="50" r="18" class="node-hollow" />
+                    <circle cx="60" cy="150" r="18" class="node-hollow" />
+                    <circle cx="240" cy="150" r="18" class="node-hollow" />
+
+                    <!-- Etiquetas -->
+                    <text x="60" y="55" class="node-label-sm">A</text>
+                    <text x="240" y="55" class="node-label-sm">B</text>
+                    <text x="60" y="155" class="node-label-sm">C</text>
+                    <text x="240" y="155" class="node-label-sm">D</text>
+                  </svg>
+                </div>
+
+                <div class="example-grid">
+                  <!-- Matriz de adyacencia -->
+                  <div class="example-card">
+                    <h4>Matriz de adyacencia</h4>
+                    <p class="example-desc">
+                      Tabla de 4 × 4. Un <strong>1</strong> indica que existe una arista entre el nodo
+                      de la fila y el de la columna; un <strong>0</strong> indica que no.
+                    </p>
+                    <div class="table-wrap">
+                      <table class="adj-matrix">
+                        <thead>
+                          <tr>
+                            <th></th>
+                            <th>A</th>
+                            <th>B</th>
+                            <th>C</th>
+                            <th>D</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <th>A</th>
+                            <td>0</td>
+                            <td>1</td>
+                            <td>1</td>
+                            <td>0</td>
+                          </tr>
+                          <tr>
+                            <th>B</th>
+                            <td>1</td>
+                            <td>0</td>
+                            <td>0</td>
+                            <td>1</td>
+                          </tr>
+                          <tr>
+                            <th>C</th>
+                            <td>1</td>
+                            <td>0</td>
+                            <td>0</td>
+                            <td>1</td>
+                          </tr>
+                          <tr>
+                            <th>D</th>
+                            <td>0</td>
+                            <td>1</td>
+                            <td>1</td>
+                            <td>0</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <small class="example-note">
+                      Útil para consultas rápidas: <code>matriz[A][B] = 1</code>.
+                      Ocupa O(V²) de memoria.
+                    </small>
+                  </div>
+
+                  <!-- Lista de adyacencia -->
+                  <div class="example-card">
+                    <h4>Lista de adyacencia</h4>
+                    <p class="example-desc">
+                      Cada nodo guarda una lista con sus vecinos directos. Es la representación
+                      habitual en algoritmos de recorrido.
+                    </p>
+                    <div class="code-list">
+                      <div class="code-line">
+                        <span class="code-key">A</span>
+                        <span class="code-arrow">→</span>
+                        <span class="code-val">[B, C]</span>
+                      </div>
+                      <div class="code-line">
+                        <span class="code-key">B</span>
+                        <span class="code-arrow">→</span>
+                        <span class="code-val">[A, D]</span>
+                      </div>
+                      <div class="code-line">
+                        <span class="code-key">C</span>
+                        <span class="code-arrow">→</span>
+                        <span class="code-val">[A, D]</span>
+                      </div>
+                      <div class="code-line">
+                        <span class="code-key">D</span>
+                        <span class="code-arrow">→</span>
+                        <span class="code-val">[B, C]</span>
+                      </div>
+                    </div>
+                    <small class="example-note">
+                      Útil para grafos dispersos: ocupa O(V + E) de memoria y recorrer
+                      los vecinos es muy rápido.
+                    </small>
+                  </div>
+                </div>
+
+                <div class="callout example-callout">
+                  <strong>Conclusión</strong>
+                  <span>
+                    La <strong>matriz</strong> es cómoda para consultar si dos nodos están conectados
+                    en tiempo constante, pero desperdicia memoria en grafos grandes y dispersos.
+                    La <strong>lista</strong> es más eficiente para recorrer vecinos y para la mayoría
+                    de algoritmos sobre grafos.
+                  </span>
+                </div>
+              </div>
+
+              <!-- VIDEO 1.1 -->
+              <div class="video-block">
+                <span class="video-label">🎬 Video recomendado</span>
+                <div class="video-wrapper">
+                  <iframe
+                    src="https://www.youtube.com/embed/D7Gk4NOlB4c"
+                    title="Matriz y lista de Adj"
+                    loading="lazy"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowfullscreen
+                  ></iframe>
+                  <div class="video-placeholder">
+                    <span>📺 Espacio reservado para video</span>
+                    <small>URL de YouTube</small>
+                  </div>
+                </div>
+              </div>
             </section>
 
             <!-- 04 · COMPLEJIDAD -->
@@ -274,7 +428,7 @@
                 <span class="video-label">🎬 Video: ¿Qué es un algoritmo?</span>
                 <div class="video-wrapper">
                   <iframe
-                    src=""
+                    src="https://www.youtube.com/embed/f10jKIslSUY"
                     title="¿Qué es un algoritmo?"
                     loading="lazy"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -282,7 +436,7 @@
                   ></iframe>
                   <div class="video-placeholder">
                     <span>📺 Espacio reservado para video</span>
-                    <small>Pega aquí tu URL de YouTube</small>
+                    <small>URL de YouTube</small>
                   </div>
                 </div>
               </div>
@@ -445,24 +599,6 @@
                   <small>Algoritmos: A*, BFS, DFS</small>
                 </article>
               </div>
-
-              <!-- 🎬 VIDEO 2 — Aplicaciones 
-              <div class="video-block">
-                <span class="video-label">🎬 Video: Aplicaciones de los grafos en el mundo real</span>
-                <div class="video-wrapper">
-                  <iframe
-                    src=""
-                    title="Aplicaciones de los grafos"
-                    loading="lazy"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowfullscreen
-                  ></iframe>
-                  <div class="video-placeholder">
-                    <span>📺 Espacio reservado para video</span>
-                    <small>Pega aquí tu URL de YouTube</small>
-                  </div>
-                </div>
-              </div>-->
             </section>
 
             <!-- 04 · ALGORITMOS DISPONIBLES EN GRAPHIX -->
@@ -511,7 +647,7 @@
                         ></iframe>
                         <div class="video-placeholder">
                           <span>📺 Espacio reservado para video</span>
-                          <small>Pega aquí tu URL de YouTube</small>
+                          <small>URL de YouTube</small>
                         </div>
                       </div>
                     </div>
@@ -621,7 +757,15 @@ const graphixAlgorithms = [
   margin: auto;
   padding: 8rem 0 5rem;
 }
-.page-header { max-width: 720px; margin-bottom: 3rem; }
+.page-header {
+  max-width: 100%;
+  margin-bottom: 3rem;
+}
+.page-header > p {
+  max-width: 720px;
+  margin-inline: auto;
+  text-align: center;
+}
 .eyebrow,
 .section-kicker,
 .theory-index span {
@@ -630,13 +774,39 @@ const graphixAlgorithms = [
   font-weight: 800;
   letter-spacing: .14em;
 }
-.page-header h1 {
+
+/* ============ TÍTULO CON GLOW ============ */
+.theory-title {
   font-size: clamp(2.4rem, 5vw, 4rem);
+  font-weight: 800;
   letter-spacing: -.05em;
   line-height: 1.05;
   margin: .8rem 0 1rem;
+  text-align: center;
   overflow-wrap: anywhere;
+  transition: color 0.3s ease, filter 0.3s ease;
 }
+
+[data-theme='dark'] .theory-title {
+  color: #ffffff;
+  filter:
+    drop-shadow(0 0 6px  rgba(255, 255, 255, 0.45))
+    drop-shadow(0 0 16px rgba(255, 255, 255, 0.25))
+    drop-shadow(0 0 34px rgba(168, 85, 247, 0.25));
+}
+
+[data-theme='light'] .theory-title {
+  background: linear-gradient(135deg, #7c3aed, #a855f7, #d946ef);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  filter:
+    drop-shadow(0 0 8px  rgba(168, 85, 247, 0.30))
+    drop-shadow(0 0 20px rgba(168, 85, 247, 0.18))
+    drop-shadow(0 0 38px rgba(217, 70, 239, 0.12));
+}
+
 .page-header p,
 .theory-content p,
 .theory-content li {
@@ -646,13 +816,16 @@ const graphixAlgorithms = [
 
 /* ============ TABS ============ */
 .tabs {
-  display: inline-flex;
+  display: flex;
+  justify-content: center;
   gap: .3rem;
   margin-top: 1.8rem;
+  margin-inline: auto;
   padding: .35rem;
   border: 1px solid var(--border-color);
   border-radius: 999px;
   background: var(--bg-surface);
+  width: fit-content;
 }
 .tab-btn {
   padding: .55rem 1.4rem;
@@ -674,8 +847,9 @@ const graphixAlgorithms = [
 /* ============ LAYOUT ============ */
 .theory-layout {
   display: grid;
-  grid-template-columns: minmax(150px, 190px) minmax(0, 1fr);
-  gap: clamp(1.5rem, 5vw, 4rem);
+  grid-template-columns: 15% minmax(0, 75%);
+  gap: 2rem;
+  justify-content: start;
   align-items: start;
 }
 .theory-index { position: sticky; top: 90px; display: grid; gap: .8rem; }
@@ -697,6 +871,24 @@ const graphixAlgorithms = [
   font-size: clamp(1.55rem, 3vw, 2rem);
   margin: .6rem 0 .8rem;
   letter-spacing: -.04em;
+  transition: color 0.3s ease, filter 0.3s ease;
+}
+
+/* Dark: blanco con brillo SUAVE */
+[data-theme='dark'] .theory-content h2 {
+  color: #ffffff;
+  filter:
+  drop-shadow(0 0 6px rgba(255, 255, 255, 0.45))
+  drop-shadow(0 0 16px rgba(255, 255, 255, 0.25))
+  drop-shadow(0 0 34px rgba(168, 85, 247, 0.25));
+}
+
+/* Light: violeta con brillo SUAVE */
+[data-theme='light'] .theory-content h2 {
+  color: #7c3aed;
+  filter:
+    drop-shadow(0 0 3px  rgba(168, 85, 247, 0.18))
+    drop-shadow(0 0 8px  rgba(217, 70, 239, 0.10));
 }
 .theory-content h3 { margin: 0 0 .5rem; }
 
@@ -784,6 +976,128 @@ const graphixAlgorithms = [
 }
 .comparison p { font-size: .9rem; margin: 0 0 .8rem; }
 .comparison code { color: var(--accent-solid); font-size: .8rem; overflow-wrap: anywhere; }
+
+/* ============ EJEMPLO PRÁCTICO DE REPRESENTACIONES ============ */
+.representation-example {
+  margin-top: 2rem;
+  padding: 1.6rem;
+  border: 1px solid var(--border-color);
+  border-radius: .9rem;
+  background: var(--bg-surface);
+}
+.representation-example h3 {
+  font-size: 1.15rem;
+  margin: 0 0 .5rem;
+}
+.representation-example > p {
+  margin: 0 0 1.2rem;
+  font-size: .92rem;
+}
+.example-graph {
+  display: flex;
+  justify-content: center;
+  margin: 0 0 1.4rem;
+}
+.example-graph-svg {
+  width: 100%;
+  max-width: 300px;
+  height: auto;
+}
+.example-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+.example-card {
+  padding: 1.2rem;
+  border: 1px solid var(--border-color);
+  border-radius: .8rem;
+  background: var(--bg-body);
+  display: flex;
+  flex-direction: column;
+  gap: .7rem;
+}
+.example-card h4 {
+  font-size: .95rem;
+  margin: 0;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  color: var(--accent-solid);
+}
+.example-desc {
+  font-size: .85rem;
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+.example-note {
+  font-size: .78rem;
+  color: var(--text-secondary);
+  opacity: .85;
+  line-height: 1.5;
+}
+.example-note code {
+  color: var(--accent-solid);
+  font-size: .78rem;
+}
+
+/* Tabla de matriz */
+.table-wrap { overflow-x: auto; }
+.adj-matrix {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .85rem;
+  text-align: center;
+}
+.adj-matrix th,
+.adj-matrix td {
+  border: 1px solid var(--border-color);
+  padding: .55rem .4rem;
+  color: var(--text-primary);
+}
+.adj-matrix thead th {
+  background: color-mix(in srgb, var(--accent-solid) 12%, transparent);
+  font-weight: 800;
+  color: var(--accent-solid);
+}
+.adj-matrix tbody th {
+  background: color-mix(in srgb, var(--accent-solid) 12%, transparent);
+  font-weight: 800;
+  color: var(--accent-solid);
+}
+
+/* Lista de adyacencia como código */
+.code-list {
+  display: grid;
+  gap: .35rem;
+  padding: .8rem;
+  border-radius: .5rem;
+  background: color-mix(in srgb, var(--accent-solid) 8%, var(--bg-body));
+  font-family: 'Fira Code', 'Cascadia Code', monospace;
+  font-size: .85rem;
+}
+.code-line {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+.code-key {
+  color: var(--accent-solid);
+  font-weight: 800;
+  min-width: 1.2rem;
+}
+.code-arrow {
+  color: var(--text-secondary);
+  opacity: .7;
+}
+.code-val {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.example-callout {
+  margin-top: 1.4rem;
+  font-size: .88rem;
+}
 
 /* ============ TIPOS DE ALGORITMOS ============ */
 .algo-types-grid {
@@ -987,6 +1301,7 @@ const graphixAlgorithms = [
 /* ============ RESPONSIVE ============ */
 @media (max-width: 900px) {
   .algo-types-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .example-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 760px) {
   .theory-shell { width: min(100% - 2rem, 680px); padding-top: 7rem; }
@@ -1019,5 +1334,6 @@ const graphixAlgorithms = [
   .theory-content li { font-size: .9rem; }
   .tabs { width: 100%; justify-content: center; }
   .tab-btn { flex: 1; padding: .5rem .8rem; font-size: .85rem; }
+  .representation-example { padding: 1rem; }
 }
 </style>

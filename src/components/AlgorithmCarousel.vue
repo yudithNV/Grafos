@@ -63,45 +63,12 @@
 
 <script setup>
 import { ref } from 'vue'
-import { ChevronLeft, ChevronRight, ArrowRight, Network } from '@lucide/vue'
+import { ChevronLeft, ChevronRight, ArrowRight } from '@lucide/vue'
+import { cards } from './algorithmCards'
 
 defineEmits(['select'])
 
 const trackRef = ref(null)
-
-// 👇 Aquí agregas tus imágenes. Opciones:
-//    - Local:  import imgGrafos from '@/assets/algo-grafos.png'
-//    - URL:    'https://tusitio.com/img/grafos.png'
-//    - Placeholder rápido: 'https://picsum.photos/seed/grafos/600/340'
-const cards = [
-  {
-    id: 'grafos',
-    title: 'Pizarra de grafos',
-    desc: 'Crea nodos y conexiones libremente para diseñar y analizar cualquier grafo.',
-    icon: Network,
-    iconBg: 'linear-gradient(135deg, var(--accent-start), var(--accent-end))',
-    image: null,           // ← pon aquí tu imagen real
-    comingSoon: false
-  },
-  {
-    id: 'asignacion',
-    title: 'Algoritmo de asignación',
-    desc: 'Resuelve problemas de asignación óptima sobre un grafo bipartito.',
-    icon: Network,
-    iconBg: 'linear-gradient(135deg, #6366f1, #06b6d4)',
-    image: null,
-    comingSoon: false // ← Cambiar de true a false
-  },
-  {
-  id: 'johnson',
-  title: 'Algoritmo de Johnson',
-  desc: 'Encuentra los caminos más cortos entre todos los pares de vértices en un grafo con pesos.',
-  icon: Network,
-  iconBg: 'linear-gradient(135deg, #6366f1, #06b6d4)',
-  image: null,
-  comingSoon: false
-}
-]
 
 const scrollBy = (direction) => {
   if (!trackRef.value) return

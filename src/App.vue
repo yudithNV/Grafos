@@ -40,6 +40,7 @@
       @back="backToWelcome"
       @show-instructions="showInstructionsModal"
       @show-matrix="showMatrixModal"
+      @show-saved="showSavedGraphs"
       @save="handleSaveGraph"
       @open-load="openLoadFromCanvas"
       @clear="confirmClearCanvas"
@@ -60,6 +61,7 @@
       @back="backToWelcome"
       @show-instructions="showInstructionsModal"
       @show-matrix="showMatrixModal"
+      @show-saved="showSavedGraphs"
       @save="handleSaveGraph"
       @open-load="openLoadAssignmentFromCanvas"
       @clear="confirmClearCanvas"
@@ -71,6 +73,13 @@
       @delete-edge="handleDeleteEdgeRequest"
       @clear-optimal="optimalAssignmentEdges = []"
       @solution-found="handleSolutionFound"
+    />
+    <NorthwestCanvas
+      v-else-if="currentView === 'canvas' && selectedAlgorithm === 'northwest'"
+      :initial-data="northwestData"
+      @back="backToWelcome"
+      @save="handleSaveNorthwest"
+      @show-instructions="showInstructionsModal"
     />
 
     <!-- Custom Modal -->
@@ -202,6 +211,21 @@
       </div>
     </div>
   </div>
+      <!-- Selector de problemas Northwest -->
+    <SavedListModal
+      :show="showNorthwestSelector"
+      title="Cargar Problema Northwest"
+      info="Guarda tus tablas de disponibilidad, demanda y costos para retomarlas después."
+      item-label="Problema"
+      new-label="➕ Crear Nuevo Problema"
+      header-bg="linear-gradient(135deg, #8b5cf6, #ec4899)"
+      :items="northwestItems"
+      :stats="(p) => [`${p.data.originCount} orígenes`, `${p.data.destinationCount} destinos`]"
+      @load="loadNorthwest"
+      @create="createNorthwest"
+      @delete="deleteNorthwest"
+      @close="showNorthwestSelector = false"
+    />
 </template>
 
 <script setup>
@@ -216,21 +240,45 @@ import CustomModal from './components/CustomModal.vue'
 import MatrixModal from './components/MatrixModal.vue'
 import Footer from './components/Footer.vue'
 import AssignmentCanvas from './components/AssignmentCanvas.vue'
+import NorthwestCanvas from './components/NorthwestCanvas.vue'
+import SavedListModal from './components/SavedListModal.vue'
+import { useSavedList } from './useSavedList'
 
 // Routing
 
 const currentView = ref('home')
+const previousView = ref('home')
 const selectedAlgorithm = ref('grafos')
 const optimalAssignmentEdges = ref([])
 const showAssignmentGraphSelector = ref(false)
 const savedAssignmentGraphs = ref([])
 const canvasMode = ref('normal')
+// Northwest: lista de problemas guardados
+const {
+  items: northwestItems,
+  load: loadNorthwestList,
+  add: addNorthwest,
+  update: updateNorthwest,
+  remove: removeNorthwest
+} = useSavedList('savedNorthwestProblems')
+
+const showNorthwestSelector = ref(false)
+const northwestData = ref(null)
+const northwestIndex = ref(-1)
 const goTo = async (view) => {
+  if (view !== currentView.value) {
+    previousView.value = currentView.value
+  }
   currentView.value = view
   if (view === 'home') {
     await nextTick()
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
+}
+
+const openCanvas = () => {
+  previousView.value = currentView.value
+  currentView.value = 'canvas'
 }
 
 watch(currentView, (view) => {
@@ -708,6 +756,13 @@ const onSelectAlgorithm = (id) => {
 
     return
   }
+
+  if (id === 'northwest') {
+    loadNorthwestList()
+    showNorthwestSelector.value = true
+    return
+  }
+
   openModal({
     title: 'Próximamente',
     iconName: 'construction',    // ← agrega esto
@@ -762,7 +817,7 @@ const loadSelectedGraph = (index) => {
     optimalAssignmentEdges.value = []
     currentGraphIndex.value = graph._storageIndex ?? index
     showGraphSelector.value = false
-    currentView.value = 'canvas'
+    openCanvas()
   }
 }
 
@@ -774,7 +829,7 @@ const loadSelectedAssignmentGraph = (index) => {
     optimalAssignmentEdges.value = []
     currentGraphIndex.value = index
     showAssignmentGraphSelector.value = false
-    currentView.value = 'canvas'
+    openCanvas()
   }
 }
 
@@ -848,7 +903,7 @@ const createNewGraph = () => {
   optimalAssignmentEdges.value = []
   currentGraphIndex.value = -1
   showGraphSelector.value = false
-  currentView.value = 'canvas'
+  openCanvas()
 }
 
 const createNewAssignmentGraph = () => {
@@ -857,25 +912,91 @@ const createNewAssignmentGraph = () => {
   optimalAssignmentEdges.value = []
   currentGraphIndex.value = -1
   showAssignmentGraphSelector.value = false
-  currentView.value = 'canvas'
+  openCanvas()
 }
 
 const handleSolutionFound = (result) => {
   optimalAssignmentEdges.value = result.optimalEdgeIds || []
 }
+// ============ NORTHWEST ============
+
+const loadNorthwest = (i) => {
+  northwestData.value = JSON.parse(JSON.stringify(northwestItems.value[i].data))
+  northwestIndex.value = i
+  showNorthwestSelector.value = false
+  openCanvas()
+}
+
+const createNorthwest = () => {
+  northwestData.value = null
+  northwestIndex.value = -1
+  showNorthwestSelector.value = false
+  openCanvas()
+}
+
+const deleteNorthwest = (i) => {
+  openModal({
+    title: 'Confirmar Eliminación',
+    message: `¿Eliminar "${northwestItems.value[i].name}"? Esta acción no se puede deshacer.`,
+    type: 'confirm',
+    callback: () => {
+      removeNorthwest(i)
+      if (northwestIndex.value === i) northwestIndex.value = -1
+    }
+  })
+}
+
+const handleSaveNorthwest = (data) => {
+  const current = northwestItems.value[northwestIndex.value]
+  openModal({
+    title: 'Guardar Problema',
+    iconName: 'save',
+    label: 'Nombre del problema:',
+    placeholder: 'Ej. Problema clase 1...',
+    type: 'input',
+    initialValue: current?.name || 'Problema Northwest',
+    callback: (name) => {
+      const problemName = String(name).trim() || 'Problema Northwest'
+      const entry = {
+        name: problemName,
+        date: new Date().toLocaleString(),
+        data: JSON.parse(JSON.stringify(data))
+      }
+      if (northwestIndex.value >= 0) {
+        updateNorthwest(northwestIndex.value, entry)
+      } else {
+        addNorthwest(entry)
+        northwestIndex.value = northwestItems.value.length - 1
+      }
+
+      setTimeout(() => {
+        openModal({
+          title: 'Guardado Correctamente',
+          iconName: 'success',
+          message: `"${problemName}" guardado correctamente.`,
+          type: 'info'
+        })
+      }, 250)
+    }
+  })
+}
 
 const backToWelcome = () => {
-  currentView.value = 'home'
+  currentView.value = previousView.value || 'home'
 }
 
 const showInstructionsModal = (manual = 'grafos') => {
   const file = {
-    asignacion: '/manual_asignacion.pdf',
-    johnson: '/manual_grafos.pdf',
-    grafos: '/Manual_Graphix_Dark.pdf'
-  }[manual] || '/Manual_Graphix_Dark.pdf'
+    asignacion: '/Manual de Uso - Pizarra de Asignación.pdf',
+    johnson: '/Manual de Uso - Pizarra de Johnson.pdf',
+    grafos: '/Manual de Uso - Pizarra de Grafos.pdf'
+  }[manual] || '/Manual de Uso - Pizarra de Grafos.pdf'
 
   window.open(file, '_blank')
+}
+const showSavedGraphs = () => {
+  loadSavedGraphsList()
+  showGraphSelector.value = true
 }
 
 const showMatrixModal = () => {
