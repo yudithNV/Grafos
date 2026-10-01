@@ -346,6 +346,27 @@ const getNextQuickName = () => {
   return numberToLetters(nextNumber)
 }
 
+// ¿Ya existe otro nodo con este nombre? NO distingue mayúsculas/minúsculas:
+// si existe "A", tampoco se puede crear "a" (y viceversa).
+// excludeId permite ignorar al propio nodo cuando se está editando.
+const isDuplicateNodeLabel = (label, excludeId = null) => {
+  const normalized = label.toLowerCase()
+  return nodes.value.some(n => n.id !== excludeId && String(n.label).toLowerCase() === normalized)
+}
+
+// Alerta de nombre duplicado. Se abre con un pequeño retraso porque el modal
+// de creación/edición se está cerrando en ese momento.
+const showDuplicateNodeAlert = (label) => {
+  setTimeout(() => {
+    openModal({
+      title: 'Nombre duplicado',
+      message: `Ya existe un nodo llamado "${label}" (sin importar mayúsculas o minúsculas). No se puede crear otro nodo con el mismo nombre; usa un nombre diferente.`,
+      type: 'info',
+      iconName: 'warning'
+    })
+  }, 150)
+}
+
 const handleCreateNodeRequest = ({ x, y }) => {
   openModal({
     title: 'Crear Nuevo Nodo',
@@ -357,6 +378,13 @@ const handleCreateNodeRequest = ({ x, y }) => {
     callback: (value) => {
       const label = String(value).trim()
       if (!label) return
+
+      // Algoritmo de Asignación: no se permite crear un nodo con un nombre que ya existe
+      if (selectedAlgorithm.value === 'asignacion' && isDuplicateNodeLabel(label)) {
+        showDuplicateNodeAlert(label)
+        return
+      }
+
       nodes.value.push({
         id: 'node_' + Date.now(),
         label,
@@ -385,7 +413,8 @@ const handleCreateEdgeRequest = ({ sourceId, targetId }) => {
       openModal({
         title: '⚠️ Conexión no permitida (Duplicidad)',
         message: `No puedes conectar "${sourceNode.label}" con otro nodo que tenga exactamente el mismo nombre. Cambia el nombre de uno de los dos, o usa mayúsculas/minúsculas distintas (por ejemplo "A" y "a" sí se pueden conectar).`,
-        type: 'confirm'
+        type: 'info',
+        iconName: 'warning'
       })
       return
     }
@@ -438,6 +467,13 @@ const handleEditNodeRequest = (node) => {
     callback: (value, color) => {
       const label = String(value).trim()
       if (!label) return
+
+      // Algoritmo de Asignación: al renombrar tampoco se puede usar un nombre ya existente
+      if (selectedAlgorithm.value === 'asignacion' && isDuplicateNodeLabel(label, node.id)) {
+        showDuplicateNodeAlert(label)
+        return
+      }
+
       const index = nodes.value.findIndex(n => n.id === node.id)
       if (index !== -1) {
         nodes.value[index] = { 
