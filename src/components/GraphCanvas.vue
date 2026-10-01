@@ -1,31 +1,145 @@
 <template>
   <div class="canvas-workspace">
-    
+
+
+    <!-- ================================= -->
+    <!-- ALERTA DEL LIENZO -->
+    <!-- ================================= -->
+
+    <Transition name="alerta">
+      <div v-if="alertaCanvas.visible" class="canvas-alert" :class="`canvas-alert-${alertaCanvas.tipo}`">
+        <div class="canvas-alert-icon">
+          <AlertTriangle />
+        </div>
+
+        <div class="canvas-alert-content">
+          <strong class="canvas-alert-title">
+            {{ alertaCanvas.titulo }}
+          </strong>
+
+          <span class="canvas-alert-message">
+            {{ alertaCanvas.mensaje }}
+          </span>
+        </div>
+
+        <button class="canvas-alert-close" @click="cerrarAlerta">
+          ×
+        </button>
+      </div>
+    </Transition>
+
+    <!-- ================================= -->
+    <!-- SELECTOR JOHNSON -->
+    <!-- ================================= -->
+
+    <Transition name="johnson-modal">
+      <div v-if="mostrarSelectorJohnson" class="johnson-selector-overlay" @click.self="cerrarSelectorJohnson">
+        <div class="johnson-selector-card">
+
+          <button class="johnson-selector-close" @click="cerrarSelectorJohnson">
+            ×
+          </button>
+
+          <div class="johnson-selector-header">
+            <div class="johnson-selector-icon">
+              <Play />
+            </div>
+
+            <h3>Ejecutar Johnson</h3>
+
+            <p>
+              Selecciona el tipo de cálculo
+            </p>
+          </div>
+
+          <div class="johnson-selector-options">
+
+            <!-- MAXIMIZAR -->
+            <button class="johnson-option johnson-option-max" @click="seleccionarTipoJohnson('maximizar')">
+              <div class="johnson-option-symbol">
+                ↗
+              </div>
+
+              <strong>Maximizar</strong>
+
+
+            </button>
+
+            <!-- MINIMIZAR -->
+            <button class="johnson-option johnson-option-min" @click="seleccionarTipoJohnson('minimizar')">
+              <div class="johnson-option-symbol">
+                ↘
+              </div>
+
+              <strong>Minimizar</strong>
+
+
+            </button>
+
+          </div>
+
+        </div>
+      </div>
+    </Transition>
+
+
+
     <!-- Barra de Herramientas Superior (simplificada) -->
     <div class="canvas-header">
       <div class="header-left">
         <button @click="$emit('back')" class="btn-icon-only" title="Volver a Inicio">
           <ArrowLeft class="icon" />
         </button>
+
         <div class="header-info">
           <h2 class="header-title">
-            Lienzo de Grafo
+            Pizarra de {{ esJohnson ? 'Johnson' : 'Grafos' }}
             <span class="status-indicator"></span>
           </h2>
+
           <p class="header-subtitle">
             {{ getModeDescription() }}
           </p>
         </div>
+
+        <!-- MIS GRAFOS -->
+        <button @click="$emit('show-saved')" class="btn-my-graphs" title="Ver mis grafos">
+          <FolderOpen class="btn-icon" />
+          <span>Mis grafos</span>
+        </button>
+
       </div>
 
       <!-- Estadísticas Académicas -->
       <div class="stats-container">
+
         <div class="stat-badge">
-          Nodos: <strong class="stat-number">{{ nodes.length }}</strong>
+          Nodos:
+          <strong class="stat-number">
+            {{ nodes.length }}
+          </strong>
         </div>
+
         <div class="stat-badge">
-          Aristas: <strong class="stat-number">{{ edges.length }}</strong>
+          Aristas:
+          <strong class="stat-number">
+            {{ edges.length }}
+          </strong>
         </div>
+
+        <!-- SOLO JOHNSON -->
+        <div v-if="esJohnson && johnsonActivo" class="stat-badge stat-critical">
+
+          {{ tipoJohnson === 'minimizar'
+            ? 'Ruta mínima:'
+            : 'Ruta crítica:' }}
+
+          <strong class="stat-critical-number">
+            {{ johnsonResult?.duracionProyecto }}
+          </strong>
+
+        </div>
+
       </div>
 
       <!-- Acciones de Cabecera -->
@@ -42,11 +156,24 @@
           <Grid3x3 class="btn-icon" />
           <span>Matriz</span>
         </button>
-        <button @click="$emit('show-instructions')" class="btn-text">
+
+        <button @click="$emit('show-instructions', esJohnson ? 'johnson' : 'grafos')" class="btn-text">
           <BookOpen class="btn-icon" />
           <span>Manual</span>
         </button>
-        
+        <button v-if="esJohnson" @click="abrirSelectorJohnson" class="btn-text">
+          <Play class="btn-icon" />
+          Ejecutar Johnson
+        </button>
+
+        <button v-if="esJohnson && johnsonActivo" @click="detenerJohnson" class="btn-text btn-stop">
+          <Square class="btn-icon" />
+          STOP
+        </button>
+
+
+
+
         <button @click="confirmClear" class="btn-text btn-danger">
           <Trash2 class="btn-icon" />
           <span>Limpiar</span>
@@ -56,14 +183,8 @@
 
     <!-- Panel Lateral Izquierdo -->
     <div class="side-panel">
-      <button
-        v-for="tool in tools"
-        :key="tool.id"
-        class="tool-btn"
-        :class="{ 'tool-active': activeTool === tool.id }"
-        @click="setActiveTool(tool.id)"
-        :title="tool.description"
-      >
+      <button v-for="tool in tools" :key="tool.id" class="tool-btn" :class="{ 'tool-active': activeTool === tool.id }"
+        @click="setActiveTool(tool.id)" :title="tool.description">
         <component :is="tool.icon" class="tool-icon" />
         <span class="tool-label">{{ tool.label }}</span>
       </button>
@@ -97,144 +218,170 @@
     </div>
 
     <!-- Contenedor del Lienzo SVG -->
-    <div
-      class="canvas-container"
-      ref="canvasContainerRef"
-      @mousedown="onCanvasMouseDown"
-      @touchstart="onCanvasTouchStart"
-    >
-      <svg
-        ref="svgRef"
-        class="svg-canvas"
-        @mousemove="onMouseMove"
-        @touchmove="onTouchMove"
-        @mouseup="onMouseUp"
-        @touchend="onTouchEnd"
-      >
+    <div class="canvas-container" ref="canvasContainerRef" @mousedown="onCanvasMouseDown"
+      @touchstart="onCanvasTouchStart">
+      <StarryBackground />
+      <svg ref="svgRef" class="svg-canvas" @mousemove="onMouseMove" @touchmove="onTouchMove" @mouseup="onMouseUp"
+        @touchend="onTouchEnd">
         <!-- Grupo que contiene TODO (nodos + aristas + background) con transform para pan -->
         <g :transform="`translate(${panOffset.x}, ${panOffset.y})`">
           <!-- Marcadores de Flechas para las Aristas -->
           <defs>
-            <marker
-              id="arrow-slate"
-              viewBox="0 0 10 10"
-              refX="9"
-              refY="5"
-              markerWidth="5"
-              markerHeight="5"
-              orient="auto-start-reverse"
-            >
+            <marker id="arrow-slate" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5"
+              orient="auto-start-reverse">
               <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#94a3b8" />
             </marker>
-            <marker
-              id="arrow-blue"
-              viewBox="0 0 10 10"
-              refX="9"
-              refY="5"
-              markerWidth="5"
-              markerHeight="5"
-              orient="auto-start-reverse"
-            >
+            <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5"
+              orient="auto-start-reverse">
               <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#6366f1" />
             </marker>
-            <marker
-              id="arrow-rose"
-              viewBox="0 0 10 10"
-              refX="9"
-              refY="5"
-              markerWidth="5"
-              markerHeight="5"
-              orient="auto-start-reverse"
-            >
+            <marker id="arrow-rose" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5"
+              orient="auto-start-reverse">
               <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#ec4899" />
             </marker>
-            <marker
-              id="arrow-purple"
-              viewBox="0 0 10 10"
-              refX="9"
-              refY="5"
-              markerWidth="5"
-              markerHeight="5"
-              orient="auto-start-reverse"
-            >
+            <marker id="arrow-purple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5"
+              orient="auto-start-reverse">
               <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#9333ea" />
+            </marker>
+
+            <marker id="arrow-critical" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5"
+              orient="auto">
+              <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#38d9ff" class="critical-arrow" />
             </marker>
           </defs>
 
           <!-- Dibujo de las Aristas -->
           <g v-for="edge in processedEdges" :key="edge.id" class="edge-group">
             <!-- Arista Principal -->
-            <path
-              :d="edge.path"
-              fill="none"
-              :stroke="edge.color"
-              stroke-width="3"
-              class="edge-path"
-              :class="{ 'edge-highlight': hoveredEdgeId === edge.id }"
-              :marker-end="`url(#${edge.markerId})`"
-              @mousedown.stop="onEdgeMouseDown(edge, $event)"
-              @touchstart.stop.prevent="onEdgeTouchStart(edge, $event)"
-              @mouseenter="hoveredEdgeId = edge.id"
-              @mouseleave="hoveredEdgeId = null"
-            />
+            <path :d="edge.path" fill="none" :stroke="edge.customColor || edge.color" stroke-width="3" class="edge-path"
+              :class="{ 'edge-highlight': hoveredEdgeId === edge.id }" :marker-end="`url(#${edge.markerId})`"
+              @mousedown.stop="onEdgeMouseDown(edge, $event)" @touchstart.stop.prevent="onEdgeTouchStart(edge, $event)"
+              @mouseenter="hoveredEdgeId = edge.id" @mouseleave="hoveredEdgeId = null" />
 
             <!-- Área sensible táctil más ancha para facilitar clicks -->
-            <path
-              :d="edge.path"
-              fill="none"
-              stroke="transparent"
-              stroke-width="40"
-              class="edge-touch-area"
+            <path :d="edge.path" fill="none" stroke="transparent" stroke-width="40" class="edge-touch-area"
               @mousedown.stop="onEdgeMouseDown(edge, $event)"
-              @touchstart.stop.prevent="onEdgeTouchStart(edge, $event)"
-            />
+              @touchstart.stop.prevent="onEdgeTouchStart(edge, $event)" />
+
+            <!-- CAMINO CRÍTICO ANIMADO -->
+            <!-- CAMINO CRÍTICO - RESPLANDOR -->
+            <path v-if="visibleCriticalEdges.includes(edge.id)" :d="edge.path" fill="none" stroke="#4f7cff"
+              stroke-width="7" class="critical-edge-glow" />
+
+            <!-- CAMINO CRÍTICO - LÍNEA ANIMADA -->
+            <path v-if="visibleCriticalEdges.includes(edge.id)" :d="edge.path" fill="none" stroke="#38d9ff"
+              stroke-width="4.5" class="critical-edge-path" marker-end="url(#arrow-critical)" />
 
             <!-- Burbuja de Peso de la Arista -->
-            <g
-              :transform="`translate(${edge.labelX}, ${edge.labelY})`"
-              class="edge-label-group"
-              @mousedown.stop="onEdgeMouseDown(edge, $event)"
-              @touchstart.stop.prevent="onEdgeTouchStart(edge, $event)"
-            >
-              <rect
-                :x="-edge.rectW / 2"
-                :y="-12"
-                :width="edge.rectW"
-                :height="24"
-                rx="6"
-                class="edge-rect"
-                :stroke="edge.color"
-              />
-              <text dy="5" class="edge-text" :fill="edge.color">
+            <g :transform="`translate(${edge.labelX}, ${edge.labelY})`" class="edge-label-group"
+              @mousedown.stop="onEdgeMouseDown(edge, $event)" @touchstart.stop.prevent="onEdgeTouchStart(edge, $event)">
+              <text v-if="
+                johnsonActivo &&
+                tipoJohnson === 'maximizar' &&
+                getHolguraEdge(edge.id) !== null
+              " y="-22" class="edge-holgura">
+                H = {{ getHolguraEdge(edge.id) }}
+              </text>
+              <rect :x="-edge.rectW / 2" :y="-12" :width="edge.rectW" :height="24" rx="6" class="edge-rect"
+                :stroke="edge.customColor || edge.color" />
+              <text dy="5" class="edge-text" :fill="edge.customColor || edge.color">
                 {{ edge.weight }}
               </text>
             </g>
-          </g> 
+          </g>
 
           <!-- Dibujo de los Nodos (Círculos Planos) -->
-          <g
-            v-for="node in nodes"
-            :key="node.id"
-            :transform="`translate(${node.x}, ${node.y})`"
-            class="node-group"
-            :class="{ 
-              'node-active': selectedNodeId === node.id, 
+          <g v-for="node in nodes" :key="node.id" :transform="`translate(${node.x}, ${node.y})`" class="node-group"
+            :class="{
+              'node-active': selectedNodeId === node.id,
               'node-dragging': draggedNodeId === node.id,
               'node-hover': hoveredNodeId === node.id,
               'node-delete-mode': activeTool === 'delete'
-            }"
-            @mousedown.stop="onNodeMouseDown(node, $event)"
-            @touchstart.stop.prevent="onNodeTouchStart(node, $event)"
-            @mouseenter="hoveredNodeId = node.id"
-            @mouseleave="hoveredNodeId = null"
-          >
-            <!-- Círculo del Nodo -->
-            <circle r="28" class="node-circle" />
+            }" @mousedown.stop="onNodeMouseDown(node, $event)"
+            @touchstart.stop.prevent="onNodeTouchStart(node, $event)" @mouseenter="hoveredNodeId = node.id"
+            @mouseleave="hoveredNodeId = null">
+            <template v-if="!johnsonActivo">
+              <!-- Círculo del Nodo -->
+              <circle r="28" class="node-circle" :style="{ '--node-color': node.color || '#94a3b8' }" />
 
-            <!-- Texto del Nodo -->
-            <text dy="6" class="node-text">
-              {{ truncateLabel(node.label) }}
-            </text>
+              <text dy="6" class="node-text">
+                {{ truncateLabel(node.label) }}
+              </text>
+            </template>
+
+            <!-- NODO JOHNSON -->
+            <!-- NODO JOHNSON -->
+            <template v-else>
+
+              <g class="johnson-node" :class="{
+                'johnson-node-critical': isCriticalNode(node.id)
+              }">
+
+                <!-- Círculo exterior -->
+                <circle r="38" class="johnson-circle" />
+
+                <!-- Arco izquierdo -->
+                <path d="M -27 -16 A 31 31 0 0 0 -27 17" class="johnson-arc johnson-arc-left" />
+
+                <!-- Arco derecho -->
+                <path d="M 27 -16 A 31 31 0 0 1 27 17" class="johnson-arc johnson-arc-right" />
+
+                <!-- Nombre -->
+                <text x="0" y="-13" class="johnson-name">
+                  {{ truncateLabel(node.label) }}
+                </text>
+
+                <!-- Línea vertical solo para Maximizar -->
+                <line v-if="tipoJohnson === 'maximizar'" x1="0" y1="-2" x2="0" y2="27" class="johnson-divider" />
+
+                <!-- ================================= -->
+                <!-- MAXIMIZAR -->
+                <!-- ================================= -->
+
+                <template v-if="tipoJohnson === 'maximizar'">
+
+                  <!-- VALOR IDA -->
+                  <text x="-15" y="10" class="johnson-value">
+                    {{ johnsonResult?.ida?.[node.id] }}
+                  </text>
+
+                  <!-- VALOR REGRESO -->
+                  <text x="15" y="10" class="johnson-value">
+                    {{ johnsonResult?.regreso?.[node.id] }}
+                  </text>
+
+                  <!-- IDA -->
+                  <text x="-15" y="25" class="johnson-label">
+                    IDA
+                  </text>
+
+                  <!-- REG -->
+                  <text x="15" y="25" class="johnson-label">
+                    REG
+                  </text>
+
+                </template>
+
+
+                <!-- ================================= -->
+                <!-- MINIMIZAR -->
+                <!-- ================================= -->
+
+                <template v-else>
+
+                  <text x="0" y="11" class="johnson-value">
+                    {{ johnsonResult?.ida?.[node.id] }}
+                  </text>
+
+                  <text x="0" y="26" class="johnson-label">
+                    MÍN
+                  </text>
+
+                </template>
+
+              </g>
+
+            </template>
           </g>
         </g>
       </svg>
@@ -262,22 +409,36 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import StarryBackground from './StarryBackground.vue'
+import {
+  ref,
+  computed,
+  watch,
+  onMounted,
+  onUnmounted
+} from 'vue'
+
 import {
   ArrowLeft,
   Trash2,
   BookOpen,
+  AlertTriangle,
   Info,
   FolderOpen,
   MousePointerClick,
   Grid3x3,
   Save,
+  FolderOpen,
   Plus,
   Link,
   Hand,
   Eraser,
-  Pencil
+  Pencil,
+  Square,
+  Play
 } from '@lucide/vue'
+
+import { calcularJohnson } from './utils/johnson'
 
 const props = defineProps({
   nodes: {
@@ -287,6 +448,10 @@ const props = defineProps({
   edges: {
     type: Array,
     required: true
+  },
+  mode: {
+    type: String,
+    default: 'normal'
   }
 })
 
@@ -294,7 +459,7 @@ const emit = defineEmits([
   'back',
   'show-instructions',
   'show-matrix',
-  'open-load',
+  'show-saved',
   'save',
   'clear',
   'create-node',
@@ -324,6 +489,326 @@ const dragOffset = ref({ x: 0, y: 0 })
 const hasDragged = ref(false)
 const hoveredNodeId = ref(null)
 const hoveredEdgeId = ref(null)
+
+
+
+// ======================================
+// ALERTAS DEL LIENZO
+// ======================================
+
+const alertaCanvas = ref({
+  visible: false,
+  titulo: '',
+  mensaje: '',
+  tipo: 'warning'
+})
+
+let alertaTimer = null
+
+const mostrarAlerta = (titulo, mensaje, tipo = 'warning') => {
+  if (alertaTimer) {
+    clearTimeout(alertaTimer)
+  }
+
+  alertaCanvas.value = {
+    visible: true,
+    titulo,
+    mensaje,
+    tipo
+  }
+
+  // Desaparece automáticamente
+  alertaTimer = setTimeout(() => {
+    alertaCanvas.value.visible = false
+  }, 3500)
+}
+
+const cerrarAlerta = () => {
+  alertaCanvas.value.visible = false
+
+  if (alertaTimer) {
+    clearTimeout(alertaTimer)
+    alertaTimer = null
+  }
+}
+
+// Saber si estamos usando el modo Johnson
+const esJohnson = computed(() => {
+  return props.mode === 'johnson'
+})
+
+const johnsonActivo = ref(false)
+const johnsonResult = ref(null)
+
+// Selector Maximizar / Minimizar
+const mostrarSelectorJohnson = ref(false)
+const tipoJohnson = ref('maximizar')
+
+// ======================================
+// ANIMACIÓN DEL CAMINO CRÍTICO
+// ======================================
+
+const criticalPathEdges = ref([])
+const visibleCriticalEdges = ref([])
+const animandoCaminoCritico = ref(false)
+const pasoCriticoActual = ref(0)
+
+let criticalTimer = null
+
+const isCriticalNode = (nodeId) => {
+  if (!johnsonActivo.value) return false
+
+  return criticalPathEdges.value.some(
+    edge =>
+      edge.sourceId === nodeId ||
+      edge.targetId === nodeId
+  )
+}
+
+const construirCaminoCritico = (resultado) => {
+  if (!resultado) return []
+
+  const criticas = resultado.holguras.filter(
+    edge => edge.holgura === 0
+  )
+
+  const inicios = resultado.inicioIds || []
+  const finales = resultado.finIds || []
+
+  // DFS para encontrar un camino continuo
+  // desde alguno de los inicios hasta alguno de los finales
+  const buscar = (actual, visitados = new Set()) => {
+
+    if (finales.includes(actual)) {
+      return []
+    }
+
+    if (visitados.has(actual)) {
+      return null
+    }
+
+    const nuevosVisitados = new Set(visitados)
+    nuevosVisitados.add(actual)
+
+    const salientesCriticas = criticas.filter(
+      edge => edge.sourceId === actual
+    )
+
+    for (const edge of salientesCriticas) {
+
+      const resto = buscar(
+        edge.targetId,
+        nuevosVisitados
+      )
+
+      if (resto !== null) {
+        return [edge, ...resto]
+      }
+    }
+
+    return null
+  }
+
+  // Probar cada posible nodo inicial
+  for (const inicio of inicios) {
+    const camino = buscar(inicio)
+
+    if (camino && camino.length > 0) {
+      return camino
+    }
+  }
+
+  return []
+}
+
+const resetJohnson = () => {
+  johnsonActivo.value = false
+  johnsonResult.value = null
+  criticalPathEdges.value = []
+  visibleCriticalEdges.value = []
+  animandoCaminoCritico.value = false
+  pasoCriticoActual.value = 0
+
+  if (criticalTimer) {
+    clearTimeout(criticalTimer)
+    criticalTimer = null
+  }
+}
+// ======================================
+
+// RESETEAR JOHNSON CUANDO SE LIMPIA
+
+// ======================================
+
+watch(
+  () => [
+    props.nodes.map(node => `${node.id}:${node.label}:${node.x}:${node.y}`).join('|'),
+    props.edges.map(edge => `${edge.id}:${edge.sourceId}:${edge.targetId}:${edge.weight}`).join('|')
+  ],
+  () => {
+    resetJohnson()
+  }
+)
+
+const detenerJohnson = () => {
+  resetJohnson()
+}
+
+
+const animarCaminoCritico = () => {
+
+
+
+  // Reiniciar animación anterior
+  if (criticalTimer) {
+    clearTimeout(criticalTimer)
+    criticalTimer = null
+  }
+
+  visibleCriticalEdges.value = []
+  pasoCriticoActual.value = 0
+
+  if (criticalPathEdges.value.length === 0) {
+    return
+  }
+
+  animandoCaminoCritico.value = true
+
+  const mostrarSiguiente = () => {
+
+    if (
+      pasoCriticoActual.value >=
+      criticalPathEdges.value.length
+    ) {
+      animandoCaminoCritico.value = false
+      return
+    }
+
+    const edge =
+      criticalPathEdges.value[
+      pasoCriticoActual.value
+      ]
+
+    // Mostrar la siguiente línea
+    visibleCriticalEdges.value.push(edge.id)
+
+    pasoCriticoActual.value++
+
+    // Esperar antes de avanzar
+    criticalTimer = setTimeout(
+      mostrarSiguiente,
+      900
+    )
+  }
+
+  mostrarSiguiente()
+}
+
+const abrirSelectorJohnson = () => {
+  // Validar antes de abrir el selector
+  if (props.nodes.length === 0) {
+    mostrarAlerta(
+      'Lienzo vacío',
+      'Crea nodos antes de ejecutar Johnson.'
+    )
+    return
+  }
+
+  if (props.edges.length === 0) {
+    mostrarAlerta(
+      'Sin conexiones',
+      'Crea al menos una arista antes de ejecutar Johnson.'
+    )
+    return
+  }
+
+  mostrarSelectorJohnson.value = true
+}
+
+const cerrarSelectorJohnson = () => {
+  mostrarSelectorJohnson.value = false
+}
+
+const seleccionarTipoJohnson = (tipo) => {
+  tipoJohnson.value = tipo
+  mostrarSelectorJohnson.value = false
+
+  ejecutarJohnson(tipo)
+}
+
+
+const ejecutarJohnson = (tipo = 'maximizar') => {
+  try {
+    tipoJohnson.value = tipo
+    if (props.nodes.length === 0) {
+      mostrarAlerta(
+        'Lienzo vacio',
+        'Crea nodos antes de ejecutar Johnson.'
+      )
+      return
+    }
+
+    if (props.edges.length === 0) {
+      mostrarAlerta(
+        'Sin conexiones',
+        'Crea al menos una arista antes de ejecutar Johnson.'
+      )
+      return
+    }
+
+    // 1. Ejecutar algoritmo
+    johnsonResult.value = calcularJohnson(
+      props.nodes,
+      props.edges,
+      tipo
+    )
+
+    // 2. Mostrar T + holguras
+    johnsonActivo.value = true
+
+    // 3. Construir camino crítico ordenado
+    // 3. Elegir el camino según el modo
+    if (tipo === 'minimizar') {
+
+      // MINIMIZAR:
+      // usar el camino de menor valor
+      criticalPathEdges.value =
+        johnsonResult.value.caminoOptimo || []
+
+    } else {
+
+      // MAXIMIZAR:
+      // usar el camino crítico tradicional
+      criticalPathEdges.value =
+        construirCaminoCritico(
+          johnsonResult.value
+        )
+    }
+
+    // 4. Animarlo
+    animarCaminoCritico()
+
+  } catch (error) {
+    mostrarAlerta(
+      'No se pudo ejecutar Johnson',
+      error.message,
+      'danger'
+    )
+  }
+}
+
+const getHolguraEdge = (edgeId) => {
+  if (!johnsonActivo.value || !johnsonResult.value) {
+    return null
+  }
+
+  const holgura = johnsonResult.value.holguras?.find(
+    (h) => h.id === edgeId
+  )
+
+  return holgura?.holgura ?? null
+}
+
 
 // Touch tracking para canvas
 const canvasTouchStart = ref({ x: 0, y: 0 })
@@ -383,18 +868,18 @@ const truncateLabel = (label) => {
 // Lógica de cálculo de curvas paralelas y rectas para aristas
 const processedEdges = computed(() => {
   const nodeRadius = 28
-  
+
   return props.edges.map(edge => {
     const sourceNode = props.nodes.find(n => n.id === edge.sourceId)
     const targetNode = props.nodes.find(n => n.id === edge.targetId)
-    
+
     if (!sourceNode || !targetNode) return null
-    
+
     const x1 = sourceNode.x
     const y1 = sourceNode.y
     const x2 = targetNode.x
     const y2 = targetNode.y
-    
+
     if (edge.sourceId === edge.targetId) {
       const r = nodeRadius
       const loopSize = 50
@@ -414,36 +899,37 @@ const processedEdges = computed(() => {
         id: edge.id, sourceId: edge.sourceId, targetId: edge.targetId, weight: edge.weight,
         path, labelX: x1, labelY: y1 - r - loopSize + 15,
         rectW: Math.max(28, String(edge.weight).length * 8 + 12),
-        color: '#9333ea', markerId: 'arrow-purple'
+        color: '#9333ea', markerId: 'arrow-purple',
+        customColor: edge.color
       }
     }
 
     // Verifica si hay arista en dirección contraria
     const hasReverse = props.edges.some(e => e.sourceId === edge.targetId && e.targetId === edge.sourceId)
-    
+
     const dx = x2 - x1
     const dy = y2 - y1
     const distance = Math.hypot(dx, dy) || 1
-    
+
     const mx = (x1 + x2) / 2
     const my = (y1 + y2) / 2
-    
+
     const ux = dx / distance
     const uy = dy / distance
     const nx = -uy
     const ny = ux
-    
+
     let path = ''
     let cx = mx
     let cy = my
     let offset = 0
     let color = '#64748b'
     let markerId = 'arrow-slate'
-    
+
     if (hasReverse) {
       const isForward = edge.sourceId < edge.targetId
       offset = 30
-      
+
       if (isForward) {
         color = '#6366f1'
         markerId = 'arrow-blue'
@@ -451,32 +937,32 @@ const processedEdges = computed(() => {
         color = '#ec4899'
         markerId = 'arrow-rose'
       }
-      
+
       cx = mx + nx * offset
       cy = my + ny * offset
-      
+
       const dxStart = cx - x1
       const dyStart = cy - y1
       const lenStart = Math.hypot(dxStart, dyStart) || 1
       const sx = x1 + (dxStart / lenStart) * nodeRadius
       const sy = y1 + (dyStart / lenStart) * nodeRadius
-      
+
       const dxEnd = x2 - cx
       const dyEnd = y2 - cy
       const lenEnd = Math.hypot(dxEnd, dyEnd) || 1
       const ex = x2 - (dxEnd / lenEnd) * nodeRadius
       const ey = y2 - (dyEnd / lenEnd) * nodeRadius
-      
+
       path = `M ${sx} ${sy} Q ${cx} ${cy} ${ex} ${ey}`
     } else {
       const sx = x1 + ux * nodeRadius
       const sy = y1 + uy * nodeRadius
       const ex = x2 - ux * nodeRadius
       const ey = y2 - uy * nodeRadius
-      
+
       path = `M ${sx} ${sy} L ${ex} ${ey}`
     }
-    
+
     let labelX = mx
     let labelY = my
     if (hasReverse) {
@@ -488,9 +974,9 @@ const processedEdges = computed(() => {
       labelX -= nx * 14
       labelY -= ny * 14
     }
-    
+
     const rectW = Math.max(28, String(edge.weight).length * 8 + 12)
-    
+
     return {
       id: edge.id,
       sourceId: edge.sourceId,
@@ -501,7 +987,8 @@ const processedEdges = computed(() => {
       labelY,
       rectW,
       color,
-      markerId
+      markerId,
+      customColor: edge.color
     }
   }).filter(Boolean)
 })
@@ -516,16 +1003,16 @@ const onCanvasMouseDown = (e) => {
     }
     return
   }
-  
+
   if (selectedNodeId.value) {
     selectedNodeId.value = null
     return
   }
-  
+
   const rect = svgRef.value.getBoundingClientRect()
   const x = e.clientX - rect.left - panOffset.value.x
   const y = e.clientY - rect.top - panOffset.value.y
-  
+
   emit('create-node', { x, y })
 }
 
@@ -536,16 +1023,16 @@ const onCanvasTouchStart = (e) => {
     }
     return
   }
-  
+
   if (selectedNodeId.value) {
     selectedNodeId.value = null
     return
   }
-  
+
   if (e.touches.length !== 1) {
     return
   }
-  
+
   const touch = e.touches[0]
   canvasTouchStart.value = { x: touch.clientX, y: touch.clientY }
   canvasTouchMoved.value = false
@@ -557,17 +1044,17 @@ const onNodeMouseDown = (node, e) => {
     handleDeleteNode(node)
     return
   }
-  
+
   if (activeTool.value === 'edit') {
     handleEditNode(node)
     return
   }
-  
+
   if (activeTool.value === 'connect') {
     handleConnectNode(node)
     return
   }
-  
+
   if (activeTool.value === 'move') {
     draggedNodeId.value = node.id
     hasDragged.value = false
@@ -583,17 +1070,17 @@ const onNodeTouchStart = (node, e) => {
     handleDeleteNode(node)
     return
   }
-  
+
   if (activeTool.value === 'edit') {
     handleEditNode(node)
     return
   }
-  
+
   if (activeTool.value === 'connect') {
     handleConnectNode(node)
     return
   }
-  
+
   if (activeTool.value === 'move' && e.touches.length === 1) {
     draggedNodeId.value = node.id
     hasDragged.value = false
@@ -611,7 +1098,7 @@ const onEdgeMouseDown = (edge, e) => {
     handleDeleteEdge(edge)
     return
   }
-  
+
   if (activeTool.value === 'edit') {
     handleEditEdge(edge)
     return
@@ -621,12 +1108,12 @@ const onEdgeMouseDown = (edge, e) => {
 const onEdgeTouchStart = (edge, e) => {
   e.stopPropagation()
   e.preventDefault()
-  
+
   if (activeTool.value === 'delete') {
     handleDeleteEdge(edge)
     return
   }
-  
+
   if (activeTool.value === 'edit') {
     handleEditEdge(edge)
     return
@@ -635,24 +1122,81 @@ const onEdgeTouchStart = (edge, e) => {
 
 // Handlers para cada herramienta
 const handleConnectNode = (node) => {
+  // PRIMER CLIC: seleccionar nodo origen
   if (!selectedNodeId.value) {
     selectedNodeId.value = node.id
-  } else {
-    if (selectedNodeId.value === node.id) {
-      // Auto-conexión (loop)
-      emit('create-edge', {
-        sourceId: node.id,
-        targetId: node.id
-      })
+    return
+  }
+
+  const sourceId = selectedNodeId.value
+  const targetId = node.id
+
+  // ==========================================
+  // REGLAS ESPECIALES PARA JOHNSON
+  // ==========================================
+  if (esJohnson.value) {
+
+    // 1. No permitir bucles A -> A
+    if (esJohnson.value) {
+
+      // No permitir A -> A
+      if (sourceId === targetId) {
+        mostrarAlerta(
+          'Conexión no permitida',
+          'En Johnson no puedes conectar un nodo consigo mismo.'
+        )
+
+        selectedNodeId.value = null
+        return
+      }
+
+      // No permitir A -> B y B -> A
+      const existeConexionContraria = props.edges.some(
+        edge =>
+          edge.sourceId === targetId &&
+          edge.targetId === sourceId
+      )
+
+      if (existeConexionContraria) {
+        mostrarAlerta(
+          'Conexión bidireccional',
+          'Esta conexión no está permitida porque ya existe una conexión en sentido contrario.'
+        )
+
+        selectedNodeId.value = null
+        return
+      }
+    }
+
+    // 2. Verificar si existe la conexión contraria
+    // Ejemplo:
+    // queremos B -> A
+    // pero ya existe A -> B
+    const existeConexionContraria = props.edges.some(
+      edge =>
+        edge.sourceId === targetId &&
+        edge.targetId === sourceId
+    )
+
+    if (existeConexionContraria) {
+      alert(
+        'No se puede crear esta conexión porque ya existe una conexión en sentido contrario. Johnson no permite conexiones bidireccionales.'
+      )
+
       selectedNodeId.value = null
-    } else {
-      emit('create-edge', {
-        sourceId: selectedNodeId.value,
-        targetId: node.id
-      })
-      selectedNodeId.value = null
+      return
     }
   }
+
+  // ==========================================
+  // CREAR CONEXIÓN
+  // ==========================================
+  emit('create-edge', {
+    sourceId,
+    targetId
+  })
+
+  selectedNodeId.value = null
 }
 
 const handleDeleteNode = (node) => {
@@ -676,12 +1220,12 @@ const handleEditEdge = (edge) => {
 // Movimiento del mouse para arrastrar nodos
 const onMouseMove = (e) => {
   if (!draggedNodeId.value || activeTool.value !== 'move') return
-  
+
   hasDragged.value = true
   const node = props.nodes.find(n => n.id === draggedNodeId.value)
   if (node) {
     const rect = svgRef.value.getBoundingClientRect()
-    
+
     node.x = Math.max(30, Math.min(rect.width - 30, e.clientX - rect.left - panOffset.value.x))
     node.y = Math.max(30, Math.min(rect.height - 30, e.clientY - rect.top - panOffset.value.y))
   }
@@ -689,14 +1233,14 @@ const onMouseMove = (e) => {
 
 const onMouseUp = () => {
   if (!draggedNodeId.value) return
-  
+
   if (activeTool.value === 'move') {
     const node = props.nodes.find(n => n.id === draggedNodeId.value)
     if (node && !hasDragged.value) {
       // Si no hubo arrastre, no hacer nada (es un clic, pero no estamos en modo clic)
     }
   }
-  
+
   draggedNodeId.value = null
 }
 
@@ -705,28 +1249,28 @@ const onTouchMove = (e) => {
   if (e.touches.length === 2) {
     hasDragged.value = true
     canvasTouchMoved.value = true
-    
+
     const touch1 = e.touches[0]
     const touch2 = e.touches[1]
-    
+
     const currentX = (touch1.clientX + touch2.clientX) / 2
     const currentY = (touch1.clientY + touch2.clientY) / 2
-    
+
     if (twoFingerStart.value.x === 0) {
       twoFingerStart.value = { x: currentX, y: currentY }
       return
     }
-    
+
     const deltaX = currentX - twoFingerStart.value.x
     const deltaY = currentY - twoFingerStart.value.y
-    
+
     panOffset.value.x += deltaX
     panOffset.value.y += deltaY
-    
+
     twoFingerStart.value = { x: currentX, y: currentY }
     return
   }
-  
+
   // ARRASTRAR NODO (solo en modo 'move' con 1 dedo)
   if (draggedNodeId.value && e.touches.length === 1 && activeTool.value === 'move') {
     hasDragged.value = true
@@ -734,18 +1278,18 @@ const onTouchMove = (e) => {
     if (node) {
       const rect = svgRef.value.getBoundingClientRect()
       const touch = e.touches[0]
-      
+
       node.x = Math.max(30, Math.min(rect.width - 30, touch.clientX - rect.left - panOffset.value.x))
       node.y = Math.max(30, Math.min(rect.height - 30, touch.clientY - rect.top - panOffset.value.y))
     }
   }
-  
+
   // Detectar movimiento en el canvas (para crear nodo en modo 'node')
   if (e.touches.length === 1 && !canvasTouchMoved.value && activeTool.value === 'node') {
     const touch = e.touches[0]
     const dx = Math.abs(touch.clientX - canvasTouchStart.value.x)
     const dy = Math.abs(touch.clientY - canvasTouchStart.value.y)
-    
+
     if (dx > TOUCH_THRESHOLD || dy > TOUCH_THRESHOLD) {
       canvasTouchMoved.value = true
     }
@@ -754,20 +1298,20 @@ const onTouchMove = (e) => {
 
 const onTouchEnd = () => {
   twoFingerStart.value = { x: 0, y: 0 }
-  
+
   if (draggedNodeId.value && activeTool.value === 'move') {
     draggedNodeId.value = null
     return
   }
-  
+
   if (!canvasTouchMoved.value && activeTool.value === 'node' && !selectedNodeId.value) {
     const rect = svgRef.value.getBoundingClientRect()
     const x = canvasTouchStart.value.x - rect.left - panOffset.value.x
     const y = canvasTouchStart.value.y - rect.top - panOffset.value.y
-    
+
     emit('create-node', { x, y })
   }
-  
+
   canvasTouchMoved.value = false
 }
 
@@ -777,6 +1321,120 @@ const confirmClear = () => {
 </script>
 
 <style scoped>
+/* ===================================
+   ALERTA DEL LIENZO
+=================================== */
+
+.canvas-alert {
+  position: absolute;
+  top: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+
+  width: min(420px, calc(100% - 32px));
+
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  padding: 14px 16px;
+
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.25);
+
+  z-index: 100;
+}
+
+.canvas-alert-warning {
+  border-color: #f59e0b;
+}
+
+.canvas-alert-danger {
+  border-color: #ef4444;
+}
+
+.canvas-alert-icon {
+  width: 38px;
+  height: 38px;
+
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 10px;
+
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+}
+
+.canvas-alert-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.canvas-alert-content {
+  flex: 1;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 3px;
+}
+
+.canvas-alert-title {
+  font-size: 13px;
+  font-weight: 700;
+
+  color: var(--text-primary);
+}
+
+.canvas-alert-message {
+  font-size: 12px;
+  line-height: 1.4;
+
+  color: var(--text-secondary);
+}
+
+.canvas-alert-close {
+  border: none;
+  background: transparent;
+
+  color: var(--text-secondary);
+
+  font-size: 22px;
+
+  cursor: pointer;
+
+  padding: 4px;
+}
+
+.canvas-alert-close:hover {
+  color: var(--text-primary);
+}
+
+
+/* ANIMACIÓN */
+
+.alerta-enter-active,
+.alerta-leave-active {
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
+}
+
+.alerta-enter-from,
+.alerta-leave-to {
+  opacity: 0;
+  transform: translate(-50%, -12px);
+}
+
+
 .canvas-workspace {
   flex-grow: 1;
   display: flex;
@@ -853,6 +1511,55 @@ const confirmClear = () => {
   flex-direction: column;
   flex: 1;
 }
+/* ===================================
+   BOTÓN MIS GRAFOS
+=================================== */
+
+.btn-my-graphs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+
+  padding: 0.45rem 0.75rem;
+
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.45);
+  border-radius: 0.6rem;
+
+  color: #818cf8;
+
+  font-size: 0.75rem;
+  font-weight: 600;
+
+  cursor: pointer;
+  white-space: nowrap;
+
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.15s ease,
+    box-shadow 0.2s ease;
+}
+
+.btn-my-graphs:hover {
+  background: rgba(99, 102, 241, 0.15);
+  border-color: #818cf8;
+  color: #a5b4fc;
+
+  box-shadow:
+    0 0 10px rgba(99, 102, 241, 0.15);
+}
+
+.btn-my-graphs:active {
+  transform: scale(0.96);
+}
+
+.btn-my-graphs .btn-icon {
+  width: 1rem;
+  height: 1rem;
+}
 
 .header-title {
   font-size: 0.85rem;
@@ -875,6 +1582,90 @@ const confirmClear = () => {
   height: 0.5rem;
   border-radius: 50%;
   background-color: #10b981;
+}
+
+/* ===================================
+   CAMINO CRÍTICO JOHNSON
+=================================== */
+/* ==========================================
+   CAMINO CRÍTICO JOHNSON - NARANJA NEÓN
+========================================== */
+
+/* ==========================================
+   JOHNSON - CAMINO CRÍTICO NEÓN
+========================================== */
+
+.critical-edge-glow {
+  pointer-events: none;
+
+  stroke-linecap: round;
+  stroke-linejoin: round;
+
+  opacity: 0.55;
+
+  filter:
+    drop-shadow(0 0 3px #38d9ff) drop-shadow(0 0 6px #22b8f0) drop-shadow(0 0 10px #4f7cff) drop-shadow(0 0 14px rgba(124, 58, 237, 0.65));
+
+  animation:
+    critical-glow-pulse 0.9s ease-in-out infinite alternate;
+}
+
+
+.critical-edge-path {
+  pointer-events: none;
+
+  stroke-linecap: round;
+  stroke-linejoin: round;
+
+  stroke-dasharray: 11 7;
+
+  animation:
+    critical-flow 0.65s linear infinite,
+    critical-light 0.9s ease-in-out infinite alternate;
+
+  filter:
+    drop-shadow(0 0 2px #ffffff) drop-shadow(0 0 4px #38d9ff) drop-shadow(0 0 7px #22b8f0) drop-shadow(0 0 11px #4f7cff);
+}
+
+
+.critical-arrow {
+  filter:
+    drop-shadow(0 0 2px #ffffff) drop-shadow(0 0 5px #38d9ff) drop-shadow(0 0 9px #4f7cff);
+}
+
+
+@keyframes critical-flow {
+  from {
+    stroke-dashoffset: 18;
+  }
+
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+
+@keyframes critical-light {
+  from {
+    opacity: 0.82;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+
+@keyframes critical-glow-pulse {
+  from {
+    opacity: 0.35;
+    stroke-width: 6;
+  }
+
+  to {
+    opacity: 0.7;
+    stroke-width: 8;
+  }
 }
 
 .header-subtitle {
@@ -914,6 +1705,41 @@ const confirmClear = () => {
   border-radius: 0.5rem;
   color: var(--text-secondary);
   font-size: 0.7rem;
+}
+
+/* ===================================
+   ESTADÍSTICA RUTA CRÍTICA JOHNSON
+=================================== */
+
+.stat-critical {
+  background-color: rgba(56, 217, 255, 0.10);
+
+  border: 1px solid rgba(56, 217, 255, 0.45);
+
+  color: #38d9ff;
+
+  box-shadow:
+    0 0 8px rgba(56, 217, 255, 0.12);
+
+  transition: all 0.2s ease;
+}
+
+.stat-critical:hover {
+  background-color: rgba(56, 217, 255, 0.16);
+
+  border-color: #38d9ff;
+
+  box-shadow:
+    0 0 8px rgba(56, 217, 255, 0.25),
+    0 0 16px rgba(79, 124, 255, 0.15);
+}
+
+.stat-critical-number {
+  color: #38d9ff;
+  font-weight: 700;
+
+  text-shadow:
+    0 0 5px rgba(56, 217, 255, 0.6);
 }
 
 @media (min-width: 640px) {
@@ -1217,24 +2043,47 @@ const confirmClear = () => {
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(1.3); }
+
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.5;
+    transform: scale(1.3);
+  }
 }
 
 .canvas-container {
+  position: relative;
+  background-color: #ffffff;  
   flex-grow: 1;
+  min-height: 0;
   width: 100%;
   height: 100%;
-  position: relative;
   cursor: crosshair;
   overflow: hidden;
   touch-action: none;
 }
 
+[data-theme='dark'] .canvas-container {
+  background-color: var(--bg-body);  /* oscuro normal */
+}
+.canvas-container > :deep(.starry-background) {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
 .svg-canvas {
+  display: block;
+  position: relative;
+  z-index: 1;
   width: 100%;
   height: 100%;
-  background-color: var(--bg-body);
+  background-color: transparent;
   background-image: radial-gradient(var(--border-color) 1px, transparent 1px);
   background-size: 24px 24px;
   touch-action: none;
@@ -1277,9 +2126,21 @@ const confirmClear = () => {
 
 .node-circle {
   fill: var(--bg-surface);
-  stroke: var(--text-secondary);
+  stroke: var(--node-color, var(--text-secondary));
   stroke-width: 2.5px;
   transition: all 0.15s ease-in-out;
+
+  /* ✨ GLOW — modo oscuro (más suave y contenido) */
+  filter:
+    drop-shadow(0 0 2px var(--node-color, #94a3b8))
+    drop-shadow(0 0 6px rgba(148, 163, 184, 0.35));
+}
+
+/* ✨ GLOW — modo claro (muy sutil, sin saturar) */
+[data-theme='light'] .node-circle {
+  filter:
+    drop-shadow(0 0 3px rgba(168, 85, 247, 0.20))
+    drop-shadow(0 0 6px rgba(168, 85, 247, 0.10));
 }
 
 .node-text {
@@ -1289,6 +2150,33 @@ const confirmClear = () => {
   fill: var(--text-primary);
   text-anchor: middle;
   user-select: none;
+}
+
+.node-divider {
+  stroke: var(--text-secondary);
+  stroke-width: 2px;
+  pointer-events: none;
+}
+
+.node-value {
+  font-family: system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  fill: var(--text-primary);
+  text-anchor: middle;
+  dominant-baseline: middle;
+  user-select: none;
+  pointer-events: none;
+}
+
+.edge-holgura {
+  font-family: system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  fill: var(--text-primary);
+  text-anchor: middle;
+  user-select: none;
+  pointer-events: none;
 }
 
 .node-group:active .node-circle {
@@ -1405,7 +2293,453 @@ const confirmClear = () => {
   }
 }
 
-.line-slate { background-color: #64748b; }
-.line-indigo { background-color: #6366f1; }
-.line-pink { background-color: #ec4899; }
+.line-slate {
+  background-color: #64748b;
+}
+
+.line-indigo {
+  background-color: #6366f1;
+}
+
+.line-pink {
+  background-color: #ec4899;
+}
+
+/* ==========================================
+   NODO JOHNSON MINIMALISTA
+========================================== */
+
+.johnson-node {
+  pointer-events: none;
+}
+
+
+/* CÍRCULO PRINCIPAL */
+.johnson-circle {
+  fill: var(--bg-surface);
+
+  stroke: #818cf8;
+  stroke-width: 2.5px;
+
+  filter:
+    drop-shadow(0 0 2px rgba(99, 102, 241, 0.4));
+
+  transition:
+    stroke 0.3s ease,
+    filter 0.3s ease;
+}
+
+
+/* ARCOS DECORATIVOS */
+.johnson-arc {
+  fill: none;
+
+  stroke-width: 2.5px;
+
+  stroke-linecap: round;
+
+  opacity: 0.9;
+}
+
+
+/* ARCO IZQUIERDO */
+.johnson-arc-left {
+  stroke: #22d3ee;
+
+  filter:
+    drop-shadow(0 0 3px rgba(34, 211, 238, 0.6));
+}
+
+
+/* ARCO DERECHO */
+.johnson-arc-right {
+  stroke: #a855f7;
+
+  filter:
+    drop-shadow(0 0 3px rgba(168, 85, 247, 0.6));
+}
+
+
+/* NOMBRE DEL NODO */
+.johnson-name {
+  font-family: system-ui, sans-serif;
+
+  font-size: 14px;
+  font-weight: 800;
+
+  fill: var(--text-primary);
+
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+
+/* VALORES */
+.johnson-value {
+  font-family: system-ui, sans-serif;
+
+  font-size: 12px;
+  font-weight: 800;
+
+  fill: var(--text-primary);
+
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+
+/* IDA / REG */
+.johnson-label {
+  font-family: system-ui, sans-serif;
+
+  font-size: 6px;
+  font-weight: 700;
+
+  letter-spacing: 0.5px;
+
+  fill: var(--text-secondary);
+
+  text-anchor: middle;
+}
+
+
+/* SEPARADOR */
+.johnson-divider {
+  stroke: var(--text-secondary);
+
+  stroke-width: 1.5px;
+
+  opacity: 0.65;
+}
+
+/* ==========================================
+   NODO DEL CAMINO CRÍTICO
+========================================== */
+
+.johnson-node-critical .johnson-circle {
+  stroke: #38d9ff;
+
+  stroke-width: 3px;
+
+  filter:
+    drop-shadow(0 0 3px #38d9ff) drop-shadow(0 0 7px rgba(56, 217, 255, 0.75)) drop-shadow(0 0 12px rgba(99, 102, 241, 0.7)) drop-shadow(0 0 18px rgba(168, 85, 247, 0.45));
+
+  animation:
+    johnson-node-glow 1.2s ease-in-out infinite alternate;
+}
+
+
+.johnson-node-critical .johnson-arc-left {
+  stroke: #38d9ff;
+
+  filter:
+    drop-shadow(0 0 4px #38d9ff) drop-shadow(0 0 8px #22d3ee);
+}
+
+
+.johnson-node-critical .johnson-arc-right {
+  stroke: #c084fc;
+
+  filter:
+    drop-shadow(0 0 4px #c084fc) drop-shadow(0 0 8px #8b5cf6);
+}
+
+
+.johnson-node-critical .johnson-name,
+.johnson-node-critical .johnson-value {
+  filter:
+    drop-shadow(0 0 4px rgba(56, 217, 255, 0.8));
+}
+
+
+@keyframes johnson-node-glow {
+
+  from {
+    filter:
+      drop-shadow(0 0 3px #38d9ff) drop-shadow(0 0 7px rgba(56, 217, 255, 0.55)) drop-shadow(0 0 11px rgba(99, 102, 241, 0.5));
+  }
+
+  to {
+    filter:
+      drop-shadow(0 0 5px #38d9ff) drop-shadow(0 0 10px rgba(56, 217, 255, 0.85)) drop-shadow(0 0 16px rgba(99, 102, 241, 0.75)) drop-shadow(0 0 21px rgba(168, 85, 247, 0.45));
+  }
+
+}
+
+/* ==========================================
+   SELECTOR JOHNSON - MAXIMIZAR / MINIMIZAR
+========================================== */
+
+.johnson-selector-overlay {
+  position: absolute;
+  inset: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 20px;
+
+  background: rgba(5, 8, 20, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+
+  z-index: 150;
+}
+
+.johnson-selector-card {
+  position: relative;
+
+  width: min(520px, 100%);
+
+  padding: 26px;
+
+  background: var(--bg-surface);
+
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  border-radius: 20px;
+
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.35),
+    0 0 30px rgba(79, 124, 255, 0.12);
+}
+
+.johnson-selector-header {
+  text-align: center;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  margin-bottom: 22px;
+}
+
+.johnson-selector-icon {
+  width: 46px;
+  height: 46px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  margin-bottom: 10px;
+
+  border-radius: 14px;
+
+  background: rgba(56, 217, 255, 0.10);
+  border: 1px solid rgba(56, 217, 255, 0.25);
+
+  color: #38d9ff;
+
+  box-shadow:
+    0 0 15px rgba(56, 217, 255, 0.12);
+}
+
+.johnson-selector-icon svg {
+  width: 21px;
+  height: 21px;
+}
+
+.johnson-selector-header h3 {
+  margin: 0;
+
+  color: var(--text-primary);
+
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.johnson-selector-header p {
+  margin: 5px 0 0;
+
+  color: var(--text-secondary);
+
+  font-size: 12px;
+}
+
+.johnson-selector-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+
+  gap: 14px;
+}
+
+.johnson-option {
+  min-height: 150px;
+
+  padding: 18px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  gap: 8px;
+
+  background: var(--bg-surface-2);
+
+  border: 1px solid var(--border-color);
+  border-radius: 15px;
+
+  color: var(--text-primary);
+
+  cursor: pointer;
+
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.johnson-option:hover {
+  transform: translateY(-4px);
+}
+
+.johnson-option-max:hover {
+  border-color: #38d9ff;
+
+  background: rgba(56, 217, 255, 0.08);
+
+  box-shadow:
+    0 0 15px rgba(56, 217, 255, 0.15),
+    0 0 30px rgba(79, 124, 255, 0.10);
+}
+
+.johnson-option-min:hover {
+  border-color: #a855f7;
+
+  background: rgba(168, 85, 247, 0.08);
+
+  box-shadow:
+    0 0 15px rgba(168, 85, 247, 0.15),
+    0 0 30px rgba(99, 102, 241, 0.10);
+}
+
+.johnson-option-symbol {
+  width: 44px;
+  height: 44px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 12px;
+
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.johnson-option-max .johnson-option-symbol {
+  color: #38d9ff;
+  background: rgba(56, 217, 255, 0.10);
+}
+
+.johnson-option-min .johnson-option-symbol {
+  color: #c084fc;
+  background: rgba(168, 85, 247, 0.10);
+}
+
+.johnson-option strong {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.johnson-option span {
+  max-width: 150px;
+
+  color: var(--text-secondary);
+
+  font-size: 11px;
+  line-height: 1.4;
+
+  text-align: center;
+}
+
+.johnson-selector-close {
+  position: absolute;
+
+  top: 12px;
+  right: 14px;
+
+  width: 30px;
+  height: 30px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0;
+
+  border: none;
+  border-radius: 8px;
+
+  background: transparent;
+
+  color: var(--text-secondary);
+
+  font-size: 22px;
+
+  cursor: pointer;
+
+  transition: all 0.15s ease;
+}
+
+.johnson-selector-close:hover {
+  background: var(--bg-surface-2);
+  color: var(--text-primary);
+}
+
+/* Animación del selector */
+
+.johnson-modal-enter-active,
+.johnson-modal-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.johnson-modal-enter-from,
+.johnson-modal-leave-to {
+  opacity: 0;
+}
+
+/* Móvil */
+
+@media (max-width: 520px) {
+
+  .johnson-selector-card {
+    padding: 22px 16px;
+  }
+
+  .johnson-selector-options {
+    grid-template-columns: 1fr;
+  }
+
+  .johnson-option {
+    min-height: 120px;
+  }
+}
+
+
+/* ==========================================
+   BOTÓN STOP JOHNSON
+========================================== */
+
+.btn-stop {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 8px;
+  padding: 7px 12px;
+  transition: all 0.2s ease;
+}
+
+.btn-stop:hover {
+  background: rgba(239, 68, 68, 0.22);
+  border-color: #ef4444;
+}
+
+.btn-stop .btn-icon {
+  width: 16px;
+  height: 16px;
+}
 </style>

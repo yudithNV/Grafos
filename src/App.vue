@@ -1,26 +1,15 @@
 <template>
   <div class="app-root" :class="{ 'app-root-fixed': currentView === 'canvas' }">
     <!-- Navbar -->
-    <Navbar
-      v-if="currentView !== 'canvas'"
-      :current="currentView"
-      :theme="theme"
-      @navigate="goTo"
-      @toggle-theme="toggleTheme"
-    />
+    <Navbar v-if="currentView !== 'canvas'" :current="currentView" :theme="theme" @navigate="goTo"
+      @toggle-theme="toggleTheme" />
 
     <!-- Views -->
-    <HomeView
-      v-if="currentView === 'home'"
-      mode="home"
-      @select="onSelectAlgorithm"
-    />
+    <HomeView v-if="currentView === 'home'" @select="onSelectAlgorithm" @navigate="goTo" />
 
-    <HomeView
-      v-else-if="currentView === 'algoritmos'"
-      mode="algoritmos"
-      @select="onSelectAlgorithm"
-    />
+    <TheoryView v-else-if="currentView === 'teoria'" />
+
+    <InteractiveView v-else-if="currentView === 'interactivos'" @select="onSelectAlgorithm" />
 
     <AboutView v-else-if="currentView === 'about'" />
 
@@ -28,12 +17,30 @@
       v-if="currentView === 'canvas' && selectedAlgorithm === 'grafos'"
       :nodes="nodes"
       :edges="edges"
+      :mode="canvasMode"
       algorithm-type="grafos"
       @back="backToWelcome"
       @show-instructions="showInstructionsModal"
       @show-matrix="showMatrixModal"
       @save="handleSaveGraph"
-      @open-load="showGraphSelector = true"
+      @clear="confirmClearCanvas"
+      @create-node="handleCreateNodeRequest"
+      @create-edge="handleCreateEdgeRequest"
+      @edit-node="handleEditNodeRequest"
+      @edit-edge="handleEditEdgeRequest"
+      @delete-node="handleDeleteNodeRequest"
+      @delete-edge="handleDeleteEdgeRequest"
+    />
+    <GraphCanvas
+      v-else-if="currentView === 'canvas' && selectedAlgorithm === 'johnson'"
+      :nodes="nodes"
+      :edges="edges"
+      :mode="canvasMode"
+      @back="backToWelcome"
+      @show-instructions="showInstructionsModal"
+      @show-matrix="showMatrixModal"
+      @show-saved="showSavedGraphs"
+      @save="handleSaveGraph"
       @clear="confirmClearCanvas"
       @create-node="handleCreateNodeRequest"
       @create-edge="handleCreateEdgeRequest"
@@ -52,8 +59,8 @@
       @back="backToWelcome"
       @show-instructions="showInstructionsModal"
       @show-matrix="showMatrixModal"
+      @show-saved="showSavedGraphs"
       @save="handleSaveGraph"
-      @open-load="showAssignmentGraphSelector = true"
       @clear="confirmClearCanvas"
       @create-node="handleCreateNodeRequest"
       @create-edge="handleCreateEdgeRequest"
@@ -64,10 +71,18 @@
       @clear-optimal="optimalAssignmentEdges = []"
       @solution-found="handleSolutionFound"
     />
+    <NorthwestCanvas
+      v-else-if="currentView === 'canvas' && selectedAlgorithm === 'northwest'"
+      :initial-data="northwestData"
+      @back="backToWelcome"
+      @save="handleSaveNorthwest"
+      @show-instructions="showInstructionsModal"
+    />
 
     <!-- Custom Modal -->
     <CustomModal
       v-model="showModal"
+      :icon-name="modalIconName" 
       :title="modalTitle"
       :label="modalLabel"
       :placeholder="modalPlaceholder"
@@ -76,6 +91,8 @@
       :initial-value="modalInitialValue"
       :quick-fill="modalQuickFill"
       :quick-fill-value="modalQuickFillValue"
+      :show-color-picker="modalShowColorPicker"
+      :initial-color="modalInitialColor"
       @submit="handleModalSubmit"
     />
 
@@ -86,6 +103,7 @@
       :edges="edges"
       :show-solver="selectedAlgorithm === 'asignacion'"
       :algorithm-type="selectedAlgorithm"
+      :mode="canvasMode"
       @close="showMatrix = false"
       @solution-found="handleSolutionFound"
     />
@@ -96,16 +114,18 @@
     <div v-if="showGraphSelector" class="graph-selector-overlay" @click.self="showGraphSelector = false">
       <div class="graph-selector-modal">
         <div class="graph-selector-header">
-          <h3>Cargar Grafo Guardado</h3>
+          <h3>{{ selectedAlgorithm === 'johnson' ? 'Cargar Grafo Johnson' : 'Cargar Grafo Guardado' }}</h3>
           <button @click="showGraphSelector = false" class="btn-close-selector">✕</button>
         </div>
+        <div class="assignment-selector-info">
+          {{
+            selectedAlgorithm === 'johnson'
+              ? 'En Johnson crea un grafo dirigido aciclico con pesos no negativos para calcular ruta critica, ida, regreso y holguras.'
+              : 'En este modo puedes crear grafos con aristas de ida y vuelta, auto-bucles y pesos negativos.'
+          }}
+        </div>
         <div class="graph-selector-list">
-          <div 
-            v-for="(graph, index) in savedGraphs" 
-            :key="index"
-            class="graph-item"
-            @click="loadSelectedGraph(index)"
-          >
+          <div v-for="(graph, index) in savedGraphs" :key="index" class="graph-item" @click="loadSelectedGraph(index)">
             <div class="graph-item-info">
               <span class="graph-item-name">{{ graph.name || `Grafo ${index + 1}` }}</span>
               <span class="graph-item-date">{{ graph.date }}</span>
@@ -116,16 +136,16 @@
             </div>
             <button @click.stop="deleteSavedGraph(index)" class="btn-delete-graph">🗑️</button>
           </div>
-          
+
           <div class="graph-item graph-item-new" @click="createNewGraph">
             <div class="graph-item-info">
               <span class="graph-item-name graph-item-name-new">
-                ➕ Crear Nuevo Grafo
+                {{ selectedAlgorithm === 'johnson' ? 'Crear Nuevo Grafo Johnson' : 'Crear Nuevo Grafo' }}
               </span>
               <span class="graph-item-date">Empezar desde cero</span>
             </div>
           </div>
-          
+
           <div v-if="savedGraphs.length === 0" class="empty-graphs">
             <p>No hay grafos guardados</p>
             <p class="empty-graphs-hint">Haz clic en "Crear Nuevo Grafo" para empezar</p>
@@ -143,12 +163,12 @@
         <div class="graph-selector-header header-assignment-selector">
           <div class="selector-title-group">
             <h3>Cargar Grafo de Asignación</h3>
-            <span class="badge-selector-unidirectional">⚡ Flujo Unidireccional</span>
+            <span class="badge-selector-unidirectional"> Flujo Unidireccional</span>
           </div>
           <button @click="showAssignmentGraphSelector = false" class="btn-close-selector">✕</button>
         </div>
         <div class="assignment-selector-info">
-          💡 En este modo todas las aristas son estrictamente de ida (sin retornos ni auto-bucles).
+          En este modo todas las aristas son estrictamente de ida (sin retornos ni auto-bucles).
         </div>
         <div class="graph-selector-list">
           <div 
@@ -188,44 +208,74 @@
       </div>
     </div>
   </div>
+      <!-- Selector de problemas Northwest -->
+    <SavedListModal
+      :show="showNorthwestSelector"
+      title="Cargar Problema Northwest"
+      info="Guarda tus tablas de disponibilidad, demanda y costos para retomarlas después."
+      item-label="Problema"
+      new-label="➕ Crear Nuevo Problema"
+      header-bg="linear-gradient(135deg, #8b5cf6, #ec4899)"
+      :items="northwestItems"
+      :stats="(p) => [`${p.data.originCount} orígenes`, `${p.data.destinationCount} destinos`]"
+      @load="loadNorthwest"
+      @create="createNorthwest"
+      @delete="deleteNorthwest"
+      @close="showNorthwestSelector = false"
+    />
 </template>
 
 <script setup>
 import { ref, onMounted, nextTick, watch } from 'vue'
 import Navbar from './components/Navbar.vue'
 import HomeView from './components/HomeView.vue'
+import TheoryView from './components/TheoryView.vue'
+import InteractiveView from './components/InteractiveView.vue'
 import AboutView from './components/AboutView.vue'
 import GraphCanvas from './components/GraphCanvas.vue'
 import CustomModal from './components/CustomModal.vue'
 import MatrixModal from './components/MatrixModal.vue'
 import Footer from './components/Footer.vue'
 import AssignmentCanvas from './components/AssignmentCanvas.vue'
+import NorthwestCanvas from './components/NorthwestCanvas.vue'
+import SavedListModal from './components/SavedListModal.vue'
+import { useSavedList } from './useSavedList'
 
 // Routing
 
 const currentView = ref('home')
+const previousView = ref('home')
 const selectedAlgorithm = ref('grafos')
 const optimalAssignmentEdges = ref([])
 const showAssignmentGraphSelector = ref(false)
 const savedAssignmentGraphs = ref([])
-const scrollToAlgorithms = () => {
-  const carousel = document.getElementById('algorithms-carousel')
-  carousel?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-}
+const canvasMode = ref('normal')
+// Northwest: lista de problemas guardados
+const {
+  items: northwestItems,
+  load: loadNorthwestList,
+  add: addNorthwest,
+  update: updateNorthwest,
+  remove: removeNorthwest
+} = useSavedList('savedNorthwestProblems')
 
+const showNorthwestSelector = ref(false)
+const northwestData = ref(null)
+const northwestIndex = ref(-1)
 const goTo = async (view) => {
-  if (view === 'algoritmos') {
-    currentView.value = 'home'
-    await nextTick()
-    scrollToAlgorithms()
-    return
+  if (view !== currentView.value) {
+    previousView.value = currentView.value
   }
-
   currentView.value = view
   if (view === 'home') {
     await nextTick()
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
+}
+
+const openCanvas = () => {
+  previousView.value = currentView.value
+  currentView.value = 'canvas'
 }
 
 watch(currentView, (view) => {
@@ -261,6 +311,8 @@ const modalInitialValue = ref('')
 const modalQuickFill = ref(false)
 const modalQuickFillValue = ref('')
 let modalCallback = null
+const modalShowColorPicker = ref(false)
+const modalInitialColor = ref('#64748b')
 
 // Matrix Modal
 const showMatrix = ref(false)
@@ -274,9 +326,13 @@ onMounted(() => {
   loadSavedGraphsList()
 })
 
+
+// Modal Icon
+const modalIconName = ref('')
+
 // ============ FUNCIONES DEL MODAL ============
 
-const openModal = ({ title, label, placeholder, type, initialValue, message, callback, quickFill, quickFillValue }) => {
+const openModal = ({ title, label, placeholder, type, initialValue, message, callback, quickFill, quickFillValue, showColorPicker, initialColor, iconName }) => {
   modalTitle.value = title || ''
   modalLabel.value = label || ''
   modalPlaceholder.value = placeholder || ''
@@ -285,13 +341,22 @@ const openModal = ({ title, label, placeholder, type, initialValue, message, cal
   modalInitialValue.value = initialValue ?? ''
   modalQuickFill.value = quickFill || false
   modalQuickFillValue.value = quickFillValue || ''
+  modalShowColorPicker.value = showColorPicker || false
+  modalInitialColor.value = initialColor || '#64748b'
+  modalIconName.value = iconName || ''
   modalCallback = callback
   showModal.value = true
 }
 
-const handleModalSubmit = (value) => {
+const handleModalSubmit = (payload) => {
   if (modalCallback) {
-    modalCallback(value)
+    // Si el modal tenía selector de color, payload es un objeto {value, color}
+    if (modalShowColorPicker.value && typeof payload === 'object' && payload.value !== undefined) {
+      modalCallback(payload.value, payload.color)
+    } else {
+      // Si no, payload es solo el valor
+      modalCallback(payload)
+    }
     modalCallback = null
   }
 }
@@ -362,7 +427,23 @@ const handleCreateEdgeRequest = ({ sourceId, targetId }) => {
     initialValue: 1,
     callback: (value) => {
       const weight = Number(value)
+
       if (isNaN(weight)) return
+
+      // En Johnson no permitir pesos negativos
+      if (canvasMode.value === 'johnson' && weight < 0) {
+
+        setTimeout(() => {
+          openModal({
+            title: '⚠️ Peso no permitido',
+            message: 'En Johnson no se permiten valores negativos. Ingresa un valor mayor o igual a 0.',
+            type: 'confirm'
+          })
+        }, 150)
+
+        return
+      }
+
       edges.value.push({
         id: 'edge_' + Date.now(),
         sourceId,
@@ -380,12 +461,18 @@ const handleEditNodeRequest = (node) => {
     placeholder: 'Ej. A, V1...',
     type: 'input',
     initialValue: node.label,
-    callback: (value) => {
+    showColorPicker: true,
+    initialColor: node.color || '#64748b',
+    callback: (value, color) => {
       const label = String(value).trim()
       if (!label) return
       const index = nodes.value.findIndex(n => n.id === node.id)
       if (index !== -1) {
-        nodes.value[index] = { ...nodes.value[index], label }
+        nodes.value[index] = { 
+          ...nodes.value[index], 
+          label,
+          color: color || '#64748b'
+        }
       }
     }
   })
@@ -398,12 +485,36 @@ const handleEditEdgeRequest = (edge) => {
     placeholder: 'Ej. 10, -5...',
     type: 'number',
     initialValue: edge.weight,
-    callback: (value) => {
+    showColorPicker: true,
+    initialColor: edge.color || '#64748b',
+    callback: (value, color) => {
       const weight = Number(value)
+
       if (isNaN(weight)) return
+
+      // En Johnson no permitir pesos negativos
+      // En Johnson no permitir pesos negativos
+      if (canvasMode.value === 'johnson' && weight < 0) {
+
+        setTimeout(() => {
+          openModal({
+            title: '⚠️ Peso no permitido',
+            message: 'En Johnson no se permiten valores negativos. Ingresa un valor mayor o igual a 0.',
+            type: 'confirm'
+          })
+        }, 150)
+
+        return
+      }
+
       const index = edges.value.findIndex(e => e.id === edge.id)
+
       if (index !== -1) {
-        edges.value[index] = { ...edges.value[index], weight }
+        edges.value[index] = { 
+          ...edges.value[index], 
+          weight,
+          color: color || '#64748b'
+        }
       }
     }
   })
@@ -412,7 +523,7 @@ const handleEditEdgeRequest = (edge) => {
 const handleDeleteNodeRequest = (nodeId) => {
   const node = nodes.value.find(n => n.id === nodeId)
   if (!node) return
-  
+
   openModal({
     title: 'Confirmar Eliminación',
     message: `¿Eliminar el nodo "${node.label}" y todas sus conexiones?`,
@@ -427,11 +538,11 @@ const handleDeleteNodeRequest = (nodeId) => {
 const handleDeleteEdgeRequest = (edgeId) => {
   const edge = edges.value.find(e => e.id === edgeId)
   if (!edge) return
-  
+
   const source = nodes.value.find(n => n.id === edge.sourceId)
   const target = nodes.value.find(n => n.id === edge.targetId)
   const label = `${source?.label || '?'} → ${target?.label || '?'}`
-  
+
   openModal({
     title: 'Confirmar Eliminación',
     message: `¿Eliminar la arista ${label} con peso ${edge.weight}?`,
@@ -456,8 +567,6 @@ const confirmClearCanvas = () => {
 
 // ============ GUARDADO ============
 
-// ============ GUARDADO ============
-
 const saveGraph = (name = null) => {
   const isAssignment = selectedAlgorithm.value === 'asignacion'
   const storageKey = isAssignment ? 'savedAssignmentGraphs' : 'savedGraphs'
@@ -465,30 +574,42 @@ const saveGraph = (name = null) => {
 
   let finalName = name
   if (!finalName) {
-    if (currentGraphIndex.value >= 0 && currentGraphIndex.value < currentList.length) {
-      finalName = currentList[currentGraphIndex.value].name
+    const currentGraph = isAssignment
+      ? currentList[currentGraphIndex.value]
+      : currentList.find(graph => graph._storageIndex === currentGraphIndex.value)
+    if (currentGraph) {
+      finalName = currentGraph.name
     } else {
       finalName = `${isAssignment ? 'Grafo Asignación' : 'Grafo'} ${new Date().toLocaleString()}`
     }
   }
-  
+
+  // Nombre automático
+  if (!finalName) {
+    finalName = `Grafo ${new Date().toLocaleString()}`
+  }
+
   const data = {
     name: finalName,
     date: new Date().toLocaleString(),
-    nodes: nodes.value,
-    edges: edges.value
+
+    // IMPORTANTE:
+    // guardar si pertenece a Pizarra o Johnson
+    mode: canvasMode.value,
+
+    nodes: JSON.parse(JSON.stringify(nodes.value)),
+    edges: JSON.parse(JSON.stringify(edges.value))
   }
-  
   const saved = localStorage.getItem(storageKey)
   let graphs = saved ? JSON.parse(saved) : []
-  
+
   if (currentGraphIndex.value >= 0 && currentGraphIndex.value < graphs.length) {
     graphs[currentGraphIndex.value] = data
-  } else {
+  }
+  else {
     graphs.push(data)
     currentGraphIndex.value = graphs.length - 1
   }
-  
   localStorage.setItem(storageKey, JSON.stringify(graphs))
   if (isAssignment) {
     loadSavedAssignmentGraphsList()
@@ -500,22 +621,26 @@ const saveGraph = (name = null) => {
 const handleSaveGraph = () => {
   if (nodes.value.length === 0 && edges.value.length === 0) {
     openModal({
-      title: '⚠️ Grafo Vacío',
+      title: 'Grafo Vacío',
+      iconName: 'warning',         // ← agrega esto
       message: 'No hay nodos ni aristas para guardar.',
       type: 'confirm'
     })
     return
   }
-  
   const isAssignment = selectedAlgorithm.value === 'asignacion'
   const currentList = isAssignment ? savedAssignmentGraphs.value : savedGraphs.value
   let currentName = isAssignment ? 'Grafo Asignación sin nombre' : 'Grafo sin nombre'
-  if (currentGraphIndex.value >= 0 && currentGraphIndex.value < currentList.length) {
-    currentName = currentList[currentGraphIndex.value].name || currentName
+  const currentGraph = isAssignment
+    ? currentList[currentGraphIndex.value]
+    : currentList.find(graph => graph._storageIndex === currentGraphIndex.value)
+  if (currentGraph?.name) {
+    currentName = currentGraph.name
   }
-  
+
   openModal({
-    title: '💾 Guardar Grafo',
+    title: 'Guardar Grafo',
+    iconName: 'save',  
     label: 'Nombre del grafo:',
     placeholder: 'Ej. Grafo Clase, Red Social...',
     type: 'input',
@@ -524,11 +649,14 @@ const handleSaveGraph = () => {
       const graphName = String(name).trim() || currentName
       saveGraph(graphName)
       
-      openModal({
-        title: '✅ Guardado Correctamente',
-        message: `"${graphName}" guardado con ${nodes.value.length} nodos y ${edges.value.length} aristas.`,
-        type: 'confirm'
-      })
+      setTimeout(() => {
+        openModal({
+          title: 'Guardado Correctamente',
+          iconName: 'success',
+          message: `"${graphName}" guardado con ${nodes.value.length} nodos y ${edges.value.length} aristas.`,
+          type: 'info'   // 👈 antes 'confirm'
+        })
+      }, 250)  // espera a que el primer modal termine de cerrarse
     }
   })
 }
@@ -540,20 +668,48 @@ const onSelectAlgorithm = (id) => {
   selectedAlgorithm.value = id
 
   if (id === 'grafos') {
+    canvasMode.value = 'normal'
+    nodes.value = []
+    edges.value = []
+    currentGraphIndex.value = -1
     loadSavedGraphsList()
     showGraphSelector.value = true
+
     return
   }
 
   if (id === 'asignacion') {
+    canvasMode.value = 'normal'
     loadSavedAssignmentGraphsList()
     showAssignmentGraphSelector.value = true
     return
   }
 
-  // Solo salta si el id no está implementado
+  if (id === 'johnson') {
+    canvasMode.value = 'johnson'
+
+    nodes.value = []
+    edges.value = []
+    currentGraphIndex.value = -1
+
+    // Cargar SOLO grafos Johnson
+    loadSavedGraphsList()
+
+    // Mostrar el mismo selector
+    showGraphSelector.value = true
+
+    return
+  }
+
+  if (id === 'northwest') {
+    loadNorthwestList()
+    showNorthwestSelector.value = true
+    return
+  }
+
   openModal({
-    title: '🚧 Próximamente',
+    title: 'Próximamente',
+    iconName: 'construction',    // ← agrega esto
     message: 'Este algoritmo todavía está en construcción.',
     type: 'confirm'
   })
@@ -561,7 +717,21 @@ const onSelectAlgorithm = (id) => {
 
 const loadSavedGraphsList = () => {
   const saved = localStorage.getItem('savedGraphs')
-  savedGraphs.value = saved ? JSON.parse(saved) : []
+  const allGraphs = saved ? JSON.parse(saved) : []
+
+  // Filtrar según el modo actual
+  savedGraphs.value = allGraphs
+    .map((graph, storageIndex) => ({
+      ...graph,
+
+      // Los grafos viejos que no tienen mode
+      // se consideran grafos normales de Pizarra
+      mode: graph.mode || 'normal',
+
+      // Guardamos la posición REAL en localStorage
+      _storageIndex: storageIndex
+    }))
+    .filter(graph => graph.mode === canvasMode.value)
 }
 
 const loadSavedAssignmentGraphsList = () => {
@@ -570,72 +740,69 @@ const loadSavedAssignmentGraphsList = () => {
 }
 
 const loadSelectedGraph = (index) => {
-  const executeLoad = () => {
-    const graph = savedGraphs.value[index]
-    if (graph) {
-      nodes.value = JSON.parse(JSON.stringify(graph.nodes))
-      edges.value = JSON.parse(JSON.stringify(graph.edges))
-      optimalAssignmentEdges.value = []
-      currentGraphIndex.value = index
-      showGraphSelector.value = false
-      currentView.value = 'canvas'
-    }
-  }
-
-  // Si ya estamos en el lienzo y hay contenido, pedir confirmación previa
-  if (currentView.value === 'canvas' && (nodes.value.length > 0 || edges.value.length > 0)) {
-    openModal({
-      title: 'Confirmar Carga de Pizarra',
-      message: '¿Estás seguro que quieres cargar una nueva pizarra? Reemplazará la pizarra actual.',
-      type: 'confirm',
-      callback: () => executeLoad()
-    })
-  } else {
-    executeLoad()
+  const graph = savedGraphs.value[index]
+  if (graph) {
+    canvasMode.value = graph.mode || (selectedAlgorithm.value === 'johnson' ? 'johnson' : 'normal')
+    nodes.value = JSON.parse(JSON.stringify(graph.nodes))
+    edges.value = JSON.parse(JSON.stringify(graph.edges))
+    optimalAssignmentEdges.value = []
+    currentGraphIndex.value = graph._storageIndex ?? index
+    showGraphSelector.value = false
+    openCanvas()
   }
 }
 
 const loadSelectedAssignmentGraph = (index) => {
-  const executeLoad = () => {
-    const graph = savedAssignmentGraphs.value[index]
-    if (graph) {
-      nodes.value = JSON.parse(JSON.stringify(graph.nodes))
-      edges.value = JSON.parse(JSON.stringify(graph.edges))
-      optimalAssignmentEdges.value = []
-      currentGraphIndex.value = index
-      showAssignmentGraphSelector.value = false
-      currentView.value = 'canvas'
-    }
-  }
-
-  if (currentView.value === 'canvas' && (nodes.value.length > 0 || edges.value.length > 0)) {
-    openModal({
-      title: 'Confirmar Carga de Pizarra',
-      message: '¿Estás seguro que quieres cargar una nueva pizarra? Reemplazará la pizarra actual.',
-      type: 'confirm',
-      callback: () => executeLoad()
-    })
-  } else {
-    executeLoad()
+  const graph = savedAssignmentGraphs.value[index]
+  if (graph) {
+    nodes.value = JSON.parse(JSON.stringify(graph.nodes))
+    edges.value = JSON.parse(JSON.stringify(graph.edges))
+    optimalAssignmentEdges.value = []
+    currentGraphIndex.value = index
+    showAssignmentGraphSelector.value = false
+    openCanvas()
   }
 }
 
 const deleteSavedGraph = (index) => {
   const graph = savedGraphs.value[index]
+
   if (!graph) return
-  
+
   openModal({
     title: 'Confirmar Eliminación',
-    message: `¿Eliminar el grafo "${graph.name || `Grafo ${index + 1}`}"? Esta acción no se puede deshacer.`,
+
+    message:
+      `¿Eliminar el grafo "${graph.name || `Grafo ${index + 1}`}"? Esta acción no se puede deshacer.`,
+
     type: 'confirm',
+
     callback: () => {
-      const graphs = JSON.parse(localStorage.getItem('savedGraphs') || '[]')
-      graphs.splice(index, 1)
-      localStorage.setItem('savedGraphs', JSON.stringify(graphs))
-      loadSavedGraphsList()
-      if (currentGraphIndex.value === index) {
+      const graphs =
+        JSON.parse(
+          localStorage.getItem('savedGraphs') || '[]'
+        )
+
+      // Índice REAL dentro de localStorage
+      const storageIndex =
+        graph._storageIndex
+
+      graphs.splice(storageIndex, 1)
+
+      localStorage.setItem(
+        'savedGraphs',
+        JSON.stringify(graphs)
+      )
+
+      if (
+        currentGraphIndex.value === storageIndex
+      ) {
         currentGraphIndex.value = -1
       }
+
+      // Volver a cargar solamente
+      // los grafos del modo actual
+      loadSavedGraphsList()
     }
   })
 }
@@ -661,59 +828,106 @@ const deleteSavedAssignmentGraph = (index) => {
 }
 
 const createNewGraph = () => {
-  const executeCreate = () => {
-    nodes.value = []
-    edges.value = []
-    optimalAssignmentEdges.value = []
-    currentGraphIndex.value = -1
-    showGraphSelector.value = false
-    currentView.value = 'canvas'
-  }
-
-  if (currentView.value === 'canvas' && (nodes.value.length > 0 || edges.value.length > 0)) {
-    openModal({
-      title: 'Confirmar Nueva Pizarra',
-      message: '¿Estás seguro que quieres cargar una nueva pizarra? Reemplazará la pizarra actual.',
-      type: 'confirm',
-      callback: () => executeCreate()
-    })
-  } else {
-    executeCreate()
-  }
+  canvasMode.value = selectedAlgorithm.value === 'johnson' ? 'johnson' : 'normal'
+  nodes.value = []
+  edges.value = []
+  optimalAssignmentEdges.value = []
+  currentGraphIndex.value = -1
+  showGraphSelector.value = false
+  openCanvas()
 }
 
 const createNewAssignmentGraph = () => {
-  const executeCreate = () => {
-    nodes.value = []
-    edges.value = []
-    optimalAssignmentEdges.value = []
-    currentGraphIndex.value = -1
-    showAssignmentGraphSelector.value = false
-    currentView.value = 'canvas'
-  }
-
-  if (currentView.value === 'canvas' && (nodes.value.length > 0 || edges.value.length > 0)) {
-    openModal({
-      title: 'Confirmar Nueva Pizarra',
-      message: '¿Estás seguro que quieres cargar una nueva pizarra? Reemplazará la pizarra actual.',
-      type: 'confirm',
-      callback: () => executeCreate()
-    })
-  } else {
-    executeCreate()
-  }
+  nodes.value = []
+  edges.value = []
+  optimalAssignmentEdges.value = []
+  currentGraphIndex.value = -1
+  showAssignmentGraphSelector.value = false
+  openCanvas()
 }
 
 const handleSolutionFound = (result) => {
   optimalAssignmentEdges.value = result.optimalEdgeIds || []
 }
+// ============ NORTHWEST ============
 
-const backToWelcome = () => {
-  currentView.value = 'home'
+const loadNorthwest = (i) => {
+  northwestData.value = JSON.parse(JSON.stringify(northwestItems.value[i].data))
+  northwestIndex.value = i
+  showNorthwestSelector.value = false
+  openCanvas()
 }
 
-const showInstructionsModal = () => {
-  window.open('/Manual_Graphix_Dark.pdf', '_blank')
+const createNorthwest = () => {
+  northwestData.value = null
+  northwestIndex.value = -1
+  showNorthwestSelector.value = false
+  openCanvas()
+}
+
+const deleteNorthwest = (i) => {
+  openModal({
+    title: 'Confirmar Eliminación',
+    message: `¿Eliminar "${northwestItems.value[i].name}"? Esta acción no se puede deshacer.`,
+    type: 'confirm',
+    callback: () => {
+      removeNorthwest(i)
+      if (northwestIndex.value === i) northwestIndex.value = -1
+    }
+  })
+}
+
+const handleSaveNorthwest = (data) => {
+  const current = northwestItems.value[northwestIndex.value]
+  openModal({
+    title: 'Guardar Problema',
+    iconName: 'save',
+    label: 'Nombre del problema:',
+    placeholder: 'Ej. Problema clase 1...',
+    type: 'input',
+    initialValue: current?.name || 'Problema Northwest',
+    callback: (name) => {
+      const problemName = String(name).trim() || 'Problema Northwest'
+      const entry = {
+        name: problemName,
+        date: new Date().toLocaleString(),
+        data: JSON.parse(JSON.stringify(data))
+      }
+      if (northwestIndex.value >= 0) {
+        updateNorthwest(northwestIndex.value, entry)
+      } else {
+        addNorthwest(entry)
+        northwestIndex.value = northwestItems.value.length - 1
+      }
+
+      setTimeout(() => {
+        openModal({
+          title: 'Guardado Correctamente',
+          iconName: 'success',
+          message: `"${problemName}" guardado correctamente.`,
+          type: 'info'
+        })
+      }, 250)
+    }
+  })
+}
+
+const backToWelcome = () => {
+  currentView.value = previousView.value || 'home'
+}
+
+const showInstructionsModal = (manual = 'grafos') => {
+  const file = {
+    asignacion: '/manual_asignacion.pdf',
+    johnson: '/manual_grafos.pdf',
+    grafos: '/Manual_Graphix_Dark.pdf'
+  }[manual] || '/Manual_Graphix_Dark.pdf'
+
+  window.open(file, '_blank')
+}
+const showSavedGraphs = () => {
+  loadSavedGraphsList()
+  showGraphSelector.value = true
 }
 
 const showMatrixModal = () => {
@@ -742,17 +956,20 @@ const showMatrixModal = () => {
 .graph-selector-overlay {
   position: fixed;
   inset: 0;
-  z-index: 200;
+  z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
+   pointer-events: auto; /* 🔥 asegura que capture clicks */
 }
 
 .graph-selector-modal {
+  position: relative;
+  z-index: 1;
   background-color: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: 1rem;
@@ -960,10 +1177,12 @@ const showMatrixModal = () => {
     max-height: 90vh;
     border-radius: 0.75rem;
   }
+
   .graph-item {
     flex-wrap: wrap;
     gap: 0.5rem;
   }
+
   .graph-item-stats {
     font-size: 0.65rem;
   }

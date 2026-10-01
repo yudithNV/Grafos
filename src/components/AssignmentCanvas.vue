@@ -1,15 +1,15 @@
 <template>
   <div class="canvas-workspace">
-    
+
     <!-- Barra de Herramientas Superior -->
     <div class="canvas-header">
       <div class="header-left">
-        <button @click="$emit('back')" class="btn-icon-only" title="Volver a Inicio">
+        <button @click="$emit('back')" class="btn-icon-only" title="Volver a la página anterior">
           <ArrowLeft class="icon" />
         </button>
         <div class="header-info">
           <h2 class="header-title">
-            Lienzo de Grafo
+            Pizzara de Asignación
             <span class="status-indicator"></span>
           </h2>
           <p class="header-subtitle">
@@ -50,7 +50,7 @@
           <Sparkles class="btn-icon" />
           <span> Resolver</span>
         </button>
-        <button @click="$emit('show-instructions')" class="btn-text">
+        <button @click="$emit('show-instructions', 'asignacion')" class="btn-text">
           <BookOpen class="btn-icon" />
           <span>Manual</span>
         </button>
@@ -110,6 +110,7 @@
       @mousedown="onCanvasMouseDown"
       @touchstart="onCanvasTouchStart"
     >
+      <StarryBackground />
       <svg
         ref="svgRef"
         class="svg-canvas"
@@ -135,7 +136,7 @@
             <path
               :d="edge.path"
               fill="none"
-              :stroke="edge.isOptimal ? '#00f2ff' : edge.color"
+              :stroke="edge.isOptimal ? '#00f2ff' : (edge.customColor || edge.color)"
               :stroke-width="edge.isOptimal ? 4 : 2.5"
               class="edge-path"
               :class="{ 
@@ -171,11 +172,13 @@
                 rx="6"
                 class="edge-rect"
                 :class="{ 'edge-rect-optimal': edge.isOptimal }"
+                :style="{ stroke: edge.isOptimal ? '#00f2ff' : (edge.customColor || edge.color) }"
               />
               <text 
                 y="4" 
                 class="edge-text"
                 :class="{ 'edge-text-optimal': edge.isOptimal }"
+                :fill="edge.isOptimal ? '#00f2ff' : (edge.customColor || edge.color)"
               >
                 {{ edge.weight }}
               </text>
@@ -202,6 +205,7 @@
               r="28" 
               class="node-circle" 
               :class="{ 'node-circle-optimal': isNodeInOptimal(node.id) }"
+              :style="{ '--node-color': node.color || '#94a3b8' }"
             />
             <text class="node-text" y="1" dominant-baseline="middle">
               {{ truncateLabel(node.label) }}
@@ -211,25 +215,24 @@
       </svg>
     </div>
 
-    <!-- ✅ MODAL DE MATRIZ (esto faltaba) -->
     <!-- Modal Matriz (solo tabla) -->
-<AssignmentMatrix
-  :show="showMatrixModal"
-  mode="matrix"
-  :nodes="nodes"
-  :edges="edges"
-  @close="showMatrixModal = false"
-/>
+    <AssignmentMatrix
+      :show="showMatrixModal"
+      mode="matrix"
+      :nodes="nodes"
+      :edges="edges"
+      @close="showMatrixModal = false"
+    />
 
-<!-- Modal Resolver (pregunta MIN/MAX) -->
-<AssignmentMatrix
-  :show="showSolverChoiceModal"
-  mode="solver"
-  :nodes="nodes"
-  :edges="edges"
-  @close="showSolverChoiceModal = false"
-  @resolve="handleSolverChoice"
-/>
+    <!-- Modal Resolver (pregunta MIN/MAX) -->
+    <AssignmentMatrix
+      :show="showSolverChoiceModal"
+      mode="solver"
+      :nodes="nodes"
+      :edges="edges"
+      @close="showSolverChoiceModal = false"
+      @resolve="handleSolverChoice"
+    />
 
     <!-- Modal de Advertencia -->
     <AssignmentWarning
@@ -241,115 +244,106 @@
     />
 
     <!-- Modal de Resolución Paso a Paso -->
-<div v-if="isStepsModalOpen" class="modal-overlay" @click.self="isStepsModalOpen = false">
-  <div class="modal-card">
-    
-    <!-- Cabecera -->
-    <div class="modal-header">
-      <div class="header-title-group">
-        <h3 class="modal-title">Resolución Paso a Paso</h3>
-        <span class="algorithm-badge" v-if="solverResult?.metodo">
-          {{ solverResult.metodo }}
-        </span>
-      </div>
-      <button @click="isStepsModalOpen = false" class="btn-close-icon">&times;</button>
-    </div>
+    <div v-if="isStepsModalOpen" class="modal-overlay" @click.self="isStepsModalOpen = false">
+      <div class="modal-card">
 
-    <!-- Cuerpo -->
-    <div class="modal-body">
-      
-      <!-- Métricas -->
-      <div class="metrics-grid" v-if="solverResult">
-        <div class="metric-card highlight">
-          <span class="metric-label">
-            {{ solverMode === 'maximize' ? 'Beneficio Total Máximo' : 'Costo Total Óptimo' }}
-          </span>
-          <span class="metric-value">{{ solverResult.costoTotal ?? 0 }}</span>
+        <div class="modal-header">
+          <div class="header-title-group">
+            <h3 class="modal-title">Resolución Paso a Paso</h3>
+            <span class="algorithm-badge" v-if="solverResult?.metodo">
+              {{ solverResult.metodo }}
+            </span>
+          </div>
+          <button @click="isStepsModalOpen = false" class="btn-close-icon">&times;</button>
         </div>
-        <div class="metric-card">
-          <span class="metric-label">Asignaciones</span>
-          <span class="metric-value">{{ solverResult.asignaciones?.length ?? 0 }}</span>
-        </div>
-      </div>
 
-      <!-- Resumen de Asignaciones Óptimas -->
-      <div class="section-container" v-if="solverResult?.asignaciones?.length">
-        <h4 class="section-heading">Resumen de Asignaciones Óptimas</h4>
-        <div class="table-wrapper">
-          <table class="result-table">
-            <thead>
-              <tr>
-                <th>Origen</th>
-                <th class="arrow-header"></th>
-                <th>Destino</th>
-                <th>{{ solverMode === 'maximize' ? 'Beneficio Original' : 'Costo Original' }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(asig, index) in solverResult.asignaciones" :key="index">
-                <td class="font-medium">{{ asig.origen }}</td>
-                <td class="arrow-cell">→</td>
-                <td class="font-medium">{{ asig.destino }}</td>
-                <td class="cost-badge">{{ asig.costo }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+        <div class="modal-body">
 
-      <!-- Evolución de la Matriz (Pasos) -->
-      <div class="section-container" v-if="solverResult?.pasos?.length">
-        <h4 class="section-heading">Evolución de la Matriz</h4>
-        
-        <div class="steps-accordion">
-          <div v-for="(paso, pIndex) in solverResult.pasos" :key="pIndex" class="step-card">
-            <span class="step-title">{{ paso.titulo }}</span>
-            <p class="step-desc">{{ paso.descripcion }}</p>
+          <div class="metrics-grid" v-if="solverResult">
+            <div class="metric-card highlight">
+              <span class="metric-label">
+                {{ solverMode === 'maximize' ? 'Beneficio Total Máximo' : 'Costo Total Óptimo' }}
+              </span>
+              <span class="metric-value">{{ solverResult.costoTotal ?? 0 }}</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">Asignaciones</span>
+              <span class="metric-value">{{ solverResult.asignaciones?.length ?? 0 }}</span>
+            </div>
+          </div>
 
-            <!-- Renderizado de Matriz por Paso -->
-            <div class="matrix-preview-wrapper" v-if="paso.matrix && paso.matrix.length">
-                <table class="step-matrix-table">
+          <div class="section-container" v-if="solverResult?.asignaciones?.length">
+            <h4 class="section-heading">Resumen de Asignaciones Óptimas</h4>
+            <div class="table-wrapper">
+              <table class="result-table">
                 <thead>
                   <tr>
-                    <th class="corner-cell">De \ A</th>
-                    <!-- Usa colLabels -->
-                    <th v-for="(colLabel, cIdx) in paso.colLabels" :key="'col_' + cIdx">
-                      {{ colLabel }}
-                    </th>
+                    <th>Origen</th>
+                    <th class="arrow-header"></th>
+                    <th>Destino</th>
+                    <th>{{ solverMode === 'maximize' ? 'Beneficio Original' : 'Costo Original' }}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="(row, rIdx) in paso.matrix" :key="'row_' + rIdx">
-                    <!-- Usa rowLabels -->
-                    <td class="row-label-cell">{{ paso.rowLabels[rIdx] }}</td>
-                    <td 
-                      v-for="(val, cIdx) in row" 
-                      :key="'cell_' + cIdx"
-                      :class="{ 
-                        'zero-cell': val === 0,
-                        'assigned-cell': isAssignedCell(paso.asignaciones, rIdx, cIdx)
-                      }"
-                    >
-                      {{ val === solverResult.INF || val >= 1000000 ? '—' : val }}
-                    </td>
+                  <tr v-for="(asig, index) in solverResult.asignaciones" :key="index">
+                    <td class="font-medium">{{ asig.origen }}</td>
+                    <td class="arrow-cell">→</td>
+                    <td class="font-medium">{{ asig.destino }}</td>
+                    <td class="cost-badge">{{ asig.costo }}</td>
                   </tr>
                 </tbody>
               </table>
             </div>
-
           </div>
+
+          <div class="section-container" v-if="solverResult?.pasos?.length">
+            <h4 class="section-heading">Evolución de la Matriz</h4>
+
+            <div class="steps-accordion">
+              <div v-for="(paso, pIndex) in solverResult.pasos" :key="pIndex" class="step-card">
+                <span class="step-title">{{ paso.titulo }}</span>
+                <p class="step-desc">{{ paso.descripcion }}</p>
+
+                <div class="matrix-preview-wrapper" v-if="paso.matrix && paso.matrix.length">
+                  <table class="step-matrix-table">
+                    <thead>
+                      <tr>
+                        <th class="corner-cell">De \ A</th>
+                        <th v-for="(colLabel, cIdx) in paso.colLabels" :key="'col_' + cIdx">
+                          {{ colLabel }}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(row, rIdx) in paso.matrix" :key="'row_' + rIdx">
+                        <td class="row-label-cell">{{ paso.rowLabels[rIdx] }}</td>
+                        <td
+                          v-for="(val, cIdx) in row"
+                          :key="'cell_' + cIdx"
+                          :class="{ 
+                            'zero-cell': val === 0,
+                            'assigned-cell': isAssignedCell(paso.asignaciones, rIdx, cIdx)
+                          }"
+                        >
+                          {{ val === solverResult.INF || val >= 1000000 ? '—' : val }}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
         </div>
+
+        <div class="modal-footer">
+          <button @click="isStepsModalOpen = false" class="btn-primary">Aceptar</button>
+        </div>
+
       </div>
-
     </div>
-
-    <!-- Pie -->
-    <div class="modal-footer">
-      <button @click="isStepsModalOpen = false" class="btn-primary">Aceptar</button>
-    </div>
-
-  </div>
-</div>
   </div>
 </template>
 
@@ -376,6 +370,7 @@ import {
   FolderOpen,
   Upload
 } from '@lucide/vue'
+import StarryBackground from './StarryBackground.vue'
 import AssignmentMatrix from './AssignmentMatrixModal.vue'
 import AssignmentWarning from './AssignmentWarning.vue'
 import { solveAlgorithm } from '../utils/solver.js'
@@ -496,15 +491,9 @@ const openSolverChoiceModal = () => {
 
 const handleSolverChoice = (mode) => {
   solverMode.value = mode
-  
-  // 1. Ejecuta el algoritmo con las props actualizadas
   const result = solveAlgorithm(props.nodes, props.edges, mode)
   solverResult.value = result
-
-  // 2. Transmite el resultado para iluminar las aristas óptimas
   emit('solution-found', result)
-
-  // 3. Cierra el selector y abre el modal paso a paso
   showSolverChoiceModal.value = false
   isStepsModalOpen.value = true
 }
@@ -577,7 +566,8 @@ const processedEdges = computed(() => {
     return {
       id: edge.id, sourceId: edge.sourceId, targetId: edge.targetId, weight: edge.weight,
       path, labelX, labelY, rectW,
-      color: '#64748b', markerId: 'arrow-assignment-slate', isOptimal
+      color: '#64748b', markerId: 'arrow-assignment-slate', isOptimal,
+      customColor: edge.color
     }
   }).filter(Boolean)
 })
@@ -1161,20 +1151,33 @@ const onTouchEnd = () => {
   50% { opacity: 0.5; transform: scale(1.3); }
 }
 
+/* ===== CONTENEDOR DEL LIENZO ===== */
 .canvas-container {
   flex-grow: 1;
   width: 100%;
   height: 100%;
+  min-height: 0;
   position: relative;
   cursor: crosshair;
   overflow: hidden;
   touch-action: none;
+  background-color: var(--bg-body);
+}
+
+.canvas-container > :deep(.starry-background) {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
 }
 
 .svg-canvas {
+  display: block;
+  position: relative;
+  z-index: 1;
   width: 100%;
   height: 100%;
-  background-color: var(--bg-body);
+  background-color: transparent !important;
   background-image: radial-gradient(var(--border-color) 1px, transparent 1px);
   background-size: 24px 24px;
   touch-action: none;
@@ -1228,9 +1231,19 @@ const onTouchEnd = () => {
 
 .node-circle {
   fill: var(--bg-surface);
-  stroke: var(--text-secondary);
+  stroke: var(--node-color, var(--text-secondary));
   stroke-width: 2.5px;
   transition: all 0.15s ease-in-out;
+
+  filter:
+    drop-shadow(0 0 2px var(--node-color, #94a3b8))
+    drop-shadow(0 0 6px rgba(148, 163, 184, 0.35));
+}
+
+[data-theme='light'] .node-circle {
+  filter:
+    drop-shadow(0 0 3px rgba(168, 85, 247, 0.20))
+    drop-shadow(0 0 6px rgba(168, 85, 247, 0.10));
 }
 
 .node-circle-optimal {
@@ -1270,309 +1283,7 @@ const onTouchEnd = () => {
   stroke-dasharray: 4 4;
 }
 
-.matrix-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.5rem;
-  background-color: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(4px);
-}
-
-.matrix-container {
-  background-color: #ffffff;
-  border-radius: 1rem;
-  width: 100%;
-  max-width: 95vw;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  overflow: hidden;
-}
-
-@media (min-width: 640px) {
-  .matrix-container { max-width: 90vw; max-height: 85vh; }
-}
-
-@media (min-width: 1024px) {
-  .matrix-container { max-width: 80vw; max-height: 80vh; }
-}
-
-.matrix-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid #e2e8f0;
-  background: linear-gradient(135deg, #a855f7 0%, #d946ef 100%);
-  flex-shrink: 0;
-}
-
-.matrix-title {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #ffffff;
-  margin: 0;
-}
-
-@media (min-width: 640px) { .matrix-title { font-size: 1.25rem; } }
-
-.btn-close {
-  background: rgba(255, 255, 255, 0.2);
-  border: none;
-  border-radius: 0.5rem;
-  color: #ffffff;
-  cursor: pointer;
-  padding: 0.25rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s ease;
-}
-
-.btn-close:hover { background: rgba(255, 255, 255, 0.3); }
-.btn-close:active { transform: scale(0.9); }
-
-.icon-close { width: 1.25rem; height: 1.25rem; }
-
-.matrix-scroll {
-  overflow: auto;
-  padding: 0.75rem;
-  flex: 1;
-  -webkit-overflow-scrolling: touch;
-}
-
-@media (min-width: 640px) { .matrix-scroll { padding: 1rem; } }
-
-.solver-steps-scroll {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.solver-mode-selector {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  background: #f8fafc;
-  padding: 0.6rem 1rem;
-  border-radius: 0.5rem;
-  border: 1px solid #e2e8f0;
-}
-
-.mode-selector-label {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: #334155;
-}
-
-.mode-buttons { display: flex; gap: 0.5rem; }
-
-.btn-mode {
-  padding: 0.35rem 0.85rem;
-  border-radius: 0.4rem;
-  border: 1px solid #cbd5e1;
-  background: #ffffff;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #475569;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.btn-mode-active {
-  background: linear-gradient(135deg, #a855f7 0%, #d946ef 100%);
-  color: #ffffff;
-  border-color: transparent;
-}
-
-.step-card {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 0.5rem;
-  padding: 0.75rem 1rem;
-}
-
-.step-conversion { background: #ecfdf5; border-color: #a7f3d0; }
-
-.step-title {
-  display: block;
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: #1e293b;
-  margin-bottom: 0.5rem;
-}
-
-.step-desc { font-size: 0.8rem; color: #047857; margin: 0; }
-
-.vector-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-
-.vector-item {
-  font-size: 0.8rem;
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
-  padding: 0.25rem 0.6rem;
-  border-radius: 0.4rem;
-  color: #334155;
-}
-
-.matrix-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.65rem;
-  min-width: 200px;
-}
-
-@media (min-width: 640px) { .matrix-table { font-size: 0.8rem; } }
-
-.th-corner, .th-node {
-  padding: 0.3rem 0.2rem;
-  text-align: center;
-  font-weight: 600;
-  border: 1px solid #cbd5e1;
-  background-color: #f1f5f9;
-  color: #1e293b;
-  white-space: nowrap;
-}
-
-@media (min-width: 640px) { .th-corner, .th-node { padding: 0.5rem 0.6rem; } }
-
-.th-node { background-color: #eef2ff; color: #4f46e5; }
-
-.td-node {
-  padding: 0.2rem 0.1rem;
-  text-align: center;
-  font-weight: 600;
-  border: 1px solid #cbd5e1;
-  background-color: #f1f5f9;
-  color: #1e293b;
-  white-space: nowrap;
-}
-
-@media (min-width: 640px) { .td-node { padding: 0.4rem 0.5rem; } }
-
-.td-cell {
-  padding: 0.2rem 0.1rem;
-  text-align: center;
-  border: 1px solid #cbd5e1;
-  background-color: #ffffff;
-  color: #1e293b;
-  font-weight: 500;
-}
-
-@media (min-width: 640px) { .td-cell { padding: 0.4rem 0.5rem; } }
-
-.td-zero { background-color: #d1fae5; color: #047857; font-weight: 700; }
-
-.result-summary { background: #f0fdf4; border-color: #86efac; }
-
-.assignments-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem; }
-
-.assignment-tag {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  background: #ffffff;
-  border: 1px solid #bbf7d0;
-  padding: 0.3rem 0.6rem;
-  border-radius: 0.4rem;
-  font-size: 0.8rem;
-}
-
-.tag-edge { font-weight: 700; color: #15803d; }
-.tag-weight { color: #64748b; font-size: 0.75rem; }
-
-.no-assignments-text {
-  font-size: 0.8rem;
-  color: #b45309;
-  margin: 0 0 0.5rem 0;
-}
-
-.optimal-total-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: #15803d;
-  color: #ffffff;
-  padding: 0.6rem 1rem;
-  border-radius: 0.4rem;
-  font-size: 0.9rem;
-}
-
-.total-number { font-size: 1.15rem; color: #bbf7d0; }
-
-.matrix-footer {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1rem;
-  border-top: 1px solid #e2e8f0;
-  background-color: #f8fafc;
-  flex-shrink: 0;
-}
-
-@media (min-width: 640px) {
-  .matrix-footer {
-    flex-direction: row;
-    justify-content: flex-end;
-    gap: 0.75rem;
-    padding: 0.75rem 1.5rem;
-  }
-}
-
-.btn-apply-solution {
-  padding: 0.4rem 1.25rem;
-  background: #10b981;
-  border: none;
-  border-radius: 0.5rem;
-  color: #ffffff;
-  font-weight: 600;
-  font-size: 0.8rem;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  min-height: 2.5rem;
-  width: 100%;
-}
-
-@media (min-width: 640px) {
-  .btn-apply-solution { width: auto; min-height: auto; }
-}
-
-.btn-apply-solution:hover { background: #059669; }
-
-.btn-close-modal {
-  padding: 0.4rem 1.5rem;
-  background: linear-gradient(135deg, #a855f7 0%, #d946ef 100%);
-  border: none;
-  border-radius: 0.5rem;
-  color: #ffffff;
-  font-weight: 600;
-  font-size: 0.8rem;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  min-height: 2.5rem;
-  width: 100%;
-}
-
-@media (min-width: 640px) {
-  .btn-close-modal { padding: 0.5rem 2rem; width: auto; min-height: auto; }
-}
-
-.btn-close-modal:active { transform: scale(0.95); }
-
-.fade-enter-active, .fade-leave-active { transition: opacity 0.25s ease; }
-.fade-enter-from, .fade-leave-to { opacity: 0; }
-
-.scale-enter-active, .scale-leave-active {
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
-}
-.scale-enter-from, .scale-leave-to { transform: scale(0.92); opacity: 0; }
-/* Modal Overlay y Contenedor */
+/* ===== MODAL PASO A PASO ===== */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -1602,7 +1313,6 @@ const onTouchEnd = () => {
   overflow: hidden;
 }
 
-/* Cabecera */
 .modal-header {
   padding: 1.25rem 1.5rem;
   border-bottom: 1px solid #334155;
@@ -1644,11 +1354,8 @@ const onTouchEnd = () => {
   transition: color 0.2s;
 }
 
-.btn-close-icon:hover {
-  color: #f8fafc;
-}
+.btn-close-icon:hover { color: #f8fafc; }
 
-/* Cuerpo */
 .modal-body {
   padding: 1.5rem;
   overflow-y: auto;
@@ -1657,7 +1364,6 @@ const onTouchEnd = () => {
   gap: 1.5rem;
 }
 
-/* Tarjetas de Métricas */
 .metrics-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -1679,10 +1385,7 @@ const onTouchEnd = () => {
   background: rgba(99, 102, 241, 0.1);
 }
 
-.metric-label {
-  font-size: 0.85rem;
-  color: #94a3b8;
-}
+.metric-label { font-size: 0.85rem; color: #94a3b8; }
 
 .metric-value {
   font-size: 1.5rem;
@@ -1690,7 +1393,6 @@ const onTouchEnd = () => {
   color: #38bdf8;
 }
 
-/* Secciones y Tablas */
 .section-container {
   display: flex;
   flex-direction: column;
@@ -1731,20 +1433,10 @@ const onTouchEnd = () => {
   color: #e2e8f0;
 }
 
-.font-medium {
-  font-weight: 500;
-}
+.font-medium { font-weight: 500; }
+.arrow-cell { color: #6366f1; }
+.cost-badge { color: #38bdf8; font-weight: 600; }
 
-.arrow-cell {
-  color: #6366f1;
-}
-
-.cost-badge {
-  color: #38bdf8;
-  font-weight: 600;
-}
-
-/* Acordeón de Pasos y Matrices */
 .steps-accordion {
   display: flex;
   flex-direction: column;
@@ -1771,13 +1463,9 @@ const onTouchEnd = () => {
   margin: 0 0 0.75rem 0;
 }
 
-.matrix-preview-wrapper {
-  overflow-x: auto;
-}
+.matrix-preview-wrapper { overflow-x: auto; }
 
-.step-matrix-table {
-  border: 1px solid #334155;
-}
+.step-matrix-table { border: 1px solid #334155; }
 
 .step-matrix-table td, .step-matrix-table th {
   border: 1px solid #334155;
@@ -1802,7 +1490,6 @@ const onTouchEnd = () => {
   border: 1px solid #22c55e !important;
 }
 
-/* Pie de Modal */
 .modal-footer {
   padding: 1rem 1.5rem;
   border-top: 1px solid #334155;
@@ -1822,7 +1509,5 @@ const onTouchEnd = () => {
   transition: background 0.2s;
 }
 
-.btn-primary:hover {
-  background: #4f46e5;
-}
+.btn-primary:hover { background: #4f46e5; }
 </style>
