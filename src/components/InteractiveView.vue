@@ -10,7 +10,7 @@
 
       <div class="lab-badge-wrapper">
         <div class="lab-badge">
-          <MousePointer2 :size="18" /> 4 pizarras disponibles
+          <MousePointer2 :size="18" /> {{ cards.length }} pizarras disponibles
         </div>
       </div>
 
@@ -33,10 +33,64 @@
               <h2>Pizarras disponibles</h2>
               <p>Selecciona una para comenzar</p>
             </div>
-            <span class="result-count">4 experiencias</span>
+            <span class="result-count">{{ cards.length }} experiencias</span>
           </div>
 
-          <AlgorithmCarousel @select="$emit('select', $event)" />
+          <!-- TABS DE VISTA -->
+          <div class="view-tabs" role="tablist" aria-label="Modo de visualización">
+            <button
+              v-for="tab in viewTabs"
+              :key="tab.value"
+              class="view-tab"
+              :class="{ active: viewMode === tab.value }"
+              role="tab"
+              :aria-selected="viewMode === tab.value"
+              @click="viewMode = tab.value"
+            >
+              <component :is="tab.icon" :size="16" />
+              {{ tab.label }}
+            </button>
+          </div>
+
+          <!-- VISTA CARRUSEL -->
+          <AlgorithmCarousel
+            v-if="viewMode === 'carousel'"
+            @select="$emit('select', $event)"
+          />
+
+          <!-- VISTA LISTA -->
+          <ul v-else class="algorithm-list">
+            <li v-for="card in cards" :key="card.id">
+              <button
+                class="list-item"
+                :class="{ 'list-item-disabled': card.comingSoon }"
+                @click="$emit('select', card.id)"
+              >
+                <div class="list-thumb">
+                  <img
+                    v-if="card.image"
+                    :src="card.image"
+                    :alt="card.title"
+                    class="list-thumb-img"
+                    loading="lazy"
+                  />
+                  <div v-else class="list-thumb-icon" :style="{ background: card.iconBg }">
+                    <component :is="card.icon" :size="24" />
+                  </div>
+                </div>
+
+                <span class="list-item-text">
+                  <strong>
+                    {{ card.title }}
+                    <em v-if="card.comingSoon" class="list-badge">Próximamente</em>
+                  </strong>
+                  <small>{{ card.desc }}</small>
+                </span>
+
+                <ChevronRight :size="18" class="list-chevron" />
+              </button>
+            </li>
+          </ul>
 
           <div class="how-it-works">
             <strong>¿Cómo funciona?</strong>
@@ -53,10 +107,27 @@
 </template>
 
 <script setup>
-import { ArrowRight, Lightbulb, MousePointer2 } from '@lucide/vue'
+import { ref } from 'vue'
+import {
+  ArrowRight,
+  Lightbulb,
+  MousePointer2,
+  GalleryHorizontal,
+  List,
+  ChevronRight
+} from '@lucide/vue'
 import AlgorithmCarousel from './AlgorithmCarousel.vue'
 import CanvasBackground from './CanvasBackground.vue'
+import { cards } from './algorithmCards'
+
 defineEmits(['select'])
+
+const viewMode = ref('carousel')
+
+const viewTabs = [
+  { value: 'carousel', label: 'Carrusel', icon: GalleryHorizontal },
+  { value: 'list', label: 'Lista', icon: List }
+]
 </script>
 
 <style scoped>
@@ -83,7 +154,7 @@ defineEmits(['select'])
 }
 .page-header .eyebrow {
   display: block;
-  text-align: left;   /* eyebrow pegado al borde izquierdo de la shell */
+  text-align: left;
   margin-bottom: .5rem;
 }
 .eyebrow {
@@ -229,6 +300,133 @@ defineEmits(['select'])
   margin: 0;
 }
 
+/* ============ TABS DE VISTA ============ */
+.view-tabs {
+  display: inline-flex;
+  gap: .25rem;
+  padding: .25rem;
+  margin-bottom: 1.25rem;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+}
+.view-tab {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .5rem .9rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: .8rem;
+  cursor: pointer;
+  transition: background .2s ease, color .2s ease;
+}
+.view-tab:hover {
+  color: var(--accent-solid);
+}
+.view-tab.active {
+  background: var(--accent-soft-bg);
+  color: var(--accent-solid);
+  font-weight: 700;
+}
+
+/* ============ VISTA LISTA ============ */
+.algorithm-list {
+  display: grid;
+  gap: .75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.list-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  padding: .75rem 1.1rem .75rem .75rem;
+  border: 1px solid var(--border-color);
+  border-radius: .9rem;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .2s ease, background .2s ease, transform .15s ease;
+}
+.list-item:hover {
+  border-color: var(--accent-solid);
+  transform: translateX(3px);
+}
+.list-item-disabled {
+  opacity: .85;
+}
+
+/* Miniatura */
+.list-thumb {
+  flex-shrink: 0;
+  width: 112px;
+  aspect-ratio: 16 / 9;
+  border-radius: .6rem;
+  overflow: hidden;
+  background: var(--bg-surface-subtle, rgba(0, 0, 0, 0.1));
+}
+.list-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.list-thumb-icon {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+}
+
+.list-item-text {
+  display: grid;
+  gap: .25rem;
+  min-width: 0;
+  flex: 1;
+}
+.list-item-text strong {
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  flex-wrap: wrap;
+}
+.list-item-text small {
+  color: var(--text-secondary);
+  font-size: .8rem;
+  line-height: 1.45;
+}
+.list-badge {
+  font-style: normal;
+  font-size: .65rem;
+  font-weight: 600;
+  padding: .15rem .5rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
+.list-chevron {
+  color: var(--accent-solid);
+  flex-shrink: 0;
+}
+
+[data-theme='light'] .list-item {
+  background: #ffffff;
+  border-color: #e4ddfa;
+}
+[data-theme='light'] .list-item:hover {
+  border-color: #a855f7;
+}
+
 /* ============ HOW IT WORKS ============ */
 .how-it-works {
   display: flex;
@@ -287,6 +485,18 @@ defineEmits(['select'])
   }
   .workspace-main :deep(.carousel-wrapper) {
     max-width: 100%;
+  }
+}
+
+@media (max-width: 520px) {
+  .list-thumb {
+    width: 84px;
+  }
+  .list-item-text small {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 }
 
