@@ -447,221 +447,167 @@
               <span class="section-kicker">02 · CLASIFICACIÓN</span>
               <h2>Tipos de algoritmos sobre grafos</h2>
               <p>
-                Los algoritmos de grafos se agrupan según el <strong>problema</strong> que resuelven.
-                Esta clasificación te ayuda a elegir el correcto antes de mirar código.
+                Se agrupan según el <strong>problema</strong> que resuelven. Los que tienen la
+                insignia <strong>En Graphix</strong> ya puedes practicarlos en su pizarra.
               </p>
 
-              <div class="algo-types-grid">
-                <article class="algo-type-card">
-                  <h3>🔍 Recorrido</h3>
-                  <p>Exploran todos los vértices del grafo de forma sistemática.</p>
-                  <ul>
-                    <li>BFS (anchura)</li>
-                    <li>DFS (profundidad)</li>
-                  </ul>
-                </article>
+              <div class="algo-table">
+                <div v-for="type in algorithmTypes" :key="type.id" class="algo-row">
+                  <span class="icon-box"><component :is="type.icon" :size="20" /></span>
+                  <div class="algo-row-info">
+                    <h3>{{ type.name }}</h3>
+                    <p>{{ type.desc }}</p>
+                  </div>
+                  <div class="algo-row-chips">
+                    <template v-for="a in type.algos" :key="a.name">
+                      <a v-if="a.url" :href="a.url" class="chip chip-live">
+                        {{ a.name }} <span class="chip-badge">En Graphix</span>
+                      </a>
+                      <span v-else class="chip">{{ a.name }}</span>
+                    </template>
+                  </div>
+                </div>
+              </div>
 
-                <article class="algo-type-card">
-                  <h3>🛣️ Caminos mínimos</h3>
-                  <p>Encuentran la ruta más barata entre dos o más nodos.</p>
-                  <ul>
-                    <li>Dijkstra</li>
-                    <li>Bellman-Ford</li>
-                    <li>Floyd-Warshall</li>
-                  </ul>
-                </article>
-
-                <article class="algo-type-card">
-                  <h3>🌳 Árboles de expansión</h3>
-                  <p>Conectan todos los vértices con el mínimo costo total.</p>
-                  <ul>
-                    <li>Kruskal</li>
-                    <li>Prim</li>
-                  </ul>
-                </article>
-
-                <article class="algo-type-card">
-                  <h3>🔗 Asignación y matching</h3>
-                  <p>Emparejan elementos minimizando o maximizando costos.</p>
-                  <ul>
-                    <li>Húngaro (asignación)</li>
-                    <li>Hopcroft-Karp</li>
-                  </ul>
-                </article>
-
-                <article class="algo-type-card">
-                  <h3>📐 Todos los pares</h3>
-                  <p>Calculan rutas óptimas entre cada par de vértices.</p>
-                  <ul>
-                    <li>Floyd-Warshall</li>
-                    <li>Johnson</li>
-                  </ul>
-                </article>
-
-                <article class="algo-type-card">
-                  <h3>📊 Ordenamiento</h3>
-                  <p>Ordenan vértices respetando dependencias (DAG).</p>
-                  <ul>
-                    <li>Kahn (BFS)</li>
-                    <li>DFS topológico</li>
-                  </ul>
-                </article>
+              <!-- 🎬 VIDEO SECCIÓN 02 — panorama de algoritmos de grafos -->
+              <!-- 👉 PEGA AQUÍ tu link en src, con este formato: https://www.youtube.com/embed/ID_DEL_VIDEO -->
+              <div class="video-block">
+                <span class="video-label">🎬 Video: panorama de algoritmos de grafos</span>
+                <div class="video-wrapper">
+                  <iframe
+                    src="https://www.youtube.com/embed/KHyzPoyaD3A"
+                    title="Panorama de algoritmos de grafos"
+                    loading="lazy"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowfullscreen
+                  ></iframe>
+                  <div class="video-placeholder">
+                    <span>📺 Espacio reservado para video</span>
+                    <small>URL de YouTube</small>
+                  </div>
+                </div>
               </div>
             </section>
 
-            <!-- 03 · APLICACIONES -->
+            <!-- 03 · RECORRIDOS: BFS vs DFS -->
+            <section id="recorridos">
+              <span class="section-kicker">03 · EJEMPLO</span>
+              <h2>Recorridos: BFS vs DFS</h2>
+              <p>
+                Son las dos formas básicas de recorrer un grafo, es decir, de visitar todos sus nodos.
+                Los dos grafos de abajo son idénticos y ambos empiezan en <strong>A</strong>;
+                el número en cada nodo indica en qué <strong>orden</strong> se visita.
+              </p>
+
+              <div class="traversal-grid">
+                <div v-for="t in traversals" :key="t.id" class="traversal-card">
+                  <h3>{{ t.name }}</h3>
+                  <svg viewBox="0 0 190 190" class="traversal-svg">
+                    <line
+                      v-for="(e, i) in traversalEdges"
+                      :key="i"
+                      :x1="nodeMap[e[0]].x"
+                      :y1="nodeMap[e[0]].y"
+                      :x2="nodeMap[e[1]].x"
+                      :y2="nodeMap[e[1]].y"
+                      class="edge-line"
+                    />
+                    <g v-for="n in traversalNodes" :key="n.id">
+                      <circle :cx="n.x" :cy="n.y" r="16" class="node-hollow" />
+                      <text :x="n.x" :y="n.y + 4" class="node-label-sm">{{ n.id }}</text>
+                      <circle :cx="n.x + 14" :cy="n.y - 14" r="8" class="order-badge" />
+                      <text :x="n.x + 14" :y="n.y - 10.5" class="order-text">{{ t.order.indexOf(n.id) + 1 }}</text>
+                    </g>
+                  </svg>
+                  <div class="traversal-order">{{ t.order.join(' → ') }}</div>
+                  <p>{{ t.analogy }}</p>
+                  <small>{{ t.structure }} · O(V + E)</small>
+                </div>
+              </div>
+
+              <div class="comparison">
+                <div>
+                  <h3>Usa BFS cuando…</h3>
+                  <p>Quieres el camino con menos aristas en un grafo sin pesos, o explorar por cercanía al nodo inicial.</p>
+                </div>
+                <div>
+                  <h3>Usa DFS cuando…</h3>
+                  <p>Necesitas detectar ciclos, ordenar tareas con dependencias (orden topológico) o explorar todos los caminos posibles.</p>
+                </div>
+              </div>
+            </section>
+
+            <!-- 04 · APLICACIONES -->
             <section id="aplicaciones">
-              <span class="section-kicker">03 · MUNDO REAL</span>
+              <span class="section-kicker">04 · MUNDO REAL</span>
               <h2>Aplicaciones de los algoritmos de grafos</h2>
-              <p>
-                Los algoritmos de grafos no son solo teoría: están detrás de muchísimas tecnologías
-                que usamos a diario. Aquí algunas de las aplicaciones más comunes, agrupadas por área.
-              </p>
+              <p>Están detrás de muchas tecnologías que usamos a diario.</p>
 
-              <div class="apps-grid">
-                <article class="app-card">
-                  <span class="app-icon">🗺️</span>
-                  <h3>Navegación y mapas</h3>
-                  <p>
-                    Google Maps, Waze y cualquier GPS usan <strong>Dijkstra</strong> o <strong>A*</strong>
-                    para calcular la ruta más rápida entre dos puntos considerando distancias, tráfico y peajes.
-                  </p>
-                  <small>Algoritmos: Dijkstra, A*, Bellman-Ford</small>
+              <div class="apps-list">
+                <article v-for="app in applications" :key="app.id" class="app-item">
+                  <span class="icon-box"><component :is="app.icon" :size="20" /></span>
+                  <div>
+                    <h3>{{ app.name }}</h3>
+                    <p>{{ app.desc }}</p>
+                    <small>{{ app.algos }}</small>
+                  </div>
                 </article>
+              </div>
 
-                <article class="app-card">
-                  <span class="app-icon">🌐</span>
-                  <h3>Redes sociales</h3>
-                  <p>
-                    Facebook, Instagram y LinkedIn usan grafos para modelar amistades, sugerir contactos
-                    ("amigos en común") y detectar comunidades con <strong>BFS</strong> y clustering.
-                  </p>
-                  <small>Algoritmos: BFS, DFS, PageRank</small>
-                </article>
-
-                <article class="app-card">
-                  <span class="app-icon">📦</span>
-                  <h3>Logística y distribución</h3>
-                  <p>
-                    Empresas como Amazon o FedEx optimizan rutas de entrega con <strong>MST</strong> y
-                    <strong>problemas de flujo</strong> para minimizar costos y tiempos.
-                  </p>
-                  <small>Algoritmos: Kruskal, Prim, Ford-Fulkerson</small>
-                </article>
-
-                <article class="app-card">
-                  <span class="app-icon">🎯</span>
-                  <h3>Asignación de recursos</h3>
-                  <p>
-                    Asignar tareas a empleados, estudiantes a proyectos o máquinas a trabajos se resuelve
-                    con el <strong>algoritmo húngaro</strong> y variantes de matching.
-                  </p>
-                  <small>Algoritmos: Húngaro, Hopcroft-Karp</small>
-                </article>
-
-                <article class="app-card">
-                  <span class="app-icon">🏗️</span>
-                  <h3>Planificación de proyectos</h3>
-                  <p>
-                    El <strong>ordenamiento topológico</strong> permite planificar tareas con dependencias:
-                    builds de software, cronogramas, prerequisitos académicos.
-                  </p>
-                  <small>Algoritmos: Kahn, DFS topológico</small>
-                </article>
-
-                <article class="app-card">
-                  <span class="app-icon">🧬</span>
-                  <h3>Bioinformática</h3>
-                  <p>
-                    El ADN, las proteínas y las redes metabólicas se modelan como grafos para encontrar
-                    rutas biológicas y analizar enfermedades con <strong>Johnson</strong> y Floyd-Warshall.
-                  </p>
-                  <small>Algoritmos: Johnson, Floyd-Warshall</small>
-                </article>
-
-                <article class="app-card">
-                  <span class="app-icon">💻</span>
-                  <h3>Redes de computadoras</h3>
-                  <p>
-                    El enrutamiento de paquetes en Internet usa <strong>Dijkstra</strong> (OSPF) y
-                    <strong>Bellman-Ford</strong> (RIP) para encontrar el camino más corto entre routers.
-                  </p>
-                  <small>Algoritmos: Dijkstra, Bellman-Ford</small>
-                </article>
-
-                <article class="app-card">
-                  <span class="app-icon">🎮</span>
-                  <h3>Videojuegos</h3>
-                  <p>
-                    La IA de NPCs usa grafos para pathfinding (A*), sistemas de diálogo, árboles de
-                    comportamiento y generación procedural de mapas.
-                  </p>
-                  <small>Algoritmos: A*, BFS, DFS</small>
-                </article>
+              <!-- 🎬 VIDEO SECCIÓN 04 — aplicaciones reales -->
+              <!-- 👉 PEGA AQUÍ tu link en src, con este formato: https://www.youtube.com/embed/ID_DEL_VIDEO -->
+              <div class="video-block">
+                <span class="video-label">🎬 Video: grafos en la vida real</span>
+                <div class="video-wrapper">
+                  <iframe
+                    src="https://www.youtube.com/embed/oMgfGkFSgI0"
+                    title="Grafos en la vida real"
+                    loading="lazy"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowfullscreen
+                  ></iframe>
+                  <div class="video-placeholder">
+                    <span>📺 Espacio reservado para video</span>
+                    <small>URL de YouTube</small>
+                  </div>
+                </div>
               </div>
             </section>
 
-            <!-- 04 · ALGORITMOS DISPONIBLES EN GRAPHIX -->
-            <section id="algoritmos-graphix">
-              <span class="section-kicker">04 · EN GRAPHIX</span>
-              <h2>Algoritmos disponibles en Graphix</h2>
-              <p>
-                Estos son los módulos interactivos que puedes experimentar ahora mismo.
-                Cada uno tiene su propia pizarra donde puedes construir, ejecutar y visualizar el algoritmo paso a paso.
-              </p>
+            <!-- 05 · PRÁCTICA -->
+            <section id="practica">
+              <span class="section-kicker">05 · PRÁCTICA</span>
+              <h2>Pruébalo en Graphix</h2>
+              <p>Así se ven las pizarras donde puedes construir y ejecutar cada algoritmo paso a paso.</p>
 
-              <div class="algo-grid">
-                <article
-                  v-for="algo in graphixAlgorithms"
-                  :key="algo.id"
-                  class="algo-card"
-                >
-                  <!-- Cabecera con icono grande -->
-                  <div class="algo-hero" :style="{ background: algo.gradient }">
-                    <span class="algo-icon">{{ algo.icon }}</span>
-                  </div>
-
-                  <div class="algo-body">
-                    <header class="algo-head">
-                      <span class="algo-tag">{{ algo.tag }}</span>
-                      <h3>{{ algo.name }}</h3>
-                    </header>
-
-                    <p class="algo-desc">{{ algo.desc }}</p>
-
-                    <ul class="algo-meta">
-                      <li><strong>Complejidad:</strong> {{ algo.complexity }}</li>
-                      <li><strong>Tipo de grafo:</strong> {{ algo.graphType }}</li>
-                    </ul>
-
-                    <!-- VIDEO opcional por algoritmo -->
-                    <div v-if="algo.hasVideo" class="video-block">
-                      <span class="video-label">🎬 Video explicativo</span>
-                      <div class="video-wrapper">
-                        <iframe
-                          src=""
-                          :title="algo.name"
-                          loading="lazy"
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                          allowfullscreen
-                        ></iframe>
-                        <div class="video-placeholder">
-                          <span>📺 Espacio reservado para video</span>
-                          <small>URL de YouTube</small>
-                        </div>
-                      </div>
+              <!-- 🖼️ CAPTURAS DE TUS PIZARRAS -->
+              <!-- 👉 Pon tus imágenes en la carpeta public/img/ y escribe la ruta en `img` dentro del array graphixShots (script) -->
+              <div class="shots-grid">
+                <figure v-for="s in graphixShots" :key="s.id" class="shot">
+                  <div class="shot-frame" :class="{ 'has-img': s.img }">
+                    <img v-if="s.img" :src="s.img" :alt="`Pizarra de ${s.name}`" loading="lazy" />
+                    <div v-else class="shot-placeholder">
+                      <ImageIcon :size="22" />
+                      <span>Espacio para captura</span>
                     </div>
-
-                    <!-- BOTÓN A ALGORITMOS INTERACTIVOS -->
-                    <a :href="algo.interactiveUrl" class="algo-cta">
-                      Abrir en Algoritmos Interactivos
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="5" y1="12" x2="19" y2="12" />
-                        <polyline points="12 5 19 12 12 19" />
-                      </svg>
-                    </a>
                   </div>
-                </article>
+                  <figcaption>
+                    <a :href="s.url" class="shot-link">
+                      {{ s.name }} <ArrowRight :size="14" />
+                    </a>
+                  </figcaption>
+                </figure>
+              </div>
+
+              <div class="callout">
+                <strong>De la teoría a la pizarra</strong>
+                <span>
+                  Los algoritmos con insignia <strong>En Graphix</strong> tienen su propia pizarra
+                  donde puedes construirlos y ejecutarlos paso a paso.
+                </span>
+                <a :href="VIEW_ROUTES.interactivos" class="practice-cta">
+                  Ir a Algoritmos Interactivos <ArrowRight :size="16" />
+                </a>
               </div>
             </section>
           </template>
@@ -674,6 +620,12 @@
 <script setup>
 import { ref, computed } from 'vue'
 import CanvasBackground from './CanvasBackground.vue'
+import {
+  Compass, Route, Network, Link2, Grid3x3, ListOrdered, Boxes,
+  Map as MapIcon, Users, Truck, Target, CalendarCheck, Server,
+  ArrowRight, Image as ImageIcon
+} from 'lucide-vue-next'
+import { ALGORITHMS, VIEW_ROUTES, getAlgorithmRoute } from '../config/routes'
 
 /* ============ TABS ============ */
 const tabs = [
@@ -693,52 +645,114 @@ const sectionsByTab = {
   algoritmos: [
     { id: 'definicion-algoritmo', label: '¿Qué es un algoritmo?' },
     { id: 'tipos-algoritmos', label: 'Tipos de algoritmos' },
+    { id: 'recorridos', label: 'BFS vs DFS' },
     { id: 'aplicaciones', label: 'Aplicaciones' },
-    { id: 'algoritmos-graphix', label: 'Algoritmos en Graphix' }
+    { id: 'practica', label: 'Pruébalo en Graphix' }
   ]
 }
 
 const currentSections = computed(() => sectionsByTab[activeTab.value])
 
-/* ============ ALGORITMOS DISPONIBLES EN GRAPHIX ============ */
-const graphixAlgorithms = [
+/* ============ TIPOS DE ALGORITMOS ============ */
+// Para marcar uno como disponible en Graphix, solo añade su `url`
+const algorithmTypes = [
+  { id: 'recorrido', icon: Compass, name: 'Recorrido',
+    desc: 'Exploran todos los vértices de forma sistemática.',
+    algos: [{ name: 'BFS' }, { name: 'DFS' }] },
+  { id: 'caminos', icon: Route, name: 'Caminos mínimos',
+    desc: 'Encuentran la ruta más barata entre nodos.',
+    algos: [{ name: 'Dijkstra' }, { name: 'Bellman-Ford' }, { name: 'Floyd-Warshall' }] },
+  { id: 'expansion', icon: Network, name: 'Árboles de expansión',
+    desc: 'Conectan todos los vértices con el mínimo costo.',
+    algos: [{ name: 'Kruskal' }, { name: 'Prim' }] },
+  { id: 'asignacion', icon: Link2, name: 'Asignación y matching',
+    desc: 'Emparejan elementos minimizando o maximizando costos.',
+    algos: [
+      { name: 'Húngaro', url: getAlgorithmRoute('asignacion') },
+      { name: 'Hopcroft-Karp' }
+    ] },
+  { id: 'transporte', icon: Boxes, name: 'Transporte',
+    desc: 'Reparten mercancía de orígenes a destinos al menor costo.',
+    algos: [
+      { name: 'Northwest', url: getAlgorithmRoute('northwest') },
+      { name: 'Costo mínimo' },
+      { name: 'Vogel' }
+    ] },
+  { id: 'pares', icon: Grid3x3, name: 'Todos los pares',
+    desc: 'Rutas óptimas entre cada par de vértices.',
+    algos: [
+      { name: 'Floyd-Warshall' },
+      { name: 'Johnson', url: getAlgorithmRoute('johnson') }
+    ] },
+  { id: 'orden', icon: ListOrdered, name: 'Ordenamiento',
+    desc: 'Ordenan vértices respetando dependencias (DAG).',
+    algos: [{ name: 'Kahn' }, { name: 'DFS topológico' }] }
+]
+
+/* ============ BFS vs DFS (mismo grafo, distinto orden) ============ */
+const traversalNodes = [
+  { id: 'A', x: 105, y: 30 },
+  { id: 'B', x: 55,  y: 90 },
+  { id: 'C', x: 155, y: 90 },
+  { id: 'D', x: 25,  y: 160 },
+  { id: 'E', x: 85,  y: 160 },
+  { id: 'F', x: 155, y: 160 }
+]
+const traversalEdges = [
+  ['A', 'B'], ['A', 'C'], ['B', 'D'], ['B', 'E'], ['C', 'F']
+]
+const nodeMap = Object.fromEntries(traversalNodes.map(n => [n.id, n]))
+
+const traversals = [
   {
-    id: 'pizarra',
-    icon: '🕸️',
-    gradient: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',
-    tag: 'Diseño',
-    name: 'Pizarra de grafos',
-    desc: 'Crea nodos y conexiones libremente para diseñar y analizar cualquier grafo.',
-    complexity: '—',
-    graphType: 'Cualquiera (dirigido, no dirigido, ponderado)',
-    hasVideo: true,
-    interactiveUrl: '/algoritmos-interactivos#pizarra'
+    id: 'bfs',
+    name: 'BFS · Anchura',
+    order: ['A', 'B', 'C', 'D', 'E', 'F'],
+    analogy: 'Como las ondas de una piedra en un estanque: primero los vecinos, luego los vecinos de los vecinos, por capas.',
+    structure: 'Usa una cola'
   },
   {
-    id: 'asignacion',
-    icon: '🔗',
-    gradient: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
-    tag: 'Optimización',
-    name: 'Algoritmo de asignación',
-    desc: 'Empareja elementos de dos conjuntos minimizando (o maximizando) el costo total, usando el método húngaro.',
-    complexity: 'O(n³)',
-    graphType: 'Bipartito ponderado',
-    hasVideo: true,
-    interactiveUrl: '/algoritmos-interactivos#asignacion'
-  },
-  {
-    id: 'johnson',
-    icon: '📐',
-    gradient: 'linear-gradient(135deg, #ec4899 0%, #f97316 100%)',
-    tag: 'Caminos mínimos',
-    name: 'Algoritmo de Johnson',
-    desc: 'Calcula los caminos más cortos entre todos los pares en grafos dispersos, incluso con pesos negativos.',
-    complexity: 'O(V² log V + V·E)',
-    graphType: 'Dirigido, disperso, permite pesos negativos',
-    hasVideo: true,
-    interactiveUrl: '/algoritmos-interactivos#johnson'
+    id: 'dfs',
+    name: 'DFS · Profundidad',
+    order: ['A', 'B', 'D', 'E', 'C', 'F'],
+    analogy: 'Como explorar un laberinto: sigues un camino hasta el fondo y, si no hay salida, regresas al último cruce.',
+    structure: 'Usa una pila'
   }
 ]
+
+/* ============ APLICACIONES ============ */
+const applications = [
+  { id: 'nav', icon: MapIcon, name: 'Navegación y mapas',
+    desc: 'Los GPS calculan la ruta más rápida considerando distancia, tráfico y peajes.',
+    algos: 'Dijkstra · A* · Bellman-Ford' },
+  { id: 'redes-sociales', icon: Users, name: 'Redes sociales',
+    desc: 'Modelan amistades, sugieren contactos y detectan comunidades.',
+    algos: 'BFS · DFS · PageRank' },
+  { id: 'logistica', icon: Truck, name: 'Logística y distribución',
+    desc: 'Optimizan rutas de entrega para minimizar costos y tiempos.',
+    algos: 'Kruskal · Prim · Ford-Fulkerson' },
+  { id: 'recursos', icon: Target, name: 'Asignación de recursos',
+    desc: 'Asignar tareas a empleados o máquinas a trabajos al menor costo.',
+    algos: 'Húngaro · Hopcroft-Karp' },
+  { id: 'planificacion', icon: CalendarCheck, name: 'Planificación de proyectos',
+    desc: 'Ordenan tareas con dependencias: builds, cronogramas, prerrequisitos.',
+    algos: 'Kahn · DFS topológico' },
+  { id: 'redes-pc', icon: Server, name: 'Redes de computadoras',
+    desc: 'El enrutamiento de paquetes busca el camino más corto entre routers.',
+    algos: 'Dijkstra (OSPF) · Bellman-Ford (RIP)' }
+]
+
+/* ============ CAPTURAS DE LAS PIZARRAS ============ */
+// Cuando tengas la captura, guarda la imagen en public/img/ y escribe la ruta en `img`
+// Ejemplo: img: '/img/asignacion.png'
+const graphixShots = ALGORITHMS
+  .filter((algorithm) => algorithm.showInTheory)
+  .map((algorithm) => ({
+    id: algorithm.id,
+    name: algorithm.name,
+    img: algorithm.image,
+    url: algorithm.route
+  }))
 </script>
 
 <style scoped>
@@ -1099,149 +1113,192 @@ const graphixAlgorithms = [
   font-size: .88rem;
 }
 
-/* ============ TIPOS DE ALGORITMOS ============ */
-.algo-types-grid {
+/* ============ ICONO EN CAJITA ============ */
+.icon-box {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1rem;
-  margin-top: 1.5rem;
+  place-items: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: .6rem;
+  background: color-mix(in srgb, var(--accent-solid) 15%, transparent);
+  color: var(--accent-solid);
 }
-.algo-type-card {
-  padding: 1.2rem;
+
+/* ============ TIPOS DE ALGORITMOS (tabla) ============ */
+.algo-table {
+  margin-top: 1.5rem;
   border: 1px solid var(--border-color);
   border-radius: .8rem;
   background: var(--bg-surface);
+  overflow: hidden;
 }
-.algo-type-card h3 { font-size: 1rem; margin: 0 0 .5rem; }
-.algo-type-card p { font-size: .85rem; margin: 0 0 .6rem; }
-.algo-type-card ul {
-  margin: 0;
-  padding-left: 1.1rem;
-  font-size: .82rem;
+.algo-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem 1.2rem;
+  border-bottom: 1px solid var(--border-color);
+}
+.algo-row:last-child { border-bottom: none; }
+.algo-row-info h3 { font-size: 1rem; margin: 0 0 .15rem; }
+.algo-row-info p { font-size: .85rem; margin: 0; }
+.algo-row-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+  justify-content: flex-end;
+}
+.chip {
+  padding: .25rem .65rem;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  font-size: .78rem;
   color: var(--text-secondary);
+  text-decoration: none;
 }
-.algo-type-card li { margin: .15rem 0; }
+.chip-live {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  border-color: var(--accent-solid);
+  color: var(--text-primary);
+  transition: background .2s ease;
+}
+.chip-live:hover {
+  background: color-mix(in srgb, var(--accent-solid) 15%, transparent);
+}
+.chip-badge {
+  padding: .05rem .4rem;
+  border-radius: 999px;
+  background: var(--accent-solid);
+  color: #fff;
+  font-size: .62rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
 
-/* ============ APLICACIONES ============ */
-.apps-grid {
+/* ============ BFS vs DFS ============ */
+.traversal-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
   margin-top: 1.5rem;
 }
-.app-card {
-  padding: 1.3rem;
+.traversal-card {
+  padding: 1.2rem;
   border: 1px solid var(--border-color);
   border-radius: .8rem;
   background: var(--bg-surface);
-  display: flex;
-  flex-direction: column;
-  gap: .45rem;
-  transition: border-color .2s ease, transform .2s ease;
+  text-align: center;
 }
-.app-card:hover {
-  border-color: var(--accent-solid);
-  transform: translateY(-2px);
+.traversal-card h3 {
+  font-size: .95rem;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--text-primary);
 }
-.app-icon {
-  font-size: 1.8rem;
-  line-height: 1;
-}
-.app-card h3 {
-  font-size: 1rem;
-  margin: 0;
-}
-.app-card p {
-  font-size: .88rem;
-  margin: 0;
-  color: var(--text-secondary);
-  line-height: 1.6;
-}
-.app-card small {
+.traversal-card p { font-size: .85rem; margin: .5rem 0 0; }
+.traversal-card small {
+  display: block;
+  margin-top: .6rem;
   color: var(--accent-solid);
   font-size: .75rem;
   font-weight: 700;
-  letter-spacing: .04em;
-  margin-top: auto;
-  padding-top: .4rem;
+}
+.traversal-svg {
+  width: 100%;
+  max-width: 260px;
+  height: auto;
+  margin: .4rem auto;
+  display: block;
+}
+.order-badge { fill: var(--accent-solid); }
+.order-text {
+  fill: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  text-anchor: middle;
+}
+.traversal-order {
+  margin-top: .3rem;
+  color: var(--text-primary);
+  font-family: 'Fira Code', 'Cascadia Code', monospace;
+  font-size: .85rem;
+  font-weight: 700;
 }
 
-/* ============ ALGORITMOS GRAPHIX (con hero) ============ */
-.algo-grid {
+/* ============ APLICACIONES (lista ligera) ============ */
+.apps-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1.2rem;
-  margin-top: 1.8rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.4rem 2rem;
+  margin-top: 1.5rem;
 }
-.algo-card {
-  border: 1px solid var(--border-color);
-  border-radius: .9rem;
-  background: var(--bg-surface);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  transition: border-color .2s ease, transform .2s ease;
+.app-item { display: flex; gap: .9rem; align-items: flex-start; }
+.app-item h3 { font-size: 1rem; margin: 0 0 .2rem; }
+.app-item p { font-size: .88rem; margin: 0; }
+.app-item small {
+  display: block;
+  margin-top: .3rem;
+  color: var(--accent-solid);
+  font-size: .75rem;
+  font-weight: 700;
 }
-.algo-card:hover {
-  border-color: var(--accent-solid);
-  transform: translateY(-3px);
+
+/* ============ CAPTURAS DE PIZARRAS ============ */
+.shots-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
 }
-.algo-hero {
-  height: 130px;
+.shot { margin: 0; display: grid; gap: .5rem; }
+.shot-frame {
+  aspect-ratio: 16 / 10;
   display: grid;
   place-items: center;
-  position: relative;
+  overflow: hidden;
+  border: 1px dashed var(--border-color);
+  border-radius: .6rem;
+  background: var(--bg-body);
 }
-.algo-icon {
-  font-size: 2.8rem;
-  filter: drop-shadow(0 4px 12px rgba(0,0,0,.35));
+.shot-frame.has-img { border-style: solid; }
+.shot-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
-.algo-body {
-  padding: 1.2rem;
-  display: flex;
-  flex-direction: column;
-  gap: .7rem;
-  flex: 1;
-}
-.algo-head { display: grid; gap: .3rem; }
-.algo-tag {
-  display: inline-block;
-  align-self: flex-start;
-  padding: .2rem .6rem;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--accent-solid) 18%, transparent);
-  color: var(--accent-solid);
-  font-size: .68rem;
-  font-weight: 800;
-  letter-spacing: .1em;
-  text-transform: uppercase;
-}
-.algo-card h3 { font-size: 1.05rem; margin: 0; }
-.algo-desc { font-size: .88rem; margin: 0; color: var(--text-secondary); }
-.algo-meta {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+.shot-placeholder {
   display: grid;
-  gap: .25rem;
-  font-size: .82rem;
+  place-items: center;
+  gap: .3rem;
+  color: var(--text-secondary);
+  font-size: .78rem;
 }
-.algo-meta strong { color: var(--text-primary); }
+.shot-link {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  color: var(--accent-solid);
+  font-weight: 700;
+  font-size: .85rem;
+  text-decoration: none;
+}
 
-/* Botón CTA hacia Algoritmos Interactivos */
-.algo-cta {
+/* ============ CTA PRÁCTICA ============ */
+.practice-cta {
   display: inline-flex;
   align-items: center;
   gap: .45rem;
-  margin-top: auto;
-  padding-top: .9rem;
+  margin-top: .4rem;
   color: var(--accent-solid);
   font-weight: 700;
-  font-size: .9rem;
   text-decoration: none;
-  transition: gap .2s ease, color .2s ease;
 }
-.algo-cta:hover { gap: .7rem; color: #fff; }
 
 /* ============ VIDEO ============ */
 .video-block {
@@ -1249,7 +1306,6 @@ const graphixAlgorithms = [
   display: grid;
   gap: .5rem;
 }
-.algo-body .video-block { margin-top: .4rem; }
 .video-label {
   color: var(--accent-solid);
   font-size: .72rem;
@@ -1300,8 +1356,8 @@ const graphixAlgorithms = [
 
 /* ============ RESPONSIVE ============ */
 @media (max-width: 900px) {
-  .algo-types-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .example-grid { grid-template-columns: 1fr; }
+  .shots-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 760px) {
   .theory-shell { width: min(100% - 2rem, 680px); padding-top: 7rem; }
@@ -1322,10 +1378,13 @@ const graphixAlgorithms = [
   .comparison,
   .concept-visual,
   .graph-types-grid,
-  .algo-types-grid,
-  .apps-grid {
+  .traversal-grid,
+  .shots-grid,
+  .apps-list {
     grid-template-columns: 1fr;
   }
+  .algo-row { grid-template-columns: auto minmax(0, 1fr); }
+  .algo-row-chips { grid-column: 1 / -1; justify-content: flex-start; }
 }
 @media (max-width: 420px) {
   .theory-shell { width: min(100% - 1.25rem, 380px); }

@@ -43,6 +43,7 @@
 <script setup>
 import { ref } from 'vue'
 import { Menu, Moon, Sun, X } from '@lucide/vue'
+import { NAV_ITEMS } from '../config/routes'
 
 defineProps({
   current: { type: String, default: 'home' },
@@ -56,7 +57,8 @@ const navigateTo = (id) => {
   emit('navigate', id)
 }
 
-const navItems = [
+const navItems = NAV_ITEMS
+const previousNavItems = [
   { id: 'home', label: 'Inicio' },
   { id: 'teoria', label: 'Fundamentos' },
   { id: 'interactivos', label: 'Algoritmos Interactivos' },

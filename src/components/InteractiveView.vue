@@ -58,6 +58,38 @@
             @select="$emit('select', $event)"
           />
 
+          <!-- VISTA CUADRÍCULA (3 por fila) -->
+          <ul v-else-if="viewMode === 'grid'" class="algorithm-grid">
+            <li v-for="card in cards" :key="card.id">
+              <button
+                class="grid-item"
+                :class="{ 'grid-item-disabled': card.comingSoon }"
+                @click="$emit('select', card.id)"
+              >
+                <div class="grid-thumb">
+                  <img
+                    v-if="card.image"
+                    :src="card.image"
+                    :alt="card.title"
+                    class="grid-thumb-img"
+                    loading="lazy"
+                  />
+                  <div v-else class="grid-thumb-icon" :style="{ background: card.iconBg }">
+                    <component :is="card.icon" :size="28" />
+                  </div>
+                </div>
+
+                <div class="grid-item-text">
+                  <strong>
+                    {{ card.title }}
+                    <em v-if="card.comingSoon" class="grid-badge">Próximamente</em>
+                  </strong>
+                  <small>{{ card.desc }}</small>
+                </div>
+              </button>
+            </li>
+          </ul>
+
           <!-- VISTA LISTA -->
           <ul v-else class="algorithm-list">
             <li v-for="card in cards" :key="card.id">
@@ -107,12 +139,13 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import {
   ArrowRight,
   Lightbulb,
   MousePointer2,
   GalleryHorizontal,
+  LayoutGrid,
   List,
   ChevronRight
 } from '@lucide/vue'
@@ -122,12 +155,27 @@ import { cards } from './algorithmCards'
 
 defineEmits(['select'])
 
-const viewMode = ref('carousel')
+const VIEW_MODE_KEY = 'interactive-view-mode'
+const DEFAULT_VIEW = 'carousel'
 
 const viewTabs = [
   { value: 'carousel', label: 'Carrusel', icon: GalleryHorizontal },
+  { value: 'grid', label: 'Cuadrícula', icon: LayoutGrid },
   { value: 'list', label: 'Lista', icon: List }
 ]
+
+const viewMode = ref(DEFAULT_VIEW)
+
+onMounted(() => {
+  const saved = sessionStorage.getItem(VIEW_MODE_KEY)
+  if (saved && viewTabs.some(t => t.value === saved)) {
+    viewMode.value = saved
+  }
+})
+
+watch(viewMode, (val) => {
+  sessionStorage.setItem(VIEW_MODE_KEY, val)
+})
 </script>
 
 <style scoped>
@@ -332,6 +380,100 @@ const viewTabs = [
   font-weight: 700;
 }
 
+/* ============ VISTA CUADRÍCULA (3 por fila) ============ */
+.algorithm-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .9rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.grid-item {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 1px solid var(--border-color);
+  border-radius: .9rem;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color .2s ease, background .2s ease, transform .15s ease;
+}
+.grid-item:hover {
+  border-color: var(--accent-solid);
+  transform: translateY(-3px);
+}
+.grid-item-disabled {
+  opacity: .85;
+}
+
+.grid-thumb {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: var(--bg-surface-subtle, rgba(0, 0, 0, 0.1));
+}
+.grid-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.grid-thumb-icon {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+}
+
+.grid-item-text {
+  display: grid;
+  gap: .3rem;
+  padding: .85rem .9rem 1rem;
+  min-width: 0;
+}
+.grid-item-text strong {
+  font-size: .95rem;
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  flex-wrap: wrap;
+}
+.grid-item-text small {
+  color: var(--text-secondary);
+  font-size: .78rem;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.grid-badge {
+  font-style: normal;
+  font-size: .62rem;
+  font-weight: 600;
+  padding: .15rem .5rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
+
+[data-theme='light'] .grid-item {
+  background: #ffffff;
+  border-color: #e4ddfa;
+}
+[data-theme='light'] .grid-item:hover {
+  border-color: #a855f7;
+}
+
 /* ============ VISTA LISTA ============ */
 .algorithm-list {
   display: grid;
@@ -450,6 +592,12 @@ const viewTabs = [
 }
 
 /* ============ RESPONSIVE ============ */
+@media (max-width: 900px) {
+  .algorithm-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 760px) {
   .interactive-shell {
     width: min(100% - 2rem, 680px);
@@ -489,6 +637,9 @@ const viewTabs = [
 }
 
 @media (max-width: 520px) {
+  .algorithm-grid {
+    grid-template-columns: 1fr;
+  }
   .list-thumb {
     width: 84px;
   }

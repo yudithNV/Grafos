@@ -118,7 +118,7 @@ const stars = Array.from({ length: STAR_COUNT }, () => {
 
 /* Modo oscuro */
 [data-theme='dark'] .hero-banner {
-  --hero-bg: radial-gradient(220% 105% at top center, #05030f 10%, #150a33 40%, #331e57 68%, #6d36cb);
+  --hero-bg: radial-gradient(220% 105% at top center, #05030f 10%, #150a33 40%, #50225b 68%, #592a65);
   --star-color: #e9d5ff;
 }
 
