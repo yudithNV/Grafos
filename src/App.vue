@@ -23,6 +23,7 @@
       @show-instructions="showInstructionsModal"
       @show-matrix="showMatrixModal"
       @save="handleSaveGraph"
+      @open-load="openLoadFromCanvas"
       @clear="confirmClearCanvas"
       @create-node="handleCreateNodeRequest"
       @create-edge="handleCreateEdgeRequest"
@@ -41,6 +42,7 @@
       @show-matrix="showMatrixModal"
       @show-saved="showSavedGraphs"
       @save="handleSaveGraph"
+      @open-load="openLoadFromCanvas"
       @clear="confirmClearCanvas"
       @create-node="handleCreateNodeRequest"
       @create-edge="handleCreateEdgeRequest"
@@ -61,6 +63,7 @@
       @show-matrix="showMatrixModal"
       @show-saved="showSavedGraphs"
       @save="handleSaveGraph"
+      @open-load="openLoadAssignmentFromCanvas"
       @clear="confirmClearCanvas"
       @create-node="handleCreateNodeRequest"
       @create-edge="handleCreateEdgeRequest"
@@ -391,6 +394,27 @@ const getNextQuickName = () => {
   return numberToLetters(nextNumber)
 }
 
+// ¿Ya existe otro nodo con este nombre? NO distingue mayúsculas/minúsculas:
+// si existe "A", tampoco se puede crear "a" (y viceversa).
+// excludeId permite ignorar al propio nodo cuando se está editando.
+const isDuplicateNodeLabel = (label, excludeId = null) => {
+  const normalized = label.toLowerCase()
+  return nodes.value.some(n => n.id !== excludeId && String(n.label).toLowerCase() === normalized)
+}
+
+// Alerta de nombre duplicado. Se abre con un pequeño retraso porque el modal
+// de creación/edición se está cerrando en ese momento.
+const showDuplicateNodeAlert = (label) => {
+  setTimeout(() => {
+    openModal({
+      title: 'Nombre duplicado',
+      message: `Ya existe un nodo llamado "${label}" (sin importar mayúsculas o minúsculas). No se puede crear otro nodo con el mismo nombre; usa un nombre diferente.`,
+      type: 'info',
+      iconName: 'warning'
+    })
+  }, 150)
+}
+
 const handleCreateNodeRequest = ({ x, y }) => {
   openModal({
     title: 'Crear Nuevo Nodo',
@@ -402,6 +426,13 @@ const handleCreateNodeRequest = ({ x, y }) => {
     callback: (value) => {
       const label = String(value).trim()
       if (!label) return
+
+      // Algoritmo de Asignación: no se permite crear un nodo con un nombre que ya existe
+      if (selectedAlgorithm.value === 'asignacion' && isDuplicateNodeLabel(label)) {
+        showDuplicateNodeAlert(label)
+        return
+      }
+
       nodes.value.push({
         id: 'node_' + Date.now(),
         label,
@@ -417,6 +448,24 @@ const handleCreateEdgeRequest = ({ sourceId, targetId }) => {
   if (existingEdge) {
     handleEditEdgeRequest(existingEdge)
     return
+  }
+
+  // Regla "Duplicidad": un nodo no puede conectarse a OTRO nodo que tenga
+  // exactamente el mismo nombre (sensible a mayúsculas/minúsculas: "A" no
+  // puede conectarse a otra "A", pero sí puede conectarse a "a"). No aplica
+  // a los bucles (un nodo conectándose a sí mismo), que siguen permitidos.
+  if (sourceId !== targetId) {
+    const sourceNode = nodes.value.find(n => n.id === sourceId)
+    const targetNode = nodes.value.find(n => n.id === targetId)
+    if (sourceNode && targetNode && sourceNode.label === targetNode.label) {
+      openModal({
+        title: '⚠️ Conexión no permitida (Duplicidad)',
+        message: `No puedes conectar "${sourceNode.label}" con otro nodo que tenga exactamente el mismo nombre. Cambia el nombre de uno de los dos, o usa mayúsculas/minúsculas distintas (por ejemplo "A" y "a" sí se pueden conectar).`,
+        type: 'info',
+        iconName: 'warning'
+      })
+      return
+    }
   }
 
   openModal({
@@ -466,6 +515,13 @@ const handleEditNodeRequest = (node) => {
     callback: (value, color) => {
       const label = String(value).trim()
       if (!label) return
+
+      // Algoritmo de Asignación: al renombrar tampoco se puede usar un nombre ya existente
+      if (selectedAlgorithm.value === 'asignacion' && isDuplicateNodeLabel(label, node.id)) {
+        showDuplicateNodeAlert(label)
+        return
+      }
+
       const index = nodes.value.findIndex(n => n.id === node.id)
       if (index !== -1) {
         nodes.value[index] = { 
@@ -715,6 +771,19 @@ const onSelectAlgorithm = (id) => {
   })
 }
 
+// Abre el selector de grafos guardados SIN salir del lienzo (Pizarra / Johnson).
+const openLoadFromCanvas = () => {
+  currentGraphIndex.value = -1
+  loadSavedGraphsList()
+  showGraphSelector.value = true
+}
+
+// Igual que arriba, pero para el selector propio del modo Asignación.
+const openLoadAssignmentFromCanvas = () => {
+  loadSavedAssignmentGraphsList()
+  showAssignmentGraphSelector.value = true
+}
+
 const loadSavedGraphsList = () => {
   const saved = localStorage.getItem('savedGraphs')
   const allGraphs = saved ? JSON.parse(saved) : []
@@ -918,10 +987,10 @@ const backToWelcome = () => {
 
 const showInstructionsModal = (manual = 'grafos') => {
   const file = {
-    asignacion: '/manual_asignacion.pdf',
-    johnson: '/manual_grafos.pdf',
-    grafos: '/Manual_Graphix_Dark.pdf'
-  }[manual] || '/Manual_Graphix_Dark.pdf'
+    asignacion: '/Manual de Uso - Pizarra de Asignación.pdf',
+    johnson: '/Manual de Uso - Pizarra de Johnson.pdf',
+    grafos: '/Manual de Uso - Pizarra de Grafos.pdf'
+  }[manual] || '/Manual de Uso - Pizarra de Grafos.pdf'
 
   window.open(file, '_blank')
 }

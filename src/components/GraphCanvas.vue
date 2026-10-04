@@ -148,7 +148,7 @@
           <Save class="btn-icon" />
           <span>Guardar</span>
         </button>
-        <button @click="$emit('open-load')" class="btn-text btn-load-graph">
+        <button @click="$emit('open-load')" class="btn-text btn-load-graph" title="Abrir un grafo ya guardado">
           <FolderOpen class="btn-icon" />
           <span>Cargar</span>
         </button>
@@ -424,7 +424,6 @@ import {
   BookOpen,
   AlertTriangle,
   Info,
-  FolderOpen,
   MousePointerClick,
   Grid3x3,
   Save,
@@ -461,6 +460,7 @@ const emit = defineEmits([
   'show-matrix',
   'show-saved',
   'save',
+  'open-load',
   'clear',
   'create-node',
   'create-edge',
@@ -1779,6 +1779,18 @@ const confirmClear = () => {
   background-color: rgba(22, 163, 74, 0.15);
   border-color: rgba(74, 222, 128, 0.35);
   color: #4ade80;
+}
+
+.btn-load-graph {
+  background-color: #dbeafe;
+  border-color: #93c5fd;
+  color: #2563eb;
+}
+
+[data-theme='dark'] .btn-load-graph {
+  background-color: rgba(37, 99, 235, 0.15);
+  border-color: rgba(96, 165, 250, 0.35);
+  color: #60a5fa;
 }
 
 @media (min-width: 640px) {

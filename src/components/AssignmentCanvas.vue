@@ -36,12 +36,10 @@
           <Save class="btn-icon" />
           <span>Guardar</span>
         </button>
-
-        <button @click="$emit('open-load')" class="btn-text btn-load-graph">
+        <button @click="$emit('open-load')" class="btn-text btn-load-graph" title="Abrir un grafo de asignación ya guardado">
           <FolderOpen class="btn-icon" />
           <span>Cargar</span>
         </button>
-                
         <button @click="showMatrixModal = true" class="btn-text btn-matrix">
           <Grid3x3 class="btn-icon" />
           <span>Matriz</span>
@@ -364,11 +362,7 @@ import {
   Pencil,
   Sparkles,
   X,
-  Loader,
-  Loader2,
-  LoaderCircle,
-  FolderOpen,
-  Upload
+  FolderOpen
 } from '@lucide/vue'
 import StarryBackground from './StarryBackground.vue'
 import AssignmentMatrix from './AssignmentMatrixModal.vue'
@@ -383,7 +377,7 @@ const props = defineProps({
 })
 
 const emit = defineEmits([
-  'back', 'show-instructions', 'save', 'clear',
+  'back', 'show-instructions', 'save', 'open-load', 'clear',
   'create-node', 'create-edge', 'edit-node', 'edit-edge',
   'delete-node', 'delete-edge', 'clear-optimal', 'solution-found'
 ])
@@ -940,16 +934,22 @@ const onTouchEnd = () => {
   color: #16a34a;
 }
 
-.btn-load-graph {
-  background-color: #0224e7;
-  border-color: #00629b;
-  color: #0295eb;
-}
-
 [data-theme='dark'] .btn-save-graph {
   background-color: rgba(22, 163, 74, 0.15);
   border-color: rgba(74, 222, 128, 0.35);
   color: #4ade80;
+}
+
+.btn-load-graph {
+  background-color: #dbeafe;
+  border-color: #93c5fd;
+  color: #2563eb;
+}
+
+[data-theme='dark'] .btn-load-graph {
+  background-color: rgba(37, 99, 235, 0.15);
+  border-color: rgba(96, 165, 250, 0.35);
+  color: #60a5fa;
 }
 
 .btn-text {
