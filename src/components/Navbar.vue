@@ -58,12 +58,6 @@ const navigateTo = (id) => {
 }
 
 const navItems = NAV_ITEMS
-const previousNavItems = [
-  { id: 'home', label: 'Inicio' },
-  { id: 'teoria', label: 'Fundamentos' },
-  { id: 'interactivos', label: 'Algoritmos Interactivos' },
-  { id: 'about', label: 'Quiénes somos' }
-]
 </script>
 
 <style scoped>
@@ -75,9 +69,9 @@ const previousNavItems = [
   padding: 0.75rem 1.5rem;
 
   /* ===== EFECTO GLASSMORPHISM ===== */
-  background: rgba(255, 255, 255, 0);
-  backdrop-filter: blur(14px) saturate(140%);
-  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
 
@@ -88,20 +82,38 @@ const previousNavItems = [
   width: 100%;
   box-sizing: border-box;
   z-index: 1000;
+
+  /* Forzar capa de composición para que el blur se aplique en deploy */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  isolation: isolate;
 }
 
-/* ===== MODO OSCURO (sin cambios) ===== */
+/* ===== MODO OSCURO ===== */
 [data-theme='dark'] .navbar {
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(0, 0, 0, 0.78);
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
 }
 
-/* ===== MODO CLARO: cristal azul marino (combina con el hero) ===== */
+/* ===== MODO CLARO: cristal azul marino ===== */
 [data-theme='light'] .navbar {
-  background: rgba(27, 41, 71, 0.70);
+  background: rgba(27, 41, 71, 0.88);
   border-bottom: 1px solid rgba(247, 247, 182, 0.18);
   box-shadow: 0 4px 30px rgba(27, 41, 71, 0.25);
+}
+
+/* ===== FALLBACK: si el navegador no soporta backdrop-filter ===== */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .navbar {
+    background: rgba(255, 255, 255, 0.96);
+  }
+  [data-theme='dark'] .navbar {
+    background: rgba(0, 0, 0, 0.94);
+  }
+  [data-theme='light'] .navbar {
+    background: rgba(27, 41, 71, 0.97);
+  }
 }
 
 .navbar-brand {
@@ -146,7 +158,6 @@ const previousNavItems = [
   transition: all 0.3s ease;
 }
 
-/* Oscuro: blanco con brillo neón */
 [data-theme='dark'] .brand-name {
   color: #ffffff;
   text-shadow:
@@ -154,7 +165,6 @@ const previousNavItems = [
     0 0 10px #ffffff;
 }
 
-/* Claro: blanco con brillo suave */
 [data-theme='light'] .brand-name {
   color: #ffffff;
   text-shadow:
@@ -205,7 +215,6 @@ const previousNavItems = [
   transform: translateY(-1px);
 }
 
-/* Claro: links blancos legibles sobre el cristal azul */
 [data-theme='light'] .nav-link {
   color: rgba(255, 255, 255, 0.78);
 }
@@ -223,7 +232,6 @@ const previousNavItems = [
   box-shadow: none !important;
 }
 
-/* Oscuro: blanco con glow */
 [data-theme='dark'] .nav-link-active {
   color: #ffffff;
   text-shadow:
@@ -232,7 +240,6 @@ const previousNavItems = [
     0 0 20px rgba(168, 85, 247, 0.20);
 }
 
-/* Claro: blanco con glow rosado (paleta del hero) */
 [data-theme='light'] .nav-link-active {
   color: #ffffff;
   text-shadow:
@@ -241,7 +248,6 @@ const previousNavItems = [
     0 0 26px rgba(233, 111, 146, 0.35);
 }
 
-/* Línea indicadora debajo del texto activo */
 .nav-link-active::after {
   content: '';
   position: absolute;
@@ -253,13 +259,11 @@ const previousNavItems = [
   border-radius: 2px;
 }
 
-/* Oscuro: línea blanca */
 [data-theme='dark'] .nav-link-active::after {
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.9), transparent);
   box-shadow: 0 0 10px rgba(255, 255, 255, 0.7);
 }
 
-/* Claro: línea crema/rosa */
 [data-theme='light'] .nav-link-active::after {
   background: linear-gradient(90deg, transparent, #F7F7B6, transparent);
   box-shadow: 0 0 10px rgba(233, 111, 146, 0.8);
