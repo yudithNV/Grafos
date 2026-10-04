@@ -40,7 +40,7 @@
           <template v-if="activeTab === 'grafos'">
             <!-- 01 · CONCEPTOS -->
             <section id="conceptos">
-              <span class="section-kicker">01 · LENGUAJE BÁSICO</span>
+              <span class="section-kicker">01 · DEFINICIÓN</span>
               <h2>¿Qué es un grafo?</h2>
               <p>
                 Un grafo es una estructura matemática que representa relaciones entre objetos.
@@ -385,7 +385,7 @@
           <template v-else>
             <!-- 01 · DEFINICIÓN DE ALGORITMO -->
             <section id="definicion-algoritmo">
-              <span class="section-kicker">01 · FUNDAMENTO</span>
+              <span class="section-kicker">01 · DEFINICIÓN</span>
               <h2>¿Qué es un algoritmo?</h2>
               <p>
                 Un <strong>algoritmo</strong> es una secuencia finita y ordenada de pasos que, partiendo de una
@@ -618,8 +618,9 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import CanvasBackground from './CanvasBackground.vue'
+import { requestedTheoryTab } from '../composables/theoryNavigation'
 import {
   Compass, Route, Network, Link2, Grid3x3, ListOrdered, Boxes,
   Map as MapIcon, Users, Truck, Target, CalendarCheck, Server,
@@ -652,6 +653,27 @@ const sectionsByTab = {
 }
 
 const currentSections = computed(() => sectionsByTab[activeTab.value])
+
+/* ============ ENTRADA DESDE EL DROPDOWN DEL NAVBAR ============ */
+const firstSectionByTab = {
+  grafos: 'conceptos',
+  algoritmos: 'definicion-algoritmo'
+}
+
+const applyRequestedTab = async () => {
+  const req = requestedTheoryTab.value
+  if (!req) return                       // entrada normal: se queda arriba, tab Grafos
+  activeTab.value = req.tab
+  requestedTheoryTab.value = null        // consumir la petición
+  await nextTick()
+  requestAnimationFrame(() => {
+    document.getElementById(firstSectionByTab[req.tab])
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  })
+}
+
+onMounted(applyRequestedTab)             // viene de otra página
+watch(requestedTheoryTab, applyRequestedTab) // ya estaba en Fundamentos
 
 /* ============ TIPOS DE ALGORITMOS ============ */
 // Para marcar uno como disponible en Graphix, solo añade su `url`

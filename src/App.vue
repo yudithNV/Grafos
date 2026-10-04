@@ -23,7 +23,6 @@
       @show-instructions="showInstructionsModal"
       @show-matrix="showMatrixModal"
       @save="handleSaveGraph"
-      @open-load="openLoadFromCanvas"
       @clear="confirmClearCanvas"
       @create-node="handleCreateNodeRequest"
       @create-edge="handleCreateEdgeRequest"
@@ -42,7 +41,6 @@
       @show-matrix="showMatrixModal"
       @show-saved="showSavedGraphs"
       @save="handleSaveGraph"
-      @open-load="openLoadFromCanvas"
       @clear="confirmClearCanvas"
       @create-node="handleCreateNodeRequest"
       @create-edge="handleCreateEdgeRequest"
@@ -63,7 +61,6 @@
       @show-matrix="showMatrixModal"
       @show-saved="showSavedGraphs"
       @save="handleSaveGraph"
-      @open-load="openLoadAssignmentFromCanvas"
       @clear="confirmClearCanvas"
       @create-node="handleCreateNodeRequest"
       @create-edge="handleCreateEdgeRequest"
@@ -229,7 +226,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
+import { ref, onMounted, nextTick, watch } from 'vue'
 import Navbar from './components/Navbar.vue'
 import HomeView from './components/HomeView.vue'
 import TheoryView from './components/TheoryView.vue'
@@ -243,7 +240,7 @@ import AssignmentCanvas from './components/AssignmentCanvas.vue'
 import NorthwestCanvas from './components/NorthwestCanvas.vue'
 import SavedListModal from './components/SavedListModal.vue'
 import { useSavedList } from './useSavedList'
-import { getAlgorithm, getAlgorithmRoute, getViewRoute, parseAppRoute } from './config/routes'
+import { requestedTheoryTab } from './composables/theoryNavigation'
 
 // Routing
 
@@ -266,84 +263,27 @@ const {
 const showNorthwestSelector = ref(false)
 const northwestData = ref(null)
 const northwestIndex = ref(-1)
-const setHashRoute = (route, replace = false) => {
-  if (window.location.hash === route) return
-  if (replace) {
-    window.history.replaceState(null, '', route)
-    return
-  }
-  window.history.pushState(null, '', route)
-}
 
-const goTo = async (view, options = {}) => {
+const goTo = async (view) => {
   if (view !== currentView.value) {
     previousView.value = currentView.value
   }
+
+  // Si el dropdown pidió un tab, TheoryView se encarga del scroll a la sección 01.
+  // Se lee ANTES del await porque TheoryView consume la petición al montarse.
+  const theoryHandlesScroll = view === 'teoria' && !!requestedTheoryTab.value
+
   currentView.value = view
-  if (options.updateHash !== false) {
-    setHashRoute(getViewRoute(view), options.replace)
-  }
-  if (view === 'home') {
+
+  if (view === 'home' || (view === 'teoria' && !theoryHandlesScroll)) {
     await nextTick()
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 }
 
 const openCanvas = () => {
-  if (currentView.value !== 'canvas') {
-    previousView.value = currentView.value
-  }
+  previousView.value = currentView.value
   currentView.value = 'canvas'
-  setHashRoute(getAlgorithmRoute(selectedAlgorithm.value))
-}
-
-const openAlgorithmRoute = (id) => {
-  if (!getAlgorithm(id)) return
-
-  selectedAlgorithm.value = id
-  previousView.value = 'teoria'
-  currentGraphIndex.value = -1
-  optimalAssignmentEdges.value = []
-  showGraphSelector.value = false
-  showAssignmentGraphSelector.value = false
-  showNorthwestSelector.value = false
-
-  if (id === 'johnson') {
-    canvasMode.value = 'johnson'
-    nodes.value = []
-    edges.value = []
-    loadSavedGraphsList()
-  } else if (id === 'northwest') {
-    northwestData.value = null
-    northwestIndex.value = -1
-    loadNorthwestList()
-  } else {
-    canvasMode.value = 'normal'
-    nodes.value = []
-    edges.value = []
-    if (id === 'asignacion') loadSavedAssignmentGraphsList()
-    else loadSavedGraphsList()
-  }
-
-  currentView.value = 'canvas'
-}
-
-const applyCurrentRoute = () => {
-  const route = parseAppRoute({
-    hash: window.location.hash,
-    pathname: window.location.pathname
-  })
-
-  if (!route) return
-
-  if (route.type === 'view') {
-    goTo(route.view, { updateHash: false })
-    return
-  }
-
-  if (route.type === 'algorithm') {
-    openAlgorithmRoute(route.algorithm)
-  }
 }
 
 watch(currentView, (view) => {
@@ -392,14 +332,6 @@ const currentGraphIndex = ref(-1)
 
 onMounted(() => {
   loadSavedGraphsList()
-  applyCurrentRoute()
-  window.addEventListener('hashchange', applyCurrentRoute)
-  window.addEventListener('popstate', applyCurrentRoute)
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('hashchange', applyCurrentRoute)
-  window.removeEventListener('popstate', applyCurrentRoute)
 })
 
 
@@ -467,27 +399,6 @@ const getNextQuickName = () => {
   return numberToLetters(nextNumber)
 }
 
-// ¿Ya existe otro nodo con este nombre? NO distingue mayúsculas/minúsculas:
-// si existe "A", tampoco se puede crear "a" (y viceversa).
-// excludeId permite ignorar al propio nodo cuando se está editando.
-const isDuplicateNodeLabel = (label, excludeId = null) => {
-  const normalized = label.toLowerCase()
-  return nodes.value.some(n => n.id !== excludeId && String(n.label).toLowerCase() === normalized)
-}
-
-// Alerta de nombre duplicado. Se abre con un pequeño retraso porque el modal
-// de creación/edición se está cerrando en ese momento.
-const showDuplicateNodeAlert = (label) => {
-  setTimeout(() => {
-    openModal({
-      title: 'Nombre duplicado',
-      message: `Ya existe un nodo llamado "${label}" (sin importar mayúsculas o minúsculas). No se puede crear otro nodo con el mismo nombre; usa un nombre diferente.`,
-      type: 'info',
-      iconName: 'warning'
-    })
-  }, 150)
-}
-
 const handleCreateNodeRequest = ({ x, y }) => {
   openModal({
     title: 'Crear Nuevo Nodo',
@@ -499,13 +410,6 @@ const handleCreateNodeRequest = ({ x, y }) => {
     callback: (value) => {
       const label = String(value).trim()
       if (!label) return
-
-      // Algoritmo de Asignación: no se permite crear un nodo con un nombre que ya existe
-      if (selectedAlgorithm.value === 'asignacion' && isDuplicateNodeLabel(label)) {
-        showDuplicateNodeAlert(label)
-        return
-      }
-
       nodes.value.push({
         id: 'node_' + Date.now(),
         label,
@@ -521,24 +425,6 @@ const handleCreateEdgeRequest = ({ sourceId, targetId }) => {
   if (existingEdge) {
     handleEditEdgeRequest(existingEdge)
     return
-  }
-
-  // Regla "Duplicidad": un nodo no puede conectarse a OTRO nodo que tenga
-  // exactamente el mismo nombre (sensible a mayúsculas/minúsculas: "A" no
-  // puede conectarse a otra "A", pero sí puede conectarse a "a"). No aplica
-  // a los bucles (un nodo conectándose a sí mismo), que siguen permitidos.
-  if (sourceId !== targetId) {
-    const sourceNode = nodes.value.find(n => n.id === sourceId)
-    const targetNode = nodes.value.find(n => n.id === targetId)
-    if (sourceNode && targetNode && sourceNode.label === targetNode.label) {
-      openModal({
-        title: '⚠️ Conexión no permitida (Duplicidad)',
-        message: `No puedes conectar "${sourceNode.label}" con otro nodo que tenga exactamente el mismo nombre. Cambia el nombre de uno de los dos, o usa mayúsculas/minúsculas distintas (por ejemplo "A" y "a" sí se pueden conectar).`,
-        type: 'info',
-        iconName: 'warning'
-      })
-      return
-    }
   }
 
   openModal({
@@ -588,13 +474,6 @@ const handleEditNodeRequest = (node) => {
     callback: (value, color) => {
       const label = String(value).trim()
       if (!label) return
-
-      // Algoritmo de Asignación: al renombrar tampoco se puede usar un nombre ya existente
-      if (selectedAlgorithm.value === 'asignacion' && isDuplicateNodeLabel(label, node.id)) {
-        showDuplicateNodeAlert(label)
-        return
-      }
-
       const index = nodes.value.findIndex(n => n.id === node.id)
       if (index !== -1) {
         nodes.value[index] = { 
@@ -792,13 +671,11 @@ const handleSaveGraph = () => {
 
 // ============ OTRAS FUNCIONES ============
 
-const onSelectAlgorithm = (id, options = {}) => {
+const onSelectAlgorithm = (id) => {
   if (!id) return
-  const algorithm = getAlgorithm(id)
   selectedAlgorithm.value = id
 
   if (id === 'grafos') {
-    if (options.updateHash !== false && algorithm) setHashRoute(algorithm.route)
     canvasMode.value = 'normal'
     nodes.value = []
     edges.value = []
@@ -810,7 +687,6 @@ const onSelectAlgorithm = (id, options = {}) => {
   }
 
   if (id === 'asignacion') {
-    if (options.updateHash !== false && algorithm) setHashRoute(algorithm.route)
     canvasMode.value = 'normal'
     loadSavedAssignmentGraphsList()
     showAssignmentGraphSelector.value = true
@@ -818,7 +694,6 @@ const onSelectAlgorithm = (id, options = {}) => {
   }
 
   if (id === 'johnson') {
-    if (options.updateHash !== false && algorithm) setHashRoute(algorithm.route)
     canvasMode.value = 'johnson'
 
     nodes.value = []
@@ -835,7 +710,6 @@ const onSelectAlgorithm = (id, options = {}) => {
   }
 
   if (id === 'northwest') {
-    if (options.updateHash !== false && algorithm) setHashRoute(algorithm.route)
     loadNorthwestList()
     showNorthwestSelector.value = true
     return
@@ -847,19 +721,6 @@ const onSelectAlgorithm = (id, options = {}) => {
     message: 'Este algoritmo todavía está en construcción.',
     type: 'confirm'
   })
-}
-
-// Abre el selector de grafos guardados SIN salir del lienzo (Pizarra / Johnson).
-const openLoadFromCanvas = () => {
-  currentGraphIndex.value = -1
-  loadSavedGraphsList()
-  showGraphSelector.value = true
-}
-
-// Igual que arriba, pero para el selector propio del modo Asignación.
-const openLoadAssignmentFromCanvas = () => {
-  loadSavedAssignmentGraphsList()
-  showAssignmentGraphSelector.value = true
 }
 
 const loadSavedGraphsList = () => {
@@ -1060,17 +921,15 @@ const handleSaveNorthwest = (data) => {
 }
 
 const backToWelcome = () => {
-  const targetView = previousView.value && previousView.value !== 'canvas'
-    ? previousView.value
-    : 'teoria'
-  goTo(targetView)
+  currentView.value = previousView.value || 'home'
 }
 
 const showInstructionsModal = (manual = 'grafos') => {
   const file = {
     asignacion: '/Manual de Uso - Pizarra de Asignación.pdf',
     johnson: '/Manual de Uso - Pizarra de Johnson.pdf',
-    grafos: '/Manual de Uso - Pizarra de Grafos.pdf'
+    grafos: '/Manual de Uso - Pizarra de Grafos.pdf',
+    northwest: '/Manual de Uso - Pizarra de Northwest.pdf'
   }[manual] || '/Manual de Uso - Pizarra de Grafos.pdf'
 
   window.open(file, '_blank')

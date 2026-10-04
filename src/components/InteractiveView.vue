@@ -16,11 +16,14 @@
 
       <div class="workspace-layout">
         <aside class="filters">
-          <span>EXPLORA POR TIPO</span>
-          <button class="filter-active">Todas las pizarras</button>
-          <button>Recorridos</button>
-          <button>Caminos mínimos</button>
-          <button>Optimización</button>
+          <div class="how-it-works">
+            <strong>¿Cómo funciona?</strong>
+            <span>1. Elige una pizarra</span>
+            <ArrowRight :size="14" />
+            <span>2. Diseña tu grafo</span>
+            <ArrowRight :size="14" />
+            <span>3. Ejecuta el algoritmo</span>
+          </div>
           <div class="tip">
             <Lightbulb :size="17" />
             <p>Empieza con la pizarra de grafos para familiarizarte con nodos y aristas.</p>
@@ -124,14 +127,7 @@
             </li>
           </ul>
 
-          <div class="how-it-works">
-            <strong>¿Cómo funciona?</strong>
-            <span>1. Elige una pizarra</span>
-            <ArrowRight :size="14" />
-            <span>2. Diseña tu grafo</span>
-            <ArrowRight :size="14" />
-            <span>3. Ejecuta el algoritmo</span>
-          </div>
+          
         </section>
       </div>
     </div>
@@ -329,6 +325,15 @@ watch(viewMode, (val) => {
   line-height: 1.4;
   margin: 0;
 }
+.filters .how-it-works {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  margin-top: 0;
+  gap: .5rem;
+}
+.filters .how-it-works strong { margin-right: 0; }
+.filters .how-it-works svg { transform: rotate(90deg); }
 
 /* ============ WORKSPACE HEADING ============ */
 .workspace-heading {
@@ -634,6 +639,15 @@ watch(viewMode, (val) => {
   .workspace-main :deep(.carousel-wrapper) {
     max-width: 100%;
   }
+  .filters {
+    display: block;
+    overflow: visible;
+  }
+  .filters .how-it-works {
+    flex-direction: row;
+    align-items: center;
+  }
+  .filters .how-it-works svg { transform: none; }
 }
 
 @media (max-width: 520px) {
