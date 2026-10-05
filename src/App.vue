@@ -110,6 +110,20 @@
 
     <Footer v-if="currentView !== 'canvas'" />
 
+    <!-- Notificación no bloqueante para operaciones completadas -->
+    <Transition name="toast">
+      <div v-if="toast.visible" class="save-toast" role="status" aria-live="polite">
+        <div class="save-toast-icon">✓</div>
+        <div class="save-toast-content">
+          <strong>{{ toast.title }}</strong>
+          <span>{{ toast.message }}</span>
+        </div>
+        <button class="save-toast-close" type="button" aria-label="Cerrar notificación" @click="hideToast">
+          &times;
+        </button>
+      </div>
+    </Transition>
+
     <!-- Graph Selector para Pizarra de Grafos -->
     <div v-if="showGraphSelector" class="graph-selector-overlay" @click.self="showGraphSelector = false">
       <div class="graph-selector-modal">
@@ -226,7 +240,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, watch } from 'vue'
+import { ref, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import Navbar from './components/Navbar.vue'
 import HomeView from './components/HomeView.vue'
 import TheoryView from './components/TheoryView.vue'
@@ -241,6 +255,7 @@ import NorthwestCanvas from './components/NorthwestCanvas.vue'
 import SavedListModal from './components/SavedListModal.vue'
 import { useSavedList } from './useSavedList'
 import { requestedTheoryTab } from './composables/theoryNavigation'
+import { getAlgorithmRoute, parseAppRoute, VIEW_ROUTES } from './config/routes'
 
 // Routing
 
@@ -264,6 +279,13 @@ const showNorthwestSelector = ref(false)
 const northwestData = ref(null)
 const northwestIndex = ref(-1)
 
+const setBrowserRoute = (route, { replace = false } = {}) => {
+  const method = replace ? 'replaceState' : 'pushState'
+  if (window.location.pathname !== route || window.location.hash) {
+    window.history[method]({}, '', route)
+  }
+}
+
 const goTo = async (view) => {
   if (view !== currentView.value) {
     previousView.value = currentView.value
@@ -274,6 +296,7 @@ const goTo = async (view) => {
   const theoryHandlesScroll = view === 'teoria' && !!requestedTheoryTab.value
 
   currentView.value = view
+  setBrowserRoute(VIEW_ROUTES[view] || VIEW_ROUTES.home)
 
   if (view === 'home' || (view === 'teoria' && !theoryHandlesScroll)) {
     await nextTick()
@@ -284,6 +307,7 @@ const goTo = async (view) => {
 const openCanvas = () => {
   previousView.value = currentView.value
   currentView.value = 'canvas'
+  setBrowserRoute(getAlgorithmRoute(selectedAlgorithm.value))
 }
 
 watch(currentView, (view) => {
@@ -321,6 +345,12 @@ const modalQuickFillValue = ref('')
 let modalCallback = null
 const modalShowColorPicker = ref(false)
 const modalInitialColor = ref('#64748b')
+const toast = ref({
+  visible: false,
+  title: '',
+  message: ''
+})
+let toastTimeout = null
 
 // Matrix Modal
 const showMatrix = ref(false)
@@ -332,6 +362,37 @@ const currentGraphIndex = ref(-1)
 
 onMounted(() => {
   loadSavedGraphsList()
+  const route = parseAppRoute(window.location)
+  if (route?.type === 'view') {
+    currentView.value = route.view
+    setBrowserRoute(VIEW_ROUTES[route.view] || VIEW_ROUTES.home, { replace: true })
+  } else if (route?.type === 'algorithm') {
+    selectedAlgorithm.value = route.algorithm
+    canvasMode.value = route.algorithm === 'johnson' ? 'johnson' : 'normal'
+    currentView.value = 'canvas'
+    setBrowserRoute(getAlgorithmRoute(route.algorithm), { replace: true })
+  } else {
+    currentView.value = 'home'
+    setBrowserRoute(VIEW_ROUTES.home, { replace: true })
+  }
+})
+
+window.addEventListener('popstate', () => {
+  const route = parseAppRoute(window.location)
+  if (!route) return
+
+  showGraphSelector.value = false
+  showAssignmentGraphSelector.value = false
+  showNorthwestSelector.value = false
+
+  if (route.type === 'view') {
+    currentView.value = route.view
+    return
+  }
+
+  selectedAlgorithm.value = route.algorithm
+  canvasMode.value = route.algorithm === 'johnson' ? 'johnson' : 'normal'
+  currentView.value = 'canvas'
 })
 
 
@@ -368,6 +429,22 @@ const handleModalSubmit = (payload) => {
     modalCallback = null
   }
 }
+
+const showToast = (title, message) => {
+  if (toastTimeout) clearTimeout(toastTimeout)
+  toast.value = { visible: true, title, message }
+  toastTimeout = setTimeout(hideToast, 4500)
+}
+
+const hideToast = () => {
+  if (toastTimeout) {
+    clearTimeout(toastTimeout)
+    toastTimeout = null
+  }
+  toast.value.visible = false
+}
+
+onBeforeUnmount(hideToast)
 
 // ============ FUNCIONES DEL CANVAS ============
 
@@ -657,14 +734,10 @@ const handleSaveGraph = () => {
       const graphName = String(name).trim() || currentName
       saveGraph(graphName)
       
-      setTimeout(() => {
-        openModal({
-          title: 'Guardado Correctamente',
-          iconName: 'success',
-          message: `"${graphName}" guardado con ${nodes.value.length} nodos y ${edges.value.length} aristas.`,
-          type: 'info'   // 👈 antes 'confirm'
-        })
-      }, 250)  // espera a que el primer modal termine de cerrarse
+      showToast(
+        'Guardado Correctamente',
+        `"${graphName}" guardado con ${nodes.value.length} nodos y ${edges.value.length} aristas.`
+      )
     }
   })
 }
@@ -908,20 +981,14 @@ const handleSaveNorthwest = (data) => {
         northwestIndex.value = northwestItems.value.length - 1
       }
 
-      setTimeout(() => {
-        openModal({
-          title: 'Guardado Correctamente',
-          iconName: 'success',
-          message: `"${problemName}" guardado correctamente.`,
-          type: 'info'
-        })
-      }, 250)
+      showToast('Guardado Correctamente', `"${problemName}" guardado correctamente.`)
     }
   })
 }
 
 const backToWelcome = () => {
   currentView.value = previousView.value || 'home'
+  setBrowserRoute(VIEW_ROUTES[currentView.value] || VIEW_ROUTES.interactivos)
 }
 
 const showInstructionsModal = (manual = 'grafos') => {
@@ -959,6 +1026,102 @@ const showMatrixModal = () => {
 .app-root-fixed {
   height: 100vh;
   overflow: hidden;
+}
+
+.save-toast {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: min(24rem, calc(100vw - 2rem));
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  border-radius: 0.75rem;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.2);
+}
+
+.save-toast-icon {
+  display: grid;
+  flex: 0 0 auto;
+  width: 1.75rem;
+  height: 1.75rem;
+  place-items: center;
+  border-radius: 50%;
+  background: #dcfce7;
+  color: #16a34a;
+  font-weight: 700;
+}
+
+.save-toast-content {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.8rem;
+}
+
+.save-toast-content strong {
+  color: #16a34a;
+  font-size: 0.85rem;
+}
+
+.save-toast-content span {
+  color: var(--text-secondary);
+  line-height: 1.35;
+}
+
+.save-toast-close {
+  flex: 0 0 auto;
+  padding: 0.1rem 0.25rem;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.save-toast-close:hover {
+  color: var(--text-primary);
+}
+
+.toast-enter-active,
+.toast-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.toast-enter-from,
+.toast-leave-to {
+  opacity: 0;
+  transform: translateY(0.75rem);
+}
+
+[data-theme='dark'] .save-toast {
+  border-color: rgba(74, 222, 128, 0.35);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme='dark'] .save-toast-icon {
+  background: rgba(22, 163, 74, 0.18);
+  color: #4ade80;
+}
+
+[data-theme='dark'] .save-toast-content strong {
+  color: #4ade80;
+}
+
+@media (max-width: 480px) {
+  .save-toast {
+    right: 1rem;
+    bottom: 1rem;
+    width: calc(100vw - 2rem);
+  }
 }
 
 /* ========== GRAPH SELECTOR - ADAPTADO A TEMA ========== */

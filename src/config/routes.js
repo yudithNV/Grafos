@@ -1,10 +1,10 @@
 import { Network } from '@lucide/vue'
 
 export const VIEW_ROUTES = {
-  home: '#/',
-  teoria: '#/teoria',
-  interactivos: '#/interactivos',
-  about: '#/about'
+  home: '/',
+  teoria: '/teoria',
+  interactivos: '/interactivos',
+  about: '/about'
 }
 
 export const NAV_ITEMS = [
@@ -23,7 +23,7 @@ export const ALGORITHMS = [
     icon: Network,
     iconBg: 'linear-gradient(135deg, var(--accent-start), var(--accent-end))',
     image: '/img/pizzara.png',
-    route: '#/pizarra/grafos',
+    route: '/pizarra/grafos',
     comingSoon: false,
     showInTheory: false
   },
@@ -35,7 +35,8 @@ export const ALGORITHMS = [
     icon: Network,
     iconBg: 'linear-gradient(135deg, #6366f1, #06b6d4)',
     image: '/img/asignacion.png',
-    route: '#/pizarra/asignacion',
+    route: '/pizarra/asignacion',
+    complexity: 'O(n³) de tiempo y O(n²) de memoria',
     comingSoon: false,
     showInTheory: true
   },
@@ -47,7 +48,8 @@ export const ALGORITHMS = [
     icon: Network,
     iconBg: 'linear-gradient(135deg, #6366f1, #06b6d4)',
     image: '/img/johnson.png',
-    route: '#/pizarra/johnson',
+    route: '/pizarra/johnson',
+    complexity: 'O(VE + V² log V) de tiempo y O(V + E) de memoria',
     comingSoon: false,
     showInTheory: true
   },
@@ -59,7 +61,8 @@ export const ALGORITHMS = [
     icon: Network,
     iconBg: 'linear-gradient(135deg, #8b5cf6, #ec4899)',
     image: '/img/northwest.png',
-    route: '#/pizarra/northwest',
+    route: '/pizarra/northwest',
+    complexity: 'O(m + n) de tiempo y O(m + n) de memoria',
     comingSoon: false,
     showInTheory: true
   }
@@ -76,25 +79,30 @@ export const getAlgorithmRoute = (id) => ALGORITHM_ROUTES[id] || VIEW_ROUTES.int
 export const getAlgorithm = (id) => ALGORITHMS.find((algorithm) => algorithm.id === id)
 
 export const parseAppRoute = ({ hash = '', pathname = '/' } = {}) => {
+  const cleanPath = pathname.replace(/\/+$/, '') || '/'
   const cleanHash = hash.replace(/^#\/?/, '')
 
-  if (!cleanHash) return { type: 'view', view: 'home' }
-  if (VIEW_ROUTES[cleanHash]) return { type: 'view', view: cleanHash }
-  if (cleanHash === 'algoritmos-interactivos') return { type: 'view', view: 'interactivos' }
+  if (cleanPath === '/') return { type: 'view', view: 'home' }
+  if (cleanPath === '/algoritmos-interactivos') return { type: 'view', view: 'interactivos' }
 
-  const boardMatch = cleanHash.match(/^pizarra\/([^/]+)$/)
+  const view = Object.entries(VIEW_ROUTES)
+    .find(([, route]) => route === cleanPath)?.[0]
+  if (view) return { type: 'view', view }
+
+  const boardMatch = cleanPath.match(/^\/pizarra\/([^/]+)$/)
   if (boardMatch && getAlgorithm(boardMatch[1])) {
     return { type: 'algorithm', algorithm: boardMatch[1] }
   }
 
-  // Compatibilidad con hashes antiguos: #asignacion, #johnson, #northwest.
-  if (getAlgorithm(cleanHash)) return { type: 'algorithm', algorithm: cleanHash }
-
-  if (pathname === '/algoritmos-interactivos') {
-    return cleanHash && getAlgorithm(cleanHash)
-      ? { type: 'algorithm', algorithm: cleanHash }
-      : { type: 'view', view: 'interactivos' }
+  // Compatibilidad con URLs antiguas basadas en hash.
+  if (cleanHash === '' && cleanPath === '/') return { type: 'view', view: 'home' }
+  if (VIEW_ROUTES[cleanHash]) return { type: 'view', view: cleanHash }
+  if (cleanHash === 'algoritmos-interactivos') return { type: 'view', view: 'interactivos' }
+  if (cleanHash.startsWith('pizarra/')) {
+    const algorithm = cleanHash.slice('pizarra/'.length)
+    if (getAlgorithm(algorithm)) return { type: 'algorithm', algorithm }
   }
+  if (getAlgorithm(cleanHash)) return { type: 'algorithm', algorithm: cleanHash }
 
   return null
 }
