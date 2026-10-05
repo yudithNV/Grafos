@@ -1,4 +1,4 @@
-import { Network } from '@lucide/vue'
+import { Network, ArrowDownUp, ListOrdered } from '@lucide/vue'
 
 export const VIEW_ROUTES = {
   home: '#/',
@@ -62,6 +62,30 @@ export const ALGORITHMS = [
     route: '#/pizarra/northwest',
     comingSoon: false,
     showInTheory: true
+  },
+  {
+    id: 'seleccion',
+    title: 'Ordenamiento por selección',
+    name: 'Selection Sort',
+    desc: 'Ordena una lista eligiendo en cada pasada el menor (o mayor) elemento y llevándolo a su posición.',
+    icon: ArrowDownUp,
+    iconBg: 'linear-gradient(135deg, #22c55e, #06b6d4)',
+    image: '/img/seleccion.png',
+    route: '#/pizarra/seleccion',
+    comingSoon: false,
+    showInTheory: false
+  },
+  {
+    id: 'insercion',
+    title: 'Ordenamiento por inserción',
+    name: 'Insertion Sort',
+    desc: 'Ordena una lista tomando cada elemento y deslizándolo hasta su lugar dentro de la parte ya ordenada.',
+    icon: ListOrdered,
+    iconBg: 'linear-gradient(135deg, #f59e0b, #ec4899)',
+    image: '/img/insercion.png',
+    route: '#/pizarra/insercion',
+    comingSoon: false,
+    showInTheory: false
   }
 ]
 

@@ -23,6 +23,7 @@
       @show-instructions="showInstructionsModal"
       @show-matrix="showMatrixModal"
       @save="handleSaveGraph"
+      @open-load="openLoadFromCanvas"
       @clear="confirmClearCanvas"
       @create-node="handleCreateNodeRequest"
       @create-edge="handleCreateEdgeRequest"
@@ -41,6 +42,7 @@
       @show-matrix="showMatrixModal"
       @show-saved="showSavedGraphs"
       @save="handleSaveGraph"
+      @open-load="openLoadFromCanvas"
       @clear="confirmClearCanvas"
       @create-node="handleCreateNodeRequest"
       @create-edge="handleCreateEdgeRequest"
@@ -61,6 +63,7 @@
       @show-matrix="showMatrixModal"
       @show-saved="showSavedGraphs"
       @save="handleSaveGraph"
+      @open-load="openLoadAssignmentFromCanvas"
       @clear="confirmClearCanvas"
       @create-node="handleCreateNodeRequest"
       @create-edge="handleCreateEdgeRequest"
@@ -77,6 +80,14 @@
       @back="backToWelcome"
       @save="handleSaveNorthwest"
       @show-instructions="showInstructionsModal"
+    />
+    <SortingCanvas
+      v-else-if="currentView === 'canvas' && isSortAlgorithm(selectedAlgorithm)"
+      :key="selectedAlgorithm + '-' + sortCanvasKey"
+      :algorithm="selectedAlgorithm"
+      :initial-data="sortData"
+      @back="backToWelcome"
+      @save="handleSaveSort"
     />
 
     <!-- Custom Modal -->
@@ -223,10 +234,25 @@
       @delete="deleteNorthwest"
       @close="showNorthwestSelector = false"
     />
+      <!-- Selector de arreglos de ordenamiento (Selection / Insertion Sort) -->
+    <SavedListModal
+      :show="showSortSelector"
+      :title="`Cargar Arreglo (${sortAlgorithmName})`"
+      info="Guarda tus listas de números para volver a ordenarlas después."
+      item-label="Arreglo"
+      new-label="➕ Crear Nuevo Arreglo"
+      :header-bg="selectedAlgorithm === 'insercion' ? 'linear-gradient(135deg, #f59e0b, #ec4899)' : 'linear-gradient(135deg, #22c55e, #06b6d4)'"
+      :items="sortItems"
+      :stats="(p) => [`${p.data.values.length} elementos`, p.data.order === 'desc' ? 'Descendente' : 'Ascendente']"
+      @load="loadSort"
+      @create="createSort"
+      @delete="deleteSort"
+      @close="showSortSelector = false"
+    />
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import Navbar from './components/Navbar.vue'
 import HomeView from './components/HomeView.vue'
 import TheoryView from './components/TheoryView.vue'
@@ -238,6 +264,8 @@ import MatrixModal from './components/MatrixModal.vue'
 import Footer from './components/Footer.vue'
 import AssignmentCanvas from './components/AssignmentCanvas.vue'
 import NorthwestCanvas from './components/NorthwestCanvas.vue'
+import SortingCanvas from './components/SortingCanvas.vue'
+import { SORT_ALGORITHMS } from './utils/sorting'
 import SavedListModal from './components/SavedListModal.vue'
 import { useSavedList } from './useSavedList'
 import { requestedTheoryTab } from './composables/theoryNavigation'
@@ -263,6 +291,21 @@ const {
 const showNorthwestSelector = ref(false)
 const northwestData = ref(null)
 const northwestIndex = ref(-1)
+
+// Ordenamiento (Selection / Insertion Sort): una lista de guardados por algoritmo
+const sortLists = {
+  seleccion: useSavedList('savedSelectionSorts'),
+  insercion: useSavedList('savedInsertionSorts')
+}
+const isSortAlgorithm = (id) => Boolean(SORT_ALGORITHMS[id])
+const currentSortList = () => sortLists[selectedAlgorithm.value] || sortLists.seleccion
+const sortItems = computed(() => currentSortList().items.value)
+const sortAlgorithmName = computed(() => SORT_ALGORITHMS[selectedAlgorithm.value]?.name || 'Ordenamiento')
+
+const showSortSelector = ref(false)
+const sortData = ref(null)
+const sortIndex = ref(-1)
+const sortCanvasKey = ref(0)
 
 const goTo = async (view) => {
   if (view !== currentView.value) {
@@ -399,6 +442,27 @@ const getNextQuickName = () => {
   return numberToLetters(nextNumber)
 }
 
+// ¿Ya existe otro nodo con este nombre? NO distingue mayúsculas/minúsculas:
+// si existe "A", tampoco se puede crear "a" (y viceversa).
+// excludeId permite ignorar al propio nodo cuando se está editando.
+const isDuplicateNodeLabel = (label, excludeId = null) => {
+  const normalized = label.toLowerCase()
+  return nodes.value.some(n => n.id !== excludeId && String(n.label).toLowerCase() === normalized)
+}
+
+// Alerta de nombre duplicado. Se abre con un pequeño retraso porque el modal
+// de creación/edición se está cerrando en ese momento.
+const showDuplicateNodeAlert = (label) => {
+  setTimeout(() => {
+    openModal({
+      title: 'Nombre duplicado',
+      message: `Ya existe un nodo llamado "${label}" (sin importar mayúsculas o minúsculas). No se puede crear otro nodo con el mismo nombre; usa un nombre diferente.`,
+      type: 'info',
+      iconName: 'warning'
+    })
+  }, 150)
+}
+
 const handleCreateNodeRequest = ({ x, y }) => {
   openModal({
     title: 'Crear Nuevo Nodo',
@@ -410,6 +474,13 @@ const handleCreateNodeRequest = ({ x, y }) => {
     callback: (value) => {
       const label = String(value).trim()
       if (!label) return
+
+      // Algoritmo de Asignación: no se permite crear un nodo con un nombre que ya existe
+      if (selectedAlgorithm.value === 'asignacion' && isDuplicateNodeLabel(label)) {
+        showDuplicateNodeAlert(label)
+        return
+      }
+
       nodes.value.push({
         id: 'node_' + Date.now(),
         label,
@@ -425,6 +496,24 @@ const handleCreateEdgeRequest = ({ sourceId, targetId }) => {
   if (existingEdge) {
     handleEditEdgeRequest(existingEdge)
     return
+  }
+
+  // Regla "Duplicidad": un nodo no puede conectarse a OTRO nodo que tenga
+  // exactamente el mismo nombre (sensible a mayúsculas/minúsculas: "A" no
+  // puede conectarse a otra "A", pero sí puede conectarse a "a"). No aplica
+  // a los bucles (un nodo conectándose a sí mismo), que siguen permitidos.
+  if (sourceId !== targetId) {
+    const sourceNode = nodes.value.find(n => n.id === sourceId)
+    const targetNode = nodes.value.find(n => n.id === targetId)
+    if (sourceNode && targetNode && sourceNode.label === targetNode.label) {
+      openModal({
+        title: '⚠️ Conexión no permitida (Duplicidad)',
+        message: `No puedes conectar "${sourceNode.label}" con otro nodo que tenga exactamente el mismo nombre. Cambia el nombre de uno de los dos, o usa mayúsculas/minúsculas distintas (por ejemplo "A" y "a" sí se pueden conectar).`,
+        type: 'info',
+        iconName: 'warning'
+      })
+      return
+    }
   }
 
   openModal({
@@ -474,6 +563,13 @@ const handleEditNodeRequest = (node) => {
     callback: (value, color) => {
       const label = String(value).trim()
       if (!label) return
+
+      // Algoritmo de Asignación: al renombrar tampoco se puede usar un nombre ya existente
+      if (selectedAlgorithm.value === 'asignacion' && isDuplicateNodeLabel(label, node.id)) {
+        showDuplicateNodeAlert(label)
+        return
+      }
+
       const index = nodes.value.findIndex(n => n.id === node.id)
       if (index !== -1) {
         nodes.value[index] = { 
@@ -715,12 +811,31 @@ const onSelectAlgorithm = (id) => {
     return
   }
 
+  if (isSortAlgorithm(id)) {
+    currentSortList().load()
+    showSortSelector.value = true
+    return
+  }
+
   openModal({
     title: 'Próximamente',
     iconName: 'construction',    // ← agrega esto
     message: 'Este algoritmo todavía está en construcción.',
     type: 'confirm'
   })
+}
+
+// Abre el selector de grafos guardados SIN salir del lienzo (Pizarra / Johnson).
+const openLoadFromCanvas = () => {
+  currentGraphIndex.value = -1
+  loadSavedGraphsList()
+  showGraphSelector.value = true
+}
+
+// Igual que arriba, pero para el selector propio del modo Asignación.
+const openLoadAssignmentFromCanvas = () => {
+  loadSavedAssignmentGraphsList()
+  showAssignmentGraphSelector.value = true
 }
 
 const loadSavedGraphsList = () => {
@@ -913,6 +1028,74 @@ const handleSaveNorthwest = (data) => {
           title: 'Guardado Correctamente',
           iconName: 'success',
           message: `"${problemName}" guardado correctamente.`,
+          type: 'info'
+        })
+      }, 250)
+    }
+  })
+}
+
+// ============ ORDENAMIENTO (Selection / Insertion Sort) ============
+
+const loadSort = (i) => {
+  sortData.value = JSON.parse(JSON.stringify(sortItems.value[i].data))
+  sortIndex.value = i
+  sortCanvasKey.value++
+  showSortSelector.value = false
+  openCanvas()
+}
+
+const createSort = () => {
+  sortData.value = null
+  sortIndex.value = -1
+  sortCanvasKey.value++
+  showSortSelector.value = false
+  openCanvas()
+}
+
+const deleteSort = (i) => {
+  openModal({
+    title: 'Confirmar Eliminación',
+    message: `¿Eliminar "${sortItems.value[i].name}"? Esta acción no se puede deshacer.`,
+    type: 'confirm',
+    callback: () => {
+      currentSortList().remove(i)
+      if (sortIndex.value === i) sortIndex.value = -1
+      else if (sortIndex.value > i) sortIndex.value--
+    }
+  })
+}
+
+const handleSaveSort = (data) => {
+  const list = currentSortList()
+  const current = list.items.value[sortIndex.value]
+  const defaultName = `Arreglo ${sortAlgorithmName.value}`
+  openModal({
+    title: 'Guardar Arreglo',
+    iconName: 'save',
+    label: 'Nombre del arreglo:',
+    placeholder: 'Ej. Práctica 1...',
+    type: 'input',
+    initialValue: current?.name || defaultName,
+    callback: (name) => {
+      const arrayName = String(name).trim() || defaultName
+      const entry = {
+        name: arrayName,
+        date: new Date().toLocaleString(),
+        data: JSON.parse(JSON.stringify(data))
+      }
+      if (sortIndex.value >= 0) {
+        list.update(sortIndex.value, entry)
+      } else {
+        list.add(entry)
+        sortIndex.value = list.items.value.length - 1
+      }
+
+      setTimeout(() => {
+        openModal({
+          title: 'Guardado Correctamente',
+          iconName: 'success',
+          message: `"${arrayName}" guardado correctamente.`,
           type: 'info'
         })
       }, 250)
