@@ -22,6 +22,7 @@
       @back="backToWelcome"
       @show-instructions="showInstructionsModal"
       @show-matrix="showMatrixModal"
+      @open-load="showSavedGraphs"
       @save="handleSaveGraph"
       @clear="confirmClearCanvas"
       @create-node="handleCreateNodeRequest"
@@ -39,7 +40,7 @@
       @back="backToWelcome"
       @show-instructions="showInstructionsModal"
       @show-matrix="showMatrixModal"
-      @show-saved="showSavedGraphs"
+      @open-load="showSavedGraphs"
       @save="handleSaveGraph"
       @clear="confirmClearCanvas"
       @create-node="handleCreateNodeRequest"
@@ -59,7 +60,7 @@
       @back="backToWelcome"
       @show-instructions="showInstructionsModal"
       @show-matrix="showMatrixModal"
-      @show-saved="showSavedGraphs"
+      @open-load="showAssignmentGraphs"
       @save="handleSaveGraph"
       @clear="confirmClearCanvas"
       @create-node="handleCreateNodeRequest"
@@ -76,6 +77,7 @@
       :initial-data="northwestData"
       @back="backToWelcome"
       @save="handleSaveNorthwest"
+      @open-load="showNorthwestProblems"
       @show-instructions="showInstructionsModal"
     />
 
@@ -305,7 +307,9 @@ const goTo = async (view) => {
 }
 
 const openCanvas = () => {
-  previousView.value = currentView.value
+  if (currentView.value !== 'canvas') {
+    previousView.value = currentView.value
+  }
   currentView.value = 'canvas'
   setBrowserRoute(getAlgorithmRoute(selectedAlgorithm.value))
 }
@@ -1001,9 +1005,19 @@ const showInstructionsModal = (manual = 'grafos') => {
 
   window.open(file, '_blank')
 }
+const showAssignmentGraphs = () => {
+  loadSavedAssignmentGraphsList()
+  showAssignmentGraphSelector.value = true
+}
+
 const showSavedGraphs = () => {
   loadSavedGraphsList()
   showGraphSelector.value = true
+}
+
+const showNorthwestProblems = () => {
+  loadNorthwestList()
+  showNorthwestSelector.value = true
 }
 
 const showMatrixModal = () => {

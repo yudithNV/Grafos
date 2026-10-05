@@ -102,12 +102,6 @@
           </p>
         </div>
 
-        <!-- MIS GRAFOS -->
-        <button @click="$emit('show-saved')" class="btn-my-graphs" title="Ver mis grafos">
-          <FolderOpen class="btn-icon" />
-          <span>Mis grafos</span>
-        </button>
-
       </div>
 
       <!-- Estadísticas Académicas -->
@@ -458,7 +452,6 @@ const emit = defineEmits([
   'back',
   'show-instructions',
   'show-matrix',
-  'show-saved',
   'save',
   'open-load',
   'clear',
@@ -1511,56 +1504,6 @@ const confirmClear = () => {
   flex-direction: column;
   flex: 1;
 }
-/* ===================================
-   BOTÓN MIS GRAFOS
-=================================== */
-
-.btn-my-graphs {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-
-  padding: 0.45rem 0.75rem;
-
-  background: rgba(99, 102, 241, 0.08);
-  border: 1px solid rgba(99, 102, 241, 0.45);
-  border-radius: 0.6rem;
-
-  color: #818cf8;
-
-  font-size: 0.75rem;
-  font-weight: 600;
-
-  cursor: pointer;
-  white-space: nowrap;
-
-  transition:
-    background 0.2s ease,
-    border-color 0.2s ease,
-    color 0.2s ease,
-    transform 0.15s ease,
-    box-shadow 0.2s ease;
-}
-
-.btn-my-graphs:hover {
-  background: rgba(99, 102, 241, 0.15);
-  border-color: #818cf8;
-  color: #a5b4fc;
-
-  box-shadow:
-    0 0 10px rgba(99, 102, 241, 0.15);
-}
-
-.btn-my-graphs:active {
-  transform: scale(0.96);
-}
-
-.btn-my-graphs .btn-icon {
-  width: 1rem;
-  height: 1rem;
-}
-
 .header-title {
   font-size: 0.85rem;
   font-weight: 600;

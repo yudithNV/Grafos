@@ -41,6 +41,10 @@
           <Save class="btn-icon" />
           <span>Guardar</span>
         </button>
+        <button @click="$emit('open-load')" class="btn-text btn-load-graph" title="Abrir un problema guardado">
+          <FolderOpen class="btn-icon" />
+          <span>Cargar</span>
+        </button>
         <button @click="showMatrixModal = true" class="btn-text btn-matrix">
           <Grid3x3 class="btn-icon" />
           <span>Matriz</span>
@@ -549,6 +553,7 @@ import {
   BookOpen,
   Grid3x3,
   Save,
+  FolderOpen,
   Sparkles,
   Undo2,
   StepForward,
@@ -560,7 +565,7 @@ import {
 import StarryBackground from './StarryBackground.vue'
 import AssignmentWarning from './AssignmentWarning.vue'
 
-const emit = defineEmits(['back', 'show-instructions', 'save', 'clear', 'solution-found'])
+const emit = defineEmits(['back', 'show-instructions', 'save', 'open-load', 'clear', 'solution-found'])
 
 const props = defineProps({
   initialData: { type: Object, default: null }
@@ -1320,6 +1325,18 @@ if (props.initialData) {
   background-color: rgba(22, 163, 74, 0.15);
   border-color: rgba(74, 222, 128, 0.35);
   color: #4ade80;
+}
+
+.btn-load-graph {
+  background-color: #dbeafe;
+  border-color: #93c5fd;
+  color: #2563eb;
+}
+
+[data-theme='dark'] .btn-load-graph {
+  background-color: rgba(37, 99, 235, 0.15);
+  border-color: rgba(96, 165, 250, 0.35);
+  color: #60a5fa;
 }
 
 .btn-danger {
