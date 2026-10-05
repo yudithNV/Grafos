@@ -896,7 +896,47 @@ function openSolver() {
   if (finished.value) showStepsModal.value = true
 }
 
+// Validar que la matriz no esté vacía
+function isMatrixEmpty() {
+  // Verificar si la matriz de costos está vacía (todos ceros o nulos)
+  for (let i = 0; i < costs.value.length; i++) {
+    for (let j = 0; j < costs.value[i].length; j++) {
+      if (costs.value[i][j] !== 0 && costs.value[i][j] !== null && costs.value[i][j] !== undefined) {
+        return false
+      }
+    }
+  }
+  return true
+}
+
+// Validar que disponibilidad y demanda no estén vacías
+function isAvailabilityOrDemandEmpty() {
+  const hasAvailability = availability.value.some(v => v !== 0 && v !== null && v !== undefined)
+  const hasDemand = demand.value.some(v => v !== 0 && v !== null && v !== undefined)
+  return !hasAvailability || !hasDemand
+}
+
 function saveBoard() {
+  // Validar que la matriz no esté vacía
+  if (isMatrixEmpty()) {
+    openWarning(
+      'Tabla vacía',
+      'La matriz de costos está vacía.',
+      'Ingresa valores en la matriz de costos antes de guardar.'
+    )
+    return
+  }
+
+  // Validar que haya disponibilidad y demanda
+  if (isAvailabilityOrDemandEmpty()) {
+    openWarning(
+      'Datos incompletos',
+      'No hay disponibilidad o demanda ingresada.',
+      'Ingresa valores en disponibilidad y demanda antes de guardar.'
+    )
+    return
+  }
+
   emit('save', {
     algorithm: 'northwest',
     objective: objective.value,
