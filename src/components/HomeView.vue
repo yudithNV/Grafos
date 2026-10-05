@@ -21,6 +21,17 @@
           Simulador interactivo para diseñar, conectar y analizar grafos. Explora la teoría
           de grafos y pon a prueba algoritmos complejos en tiempo real.
         </p>
+
+        <div class="hero-actions">
+          <button class="hero-button primary" type="button" @click="$emit('navigate', 'teoria')">
+            Comenzar con fundamentos
+            <ArrowRight :size="17" />
+          </button>
+          <button class="hero-button secondary" type="button" @click="$emit('navigate', 'interactivos')">
+            Probar algoritmos
+            <ArrowUpRight :size="17" />
+          </button>
+        </div>
       </div>
     </section>
 
@@ -31,30 +42,29 @@
       <!-- RESTO DEL CONTENIDO -->
       <section class="home-section">
         <div class="section-heading">
-          <div><span class="eyebrow">UNA RUTA CLARA</span><h2>Todo lo que necesitas para aprender</h2></div>
-          <p>Estudia el concepto, llévalo a la práctica y comprueba tus resultados en un mismo espacio.</p>
+          <div><span class="eyebrow">EMPIEZA AQUÍ</span><h2>Explora Graphix a tu ritmo</h2></div>
+          <p>Aprende los conceptos, construye tu propio grafo y descubre cómo Graphix te ayuda a analizarlo.</p>
         </div>
         <div class="learning-grid">
           <article class="learning-card">
             <div class="card-icon purple"><BookOpen :size="22" /></div>
             <span class="card-number">01</span>
-            <h3>Fundamentos sólidos</h3>
-            <p>Definiciones, representaciones, tipos de grafos y complejidad explicados con ejemplos.</p>
-            <button @click="$emit('navigate', 'teoria')">Ir a Fundamentos <ArrowUpRight :size="16" /></button>
+            <h3>Fundamentos</h3>
+            <p>Consulta definiciones, representaciones, tipos de grafos y complejidad explicados con ejemplos.</p>
+            <button type="button" @click="$emit('navigate', 'teoria')">Explorar teoría <ArrowUpRight :size="16" /></button>
           </article>
           <article class="learning-card featured">
             <div class="card-icon pink"><MousePointer2 :size="22" /></div>
             <span class="card-number">02</span>
-            <h3>Experimentación visual</h3>
-            <p>Dibuja grafos, asigna pesos y observa cómo se comportan los algoritmos en tiempo real.</p>
-            <button @click="$emit('navigate', 'interactivos')">Abrir pizarras <ArrowUpRight :size="16" /></button>
+            <h3>Pizarra de grafos</h3>
+            <p>Crea nodos, conecta aristas, asigna pesos y diseña un grafo desde cero.</p>
+            <button type="button" @click="$emit('navigate', 'interactivos')">Explorar pizarras <ArrowUpRight :size="16" /></button>
           </article>
           <article class="learning-card">
-            <div class="card-icon blue"><GraduationCap :size="22" /></div>
+            <div class="card-icon blue"><CheckCircle2 :size="22" /></div>
             <span class="card-number">03</span>
-            <h3>Aprendizaje activo</h3>
-            <p>Relaciona la teoría con decisiones concretas y construye intuición para resolver problemas.</p>
-            <button @click="$emit('navigate', 'about')">Conocer el proyecto <ArrowUpRight :size="16" /></button>
+            <h3>Cómo funciona Graphix</h3>
+            <p>Comprende el recorrido completo: estudia un concepto, construye un grafo y analiza el resultado.</p>
           </article>
         </div>
       </section>
@@ -65,6 +75,63 @@
           <div><span>1</span><h3>Comprende</h3><p>Consulta los conceptos clave antes de comenzar.</p></div>
           <div><span>2</span><h3>Construye</h3><p>Modela tu propio grafo con nodos, conexiones y pesos.</p></div>
           <div><span>3</span><h3>Analiza</h3><p>Interpreta el resultado y verifica cada decisión.</p></div>
+        </div>
+      </section>
+
+      <section class="home-section capabilities-section">
+        <div class="section-heading">
+          <div><span class="eyebrow">TODO EN UN SOLO LUGAR</span><h2>¿Qué puedes hacer en Graphix?</h2></div>
+          <p>Convierte la teoría en una experiencia visual, práctica y fácil de comprobar.</p>
+        </div>
+
+        <div class="capabilities-layout">
+          <!-- 👇 NUEVO: ejemplo de grafo -->
+          <div class="graph-demo" aria-hidden="true">
+            <svg viewBox="0 0 400 320" xmlns="http://www.w3.org/2000/svg">
+              <!-- aristas -->
+              <g class="g-edges">
+                <line x1="60"  y1="80"  x2="190" y2="40"  />
+                <line x1="190" y1="40"  x2="330" y2="100" />
+                <line x1="190" y1="40"  x2="250" y2="200" />
+                <line x1="330" y1="100" x2="250" y2="200" />
+                <line x1="330" y1="100" x2="340" y2="280" />
+              </g>
+              <!-- camino resaltado (A → D → E → F) -->
+              <g class="g-path">
+                <line x1="60"  y1="80"  x2="110" y2="210" />
+                <line x1="110" y1="210" x2="250" y2="200" />
+                <line x1="250" y1="200" x2="340" y2="280" />
+              </g>
+              <!-- pesos -->
+              <g class="g-weights">
+                <g transform="translate(125,60)"><circle r="11"/><text>4</text></g>
+                <g transform="translate(260,70)"><circle r="11"/><text>3</text></g>
+                <g transform="translate(220,120)"><circle r="11"/><text>6</text></g>
+                <g transform="translate(290,150)"><circle r="11"/><text>1</text></g>
+                <g transform="translate(335,190)"><circle r="11"/><text>7</text></g>
+                <g transform="translate(85,145)" class="on"><circle r="11"/><text>2</text></g>
+                <g transform="translate(180,205)" class="on"><circle r="11"/><text>5</text></g>
+                <g transform="translate(295,240)" class="on"><circle r="11"/><text>2</text></g>
+              </g>
+              <!-- nodos -->
+              <g class="g-nodes">
+                <g transform="translate(60,80)"  class="on"><circle r="20"/><text>A</text></g>
+                <g transform="translate(190,40)"><circle r="20"/><text>B</text></g>
+                <g transform="translate(330,100)"><circle r="20"/><text>C</text></g>
+                <g transform="translate(110,210)" class="on"><circle r="20"/><text>D</text></g>
+                <g transform="translate(250,200)" class="on"><circle r="20"/><text>E</text></g>
+                <g transform="translate(340,280)" class="on"><circle r="20"/><text>F</text></g>
+              </g>
+            </svg>
+          </div>
+
+          <div class="capabilities-grid">
+            <div class="capability-item"><span class="capability-icon"><MousePointer2 :size="19" /></span><div><h3>Crear grafos</h3><p>Diseña estructuras con nodos y conexiones.</p></div></div>
+            <div class="capability-item"><span class="capability-icon"><ArrowUpRight :size="19" /></span><div><h3>Asignar pesos</h3><p>Representa costos, distancias y relaciones.</p></div></div>
+            <div class="capability-item"><span class="capability-icon"><GraduationCap :size="19" /></span><div><h3>Ejecutar algoritmos</h3><p>Experimenta con soluciones paso a paso.</p></div></div>
+            <div class="capability-item"><span class="capability-icon"><CheckCircle2 :size="19" /></span><div><h3>Visualizar soluciones</h3><p>Observa qué decisiones toma cada algoritmo.</p></div></div>
+            <div class="capability-item"><span class="capability-icon"><BookOpen :size="19" /></span><div><h3>Guardar tus grafos</h3><p>Retoma tus ejercicios cuando quieras.</p></div></div>
+          </div>
         </div>
       </section>
     </div>
@@ -240,6 +307,94 @@ const stars = Array.from({ length: STAR_COUNT }, () => {
     0 0 24px rgba(27, 41, 71, 0.35);
 }
 
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: .8rem;
+  margin-top: 2rem;
+}
+
+.hero-button {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .45rem;
+  min-height: 2.9rem;
+  padding: .75rem 1.15rem;
+  border: 1px solid transparent;
+  border-radius: .7rem;
+  font: inherit;
+  font-size: .88rem;
+  font-weight: 750;
+  cursor: pointer;
+  transition: transform .2s ease, background-color .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+
+.hero-button:hover {
+  transform: translateY(-2px);
+}
+
+/* destello que cruza el botón al hacer hover */
+.hero-button::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -75%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(120deg, transparent, rgba(255, 255, 255, .65), transparent);
+  transform: skewX(-20deg);
+  transition: left .6s ease;
+  pointer-events: none;
+}
+.hero-button:hover::after { left: 130%; }
+
+.hero-button.primary {
+  color: #1b2947;
+  background: linear-gradient(135deg, #ffffff 0%, #f7f7b6 100%);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, .6),
+    0 0 18px rgba(247, 247, 182, .55),
+    0 0 42px rgba(233, 111, 146, .45);
+  animation: btn-pulse 3s ease-in-out infinite;
+}
+
+.hero-button.primary:hover {
+  background: linear-gradient(135deg, #ffffff 0%, #ffe9a8 100%);
+  box-shadow:
+    0 0 0 1px #fff,
+    0 0 26px rgba(247, 247, 182, .85),
+    0 0 60px rgba(233, 111, 146, .65);
+}
+
+.hero-button.secondary {
+  color: #fff;
+  border-color: rgba(255, 255, 255, .6);
+  background: rgba(255, 255, 255, .12);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow:
+    inset 0 0 14px rgba(255, 255, 255, .15),
+    0 0 18px rgba(168, 85, 247, .4);
+}
+
+.hero-button.secondary:hover {
+  border-color: #fff;
+  background: rgba(255, 255, 255, .22);
+  box-shadow:
+    inset 0 0 18px rgba(255, 255, 255, .25),
+    0 0 30px rgba(168, 85, 247, .7),
+    0 0 55px rgba(236, 72, 153, .45);
+}
+
+@keyframes btn-pulse {
+  0%, 100% { filter: brightness(1); }
+  50%      { filter: brightness(1.08); }
+}
+
 /* ===== RESTO DEL CONTENIDO ===== */
 .eyebrow { color: var(--accent-solid); font-size: .72rem; font-weight: 800; letter-spacing: .16em; }
 
@@ -268,12 +423,68 @@ h2 { font-size: clamp(1.8rem, 3vw, 2.5rem); letter-spacing: -.04em; margin: .6re
 .steps > div { padding: 1.5rem; }
 .steps span { display: grid; place-items: center; width: 2.3rem; height: 2.3rem; margin: 0 auto 1rem; border-radius: 50%; color: #fff; font-weight: 800; background: linear-gradient(135deg, var(--accent-start), var(--accent-end)); }
 
+/* ===== GRAFO DE EJEMPLO ===== */
+.capabilities-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 2.5rem;
+  align-items: center;
+}
+
+.graph-demo {
+  order: 2; /* grafo a la derecha */
+  padding: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 1rem;
+  background: var(--bg-surface);
+}
+.graph-demo svg { width: 100%; height: auto; display: block; }
+
+.g-edges line { stroke: var(--border-color); stroke-width: 2.5; }
+
+.g-path line {
+  stroke: var(--accent-solid);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-dasharray: 8 8;
+  filter: drop-shadow(0 0 5px var(--accent-solid));
+  animation: path-flow 1.2s linear infinite;
+}
+@keyframes path-flow { to { stroke-dashoffset: -16; } }
+
+.g-weights circle { fill: var(--bg-surface); stroke: var(--border-color); stroke-width: 1.5; }
+.g-weights text {
+  fill: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+.g-weights .on circle { stroke: var(--accent-solid); }
+.g-weights .on text { fill: var(--accent-solid); }
+
+.g-nodes circle { fill: var(--bg-surface); stroke: var(--text-secondary); stroke-width: 2.5; }
+.g-nodes text {
+  fill: var(--text-primary, currentColor);
+  font-size: 15px;
+  font-weight: 800;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+.g-nodes .on circle {
+  fill: var(--accent-solid);
+  stroke: var(--accent-solid);
+  filter: drop-shadow(0 0 8px var(--accent-solid));
+}
+.g-nodes .on text { fill: #fff; }
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 900px) {
   .learning-grid { grid-template-columns: 1fr; }
   .section-heading { display: block; }
   .section-heading > p { margin-top: 1rem; }
   .steps { grid-template-columns: 1fr; gap: 0; }
+  .capabilities-layout { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 768px) {
@@ -288,5 +499,7 @@ h2 { font-size: clamp(1.8rem, 3vw, 2.5rem); letter-spacing: -.04em; margin: .6re
 @media (max-width: 480px) {
   .hero-banner { min-height: auto; }
   .home-section { padding-left: 1rem; padding-right: 1rem; }
+  .hero-actions { width: 100%; }
+  .hero-button { width: 100%; }
 }
 </style>
