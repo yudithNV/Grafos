@@ -310,6 +310,7 @@ const openCanvas = () => {
   if (currentView.value !== 'canvas') {
     previousView.value = currentView.value
   }
+
   currentView.value = 'canvas'
   setBrowserRoute(getAlgorithmRoute(selectedAlgorithm.value))
 }
@@ -997,10 +998,10 @@ const backToWelcome = () => {
 
 const showInstructionsModal = (manual = 'grafos') => {
   const file = {
-    asignacion: '/Manual de Uso - Pizarra de Asignación.pdf',
-    johnson: '/Manual de Uso - Pizarra de Johnson.pdf',
-    grafos: '/Manual de Uso - Pizarra de Grafos.pdf',
-    northwest: '/Manual de Uso - Pizarra de Northwest.pdf'
+    asignacion: '/Manual de Usuario - Graphix-3-4.pdf',
+    johnson: '/Manual de Usuario - Graphix-5-6.pdf',
+    grafos: '/Manual de Usuario - Graphix-1-2.pdf',
+    northwest: '/Manual de Usuario - Graphix-7-8.pdf'
   }[manual] || '/Manual de Uso - Pizarra de Grafos.pdf'
 
   window.open(file, '_blank')
