@@ -555,6 +555,7 @@ const stars = Array.from({ length: STAR_COUNT }, () => {
     drop-shadow(0 0 20px rgba(168, 85, 247, 0.18))
     drop-shadow(0 0 38px rgba(217, 70, 239, 0.12));
 }
+
 .section-heading > p { max-width: 390px; color: var(--text-secondary); line-height: 1.6; margin: 0; }
 
 .learning-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
