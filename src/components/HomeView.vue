@@ -134,12 +134,134 @@
           </div>
         </div>
       </section>
+
+      <section class="home-section videos-section">
+        <div class="section-heading">
+          <div><span class="eyebrow">APRENDE A TU RITMO</span><h2>Videos para aprender</h2></div>
+          <p>Refuerza los conceptos de teoría de grafos con explicaciones visuales y ejemplos prácticos.</p>
+        </div>
+
+        <div class="video-grid">
+          <a
+            class="video-card"
+            href="https://www.youtube.com/results?search_query=teoria+de+grafos+introduccion"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <div class="video-cover">
+              <img src="/tipos.png.jpg" alt="Tipos de grafos" />
+              <span class="play-badge"><PlayCircle :size="24" /></span>
+            </div>
+            <div class="video-content">
+              <span class="video-label">CONCEPTOS BÁSICOS</span>
+              <h3>Introducción a la teoría de grafos</h3>
+              <p>Conoce vértices, aristas, caminos y las representaciones más comunes.</p>
+              <span class="video-link">Buscar videos <ArrowUpRight :size="15" /></span>
+            </div>
+          </a>
+
+          <a
+            class="video-card"
+            href="https://www.youtube.com/results?search_query=algoritmos+de+grafos+caminos+minimos"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <div class="video-cover">
+              <img src="/elementos.png.jpg" alt="Algoritmos de grafos" />
+              <span class="play-badge"><PlayCircle :size="24" /></span>
+            </div>
+            <div class="video-content">
+              <span class="video-label">ALGORITMOS</span>
+              <h3>Caminos mínimos y recorridos</h3>
+              <p>Observa cómo los algoritmos analizan conexiones, distancias y rutas.</p>
+              <span class="video-link">Buscar videos <ArrowUpRight :size="15" /></span>
+            </div>
+          </a>
+
+          <a
+            class="video-card"
+            href="https://www.youtube.com/results?search_query=problemas+de+asignacion+y+transporte+investigacion+de+operaciones"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <div class="video-cover">
+              <img src="/img/asignacion.png" alt="Problemas de asignación y transporte" />
+              <span class="play-badge"><PlayCircle :size="24" /></span>
+            </div>
+            <div class="video-content">
+              <span class="video-label">APLICACIONES</span>
+              <h3>Asignación y transporte</h3>
+              <p>Relaciona los modelos de asignación y transporte con situaciones reales.</p>
+              <span class="video-link">Buscar videos <ArrowUpRight :size="15" /></span>
+            </div>
+          </a>
+        </div>
+      </section>
+
+      <section class="home-section comparison-section">
+        <div class="section-heading">
+          <div><span class="eyebrow">ELIGE TU RECORRIDO</span><h2>¿Qué pizarra necesitas?</h2></div>
+          <p>Una vista rápida para elegir el espacio adecuado según el problema que quieras resolver.</p>
+        </div>
+
+        <div class="comparison-table-wrap">
+          <table class="comparison-table">
+            <thead>
+              <tr><th>Pizarra</th><th>Úsala para</th><th>Trabaja con</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Grafos</td><td>Crear estructuras libres</td><td>Nodos, aristas y pesos</td></tr>
+              <tr><td>Asignación</td><td>Encontrar asignaciones óptimas</td><td>Orígenes, destinos y costos</td></tr>
+              <tr><td>Johnson</td><td>Analizar rutas y actividades</td><td>Conexiones, duraciones y holguras</td></tr>
+              <tr><td>Northwest</td><td>Resolver problemas de transporte</td><td>Oferta, demanda y costos</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="home-section faq-section">
+        <div class="section-heading centered">
+          <div><span class="eyebrow">RESUELVE TUS DUDAS</span><h2>Preguntas frecuentes</h2></div>
+        </div>
+        <div class="faq-list">
+          <details>
+            <summary>¿Qué pizarra debo elegir?</summary>
+            <p>Grafos sirve para construir estructuras libres; Asignación para relacionar orígenes y destinos; Johnson para analizar rutas y actividades; y Northwest para problemas de transporte.</p>
+          </details>
+          <details>
+            <summary>¿Puedo guardar mis ejercicios?</summary>
+            <p>Sí. Puedes guardar y cargar tus grafos o problemas para continuar trabajando después.</p>
+          </details>
+          <details>
+            <summary>¿Qué significan los pesos?</summary>
+            <p>Son valores asociados a las conexiones, como costos, distancias, tiempos o beneficios, según el problema.</p>
+          </details>
+          <details>
+            <summary>¿Puedo aprender aunque esté comenzando?</summary>
+            <p>Sí. Comienza por Fundamentos, revisa los ejemplos y después practica en la pizarra que corresponda.</p>
+          </details>
+        </div>
+      </section>
+
+      <section class="home-section team-preview">
+        <div class="team-preview-card">
+          <div>
+            <span class="eyebrow">CONOCE A SUS CREADORES</span>
+            <h2>Detrás de Graphix está pinguinos.exe</h2>
+            <p>Un equipo que creó este espacio para aprender y visualizar algoritmos de forma más clara.</p>
+          </div>
+          <button class="team-button" type="button" @click="$emit('navigate', 'about')">
+            Conocer al equipo
+            <ArrowUpRight :size="16" />
+          </button>
+        </div>
+      </section>
     </div>
   </main>
 </template>
 
 <script setup>
-import { ArrowRight, ArrowUpRight, BookOpen, CheckCircle2, GraduationCap, MousePointer2 } from '@lucide/vue'
+import { ArrowRight, ArrowUpRight, BookOpen, CheckCircle2, GraduationCap, MousePointer2, PlayCircle } from '@lucide/vue'
 import CanvasBackground from './CanvasBackground.vue'
 
 defineEmits(['select', 'navigate'])
@@ -400,7 +522,39 @@ const stars = Array.from({ length: STAR_COUNT }, () => {
 
 .home-section { max-width: 1160px; margin: 0 auto; padding: 5rem 1.5rem; }
 .section-heading { display: flex; justify-content: space-between; align-items: end; gap: 2rem; margin-bottom: 2rem; }
-h2 { font-size: clamp(1.8rem, 3vw, 2.5rem); letter-spacing: -.04em; margin: .6rem 0 0; }
+/* ===== TÍTULOS DE SECCIÓN CON EL MISMO ESTILO QUE THEORY ===== */
+.home-section h2,
+.team-preview-card h2 {
+  font-size: clamp(1.8rem, 3vw, 2.5rem);
+  font-weight: 600;   /* ✅ mismo peso que theory */
+  letter-spacing: -.04em;
+  margin: .6rem 0 0;
+  transition: color 0.3s ease, filter 0.3s ease;
+}
+
+/* Modo oscuro: blanco con brillo suave */
+[data-theme='dark'] .home-section h2,
+[data-theme='dark'] .team-preview-card h2 {
+  color: #ffffff;
+  filter:
+    drop-shadow(0 0 6px  rgba(255, 255, 255, 0.45))
+    drop-shadow(0 0 16px rgba(255, 255, 255, 0.25))
+    drop-shadow(0 0 34px rgba(168, 85, 247, 0.25));
+}
+
+/* Modo claro: degradado violeta → fucsia */
+[data-theme='light'] .home-section h2,
+[data-theme='light'] .team-preview-card h2 {
+  background: linear-gradient(135deg, #7c3aed, #a855f7, #d946ef);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  filter:
+    drop-shadow(0 0 8px  rgba(168, 85, 247, 0.30))
+    drop-shadow(0 0 20px rgba(168, 85, 247, 0.18))
+    drop-shadow(0 0 38px rgba(217, 70, 239, 0.12));
+}
 .section-heading > p { max-width: 390px; color: var(--text-secondary); line-height: 1.6; margin: 0; }
 
 .learning-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
@@ -478,6 +632,243 @@ h2 { font-size: clamp(1.8rem, 3vw, 2.5rem); letter-spacing: -.04em; margin: .6re
 }
 .g-nodes .on text { fill: #fff; }
 
+/* ===== VIDEOS PARA APRENDER ===== */
+.videos-section {
+  padding-top: 2rem;
+}
+
+.video-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.video-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  border-radius: 1rem;
+  color: inherit;
+  text-decoration: none;
+  background: var(--bg-surface);
+  transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+
+.video-card:hover {
+  transform: translateY(-4px);
+  border-color: color-mix(in srgb, var(--accent-solid) 55%, var(--border-color));
+  box-shadow: 0 12px 30px rgba(0, 0, 0, .12);
+}
+
+.video-cover {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: var(--accent-soft-bg);
+}
+
+.video-cover img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  transition: transform .3s ease;
+}
+
+.video-card:hover .video-cover img {
+  transform: scale(1.04);
+}
+
+.play-badge {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, .7);
+  border-radius: 50%;
+  background: rgba(27, 41, 71, .72);
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 20px rgba(0, 0, 0, .22);
+}
+
+.video-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 1.25rem;
+}
+
+.video-label {
+  color: var(--accent-solid);
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .13em;
+}
+
+.video-content h3 {
+  margin: .55rem 0 .45rem;
+  font-size: 1.05rem;
+}
+
+.video-content p {
+  flex: 1;
+  margin: 0 0 1rem;
+  color: var(--text-secondary);
+  font-size: .88rem;
+  line-height: 1.55;
+}
+
+.video-link {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  color: var(--accent-solid);
+  font-size: .82rem;
+  font-weight: 700;
+}
+
+/* ===== COMPARACIÓN, FAQ Y EQUIPO ===== */
+.comparison-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 1rem;
+  background: var(--bg-surface);
+}
+
+.comparison-table {
+  width: 100%;
+  min-width: 620px;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.comparison-table th,
+.comparison-table td {
+  padding: 1rem 1.2rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.comparison-table th {
+  color: var(--accent-solid);
+  font-size: .72rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.comparison-table td {
+  color: var(--text-secondary);
+  font-size: .9rem;
+}
+
+.comparison-table td:first-child {
+  color: var(--text-primary);
+  font-weight: 800;
+}
+
+.comparison-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.faq-section {
+  max-width: 860px;
+}
+
+.faq-list {
+  display: grid;
+  gap: .75rem;
+}
+
+.faq-list details {
+  border: 1px solid var(--border-color);
+  border-radius: .8rem;
+  background: var(--bg-surface);
+}
+
+.faq-list summary {
+  padding: 1rem 1.2rem;
+  color: var(--text-primary);
+  font-weight: 750;
+  cursor: pointer;
+  list-style: none;
+}
+
+.faq-list summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq-list summary::after {
+  content: '+';
+  float: right;
+  color: var(--accent-solid);
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.faq-list details[open] summary::after {
+  content: '−';
+}
+
+.faq-list details p {
+  margin: 0;
+  padding: 0 1.2rem 1rem;
+  color: var(--text-secondary);
+  font-size: .9rem;
+  line-height: 1.6;
+}
+
+.team-preview {
+  padding-top: 2rem;
+  padding-bottom: 5rem;
+}
+
+.team-preview-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  padding: 2rem;
+  border: 1px solid var(--border-color);
+  border-radius: 1.2rem;
+  background: linear-gradient(135deg, var(--bg-surface), var(--accent-soft-bg));
+}
+
+.team-preview-card h2 {
+  margin-bottom: .6rem;
+}
+
+.team-preview-card p {
+  max-width: 560px;
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.team-button {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: .4rem;
+  padding: .75rem 1rem;
+  border: 1px solid var(--accent-solid);
+  border-radius: .7rem;
+  color: var(--accent-solid);
+  background: transparent;
+  font: inherit;
+  font-size: .85rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.team-button:hover {
+  color: #fff;
+  background: var(--accent-solid);
+}
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 900px) {
   .learning-grid { grid-template-columns: 1fr; }
@@ -485,6 +876,8 @@ h2 { font-size: clamp(1.8rem, 3vw, 2.5rem); letter-spacing: -.04em; margin: .6re
   .section-heading > p { margin-top: 1rem; }
   .steps { grid-template-columns: 1fr; gap: 0; }
   .capabilities-layout { grid-template-columns: 1fr; }
+  .video-grid { grid-template-columns: 1fr; }
+  .team-preview-card { align-items: flex-start; flex-direction: column; }
 }
 
 @media (max-width: 768px) {
