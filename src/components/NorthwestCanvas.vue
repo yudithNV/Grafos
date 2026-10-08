@@ -135,7 +135,12 @@
         <span class="pulse-dot"></span>
         <span>
           La disponibilidad total ({{ totalAvailability }}) y la demanda total ({{ totalDemand }}) no coinciden.
-          Ajusta los valores para obtener una solución completa.
+          Al ejecutar se agregará un {{ totalAvailability < totalDemand ? 'origen' : 'destino' }} ficticio con costo 0.
+        </span>
+      </div>
+      <div v-else-if="dummy" class="connection-tip">
+        <span>
+          Se agregó un {{ dummy.type === 'row' ? 'origen' : 'destino' }} ficticio (costo 0) para balancear el problema.
         </span>
       </div>
 
@@ -160,14 +165,14 @@
               <tr>
                 <th>Origen / Destino</th>
                 <th v-for="(_, column) in destinationCount" :key="`heading-${column}`">
-                  Destino {{ column + 1 }}
+                  {{ destinationLabel(column) }}
                 </th>
                 <th>Disponibilidad</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="(row, origin) in costs" :key="`row-${origin}`">
-                <th>Origen {{ origin + 1 }}</th>
+                <th>{{ originLabel(origin) }}</th>
                 <td
                   v-for="(_, destination) in row"
                   :key="`cell-${origin}-${destination}`"
@@ -247,13 +252,13 @@
                 <thead>
                   <tr>
                     <th class="corner-cell">Origen \ Destino</th>
-                    <th v-for="(_, c) in destinationCount" :key="'mc' + c">Destino {{ c + 1 }}</th>
+                    <th v-for="(_, c) in destinationCount" :key="'mc' + c">{{ destinationLabel(c) }}</th>
                     <th>Disponibilidad</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-for="(row, r) in costs" :key="'mr' + r">
-                    <td class="row-label-cell">Origen {{ r + 1 }}</td>
+                    <td class="row-label-cell">{{ originLabel(r) }}</td>
                     <td v-for="(val, c) in row" :key="'mv' + r + '-' + c">{{ val }}</td>
                     <td class="row-label-cell">{{ availability[r] }}</td>
                   </tr>
@@ -274,12 +279,12 @@
                 <thead>
                   <tr>
                     <th class="corner-cell">Origen \ Destino</th>
-                    <th v-for="(_, c) in destinationCount" :key="'ac' + c">Destino {{ c + 1 }}</th>
+                    <th v-for="(_, c) in destinationCount" :key="'ac' + c">{{ destinationLabel(c) }}</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-for="(row, r) in displayAllocations" :key="'ar' + r">
-                    <td class="row-label-cell">Origen {{ r + 1 }}</td>
+                    <td class="row-label-cell">{{ originLabel(r) }}</td>
                     <td
                       v-for="(val, c) in row"
                       :key="'av' + r + '-' + c"
@@ -349,9 +354,9 @@
                 </thead>
                 <tbody>
                   <tr v-for="(item, index) in assignmentList" :key="index">
-                    <td class="font-medium">Origen {{ item.origin }}</td>
+                    <td class="font-medium">{{ originLabel(item.origin - 1) }}</td>
                     <td class="arrow-cell">→</td>
-                    <td class="font-medium">Destino {{ item.destination }}</td>
+                    <td class="font-medium">{{ destinationLabel(item.destination - 1) }}</td>
                     <td>{{ item.amount }}</td>
                     <td>{{ item.unitCost }}</td>
                     <td class="cost-badge">{{ item.subtotal }}</td>
@@ -374,13 +379,13 @@
                     <thead>
                       <tr>
                         <th class="corner-cell">Origen \ Destino</th>
-                        <th v-for="(_, c) in destinationCount" :key="'sc' + sIndex + '-' + c">Destino {{ c + 1 }}</th>
+                        <th v-for="(_, c) in destinationCount" :key="'sc' + sIndex + '-' + c">{{ destinationLabel(c) }}</th>
                         <th>Disp. restante</th>
                       </tr>
                     </thead>
                     <tbody>
                       <tr v-for="(row, r) in step.allocations" :key="'sr' + sIndex + '-' + r">
-                        <td class="row-label-cell">Origen {{ r + 1 }}</td>
+                        <td class="row-label-cell">{{ originLabel(r) }}</td>
                         <td
                           v-for="(val, c) in row"
                           :key="'sv' + sIndex + '-' + r + '-' + c"
@@ -453,9 +458,9 @@
                   </thead>
                   <tbody>
                     <tr v-for="(item, index) in modiResult.assignments" :key="index">
-                      <td class="font-medium">Origen {{ item.origin }}</td>
+                      <td class="font-medium">{{ originLabel(item.origin - 1) }}</td>
                       <td class="arrow-cell">→</td>
-                      <td class="font-medium">Destino {{ item.destination }}</td>
+                      <td class="font-medium">{{ destinationLabel(item.destination - 1) }}</td>
                       <td>{{ item.amount }}</td>
                       <td>{{ item.unitCost }}</td>
                       <td class="cost-badge">{{ item.subtotal }}</td>
@@ -479,13 +484,13 @@
                       <thead>
                         <tr>
                           <th class="corner-cell">Origen \ Destino</th>
-                          <th v-for="(_, c) in destinationCount" :key="'mh' + i + '-' + c">Destino {{ c + 1 }}</th>
+                          <th v-for="(_, c) in destinationCount" :key="'mh' + i + '-' + c">{{ destinationLabel(c) }}</th>
                           <th>u</th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr v-for="(row, r) in it.allocations" :key="'mr' + i + '-' + r">
-                          <td class="row-label-cell">Origen {{ r + 1 }}</td>
+                          <td class="row-label-cell">{{ originLabel(r) }}</td>
                           <td v-for="(val, c) in row" :key="'mc' + i + '-' + r + '-' + c" :class="modiCellClass(it, r, c)">
                             <template v-if="it.basis[r][c]">{{ val }}</template>
                             <template v-else>Δ {{ it.deltas[r][c] }}</template>
@@ -559,8 +564,8 @@ import {
   StepForward,
   FastForward,
   RotateCcw,
-  TrendingDown,   // 👈 nuevo
-  TrendingUp      // 👈 nuevo
+  TrendingDown,
+  TrendingUp
 } from '@lucide/vue'
 import StarryBackground from './StarryBackground.vue'
 import AssignmentWarning from './AssignmentWarning.vue'
@@ -599,9 +604,49 @@ const history = ref([])
 
 /* ---------- Objetivo y optimalidad (MODI) ---------- */
 const objective = ref('minimize')
-// 'optimal' = reparto óptimo (MODI), 'initial' = reparto de Northwest
 const viewMode = ref('optimal')
 const modiResult = computed(() => (finished.value && isBalanced.value ? runModi() : null))
+
+/* ---------- Balanceo con fila/columna ficticia ---------- */
+const dummy = ref(null) // { type: 'row' | 'column', index }
+
+const originLabel = (i) =>
+  dummy.value?.type === 'row' && dummy.value.index === i ? 'Origen ficticio' : `Origen ${i + 1}`
+const destinationLabel = (i) =>
+  dummy.value?.type === 'column' && dummy.value.index === i ? 'Destino ficticio' : `Destino ${i + 1}`
+
+function removeDummy() {
+  if (!dummy.value) return
+  const { type, index } = dummy.value
+  if (type === 'row') {
+    costs.value.splice(index, 1)
+    availability.value.splice(index, 1)
+    originCount.value -= 1
+  } else {
+    costs.value.forEach((row) => row.splice(index, 1))
+    demand.value.splice(index, 1)
+    destinationCount.value -= 1
+  }
+  dummy.value = null
+}
+
+function balanceProblem() {
+  removeDummy()
+  const diff = totalAvailability.value - totalDemand.value
+
+  if (diff < 0) {
+    costs.value.push(Array(destinationCount.value).fill(0))
+    availability.value.push(-diff)
+    dummy.value = { type: 'row', index: originCount.value }
+    originCount.value += 1
+  } else if (diff > 0) {
+    costs.value.forEach((row) => row.push(0))
+    demand.value.push(diff)
+    dummy.value = { type: 'column', index: destinationCount.value }
+    destinationCount.value += 1
+  }
+  resetAllocations()
+}
 
 /* ---------- Modales ---------- */
 const showMatrixModal = ref(false)
@@ -639,19 +684,14 @@ const remainingDemand = computed(() =>
   })
 )
 
-// ¿Se muestra el reparto óptimo en la tabla?
 const showOptimal = computed(() => viewMode.value === 'optimal' && !!modiResult.value?.optimal)
-
-// ¿Tiene sentido el interruptor? (solo si el óptimo es distinto del inicial)
 const canToggleView = computed(() => !!modiResult.value?.optimal && !modiResult.value.initialOptimal)
 
-// Matriz que se muestra: la óptima (MODI) o la de Northwest
 const displayAllocations = computed(() =>
   showOptimal.value ? modiResult.value.finalAllocations : allocations.value
 )
 
 const cellAmount = (r, c) => displayAllocations.value[r]?.[c] ?? 0
-
 const isAssigned = (r, c) => (showOptimal.value ? cellAmount(r, c) > 0 : !!visited.value[r]?.[c])
 
 const costFromMatrix = (matrix) =>
@@ -661,15 +701,10 @@ const costFromMatrix = (matrix) =>
     0
   )
 
-// Costo / ganancia de la solución inicial de Northwest
 const initialCost = computed(() => costFromMatrix(allocations.value))
-
-// Costo / ganancia mostrado (óptimo si corresponde)
 const totalCost = computed(() => costFromMatrix(displayAllocations.value))
-
 const assignmentCount = computed(() => displayAllocations.value.flat().filter((amount) => amount > 0).length)
 
-// Asignaciones de Northwest (para la Parte 1 del paso a paso)
 const assignmentList = computed(() => {
   const list = []
   allocations.value.forEach((row, origin) => {
@@ -702,7 +737,6 @@ const optimalityTone = computed(() => {
 })
 
 const objectiveLabel = computed(() => (objective.value === 'maximize' ? 'Ganancia' : 'Costo'))
-
 const nextStepLabel = computed(() => (currentCell.value ? 'Siguiente paso' : 'Iniciar método'))
 
 const modeDescription = computed(() => {
@@ -711,7 +745,7 @@ const modeDescription = computed(() => {
       ? 'Solución óptima lista. Revisa el resultado y el paso a paso.'
       : 'Solución inicial lista. Revisa el resultado y el paso a paso.'
   }
-  if (currentCell.value) return `Siguiente celda: Origen ${currentCell.value.row + 1} → Destino ${currentCell.value.column + 1}`
+  if (currentCell.value) return `Siguiente celda: ${originLabel(currentCell.value.row)} → ${destinationLabel(currentCell.value.column)}`
   return 'Asigna desde la esquina noroeste hasta cubrir disponibilidad y demanda'
 })
 
@@ -744,12 +778,13 @@ const currentStep = computed(() => {
   if (last) return { title: last.title, description: last.description }
   return {
     title: 'Comienza en la esquina noroeste',
-    description: 'Presiona “Iniciar método” para asignar la cantidad posible en la primera celda.'
+    description: 'Presiona "Iniciar método" para asignar la cantidad posible en la primera celda.'
   }
 })
 
 /* ---------- Tamaño de la tabla ---------- */
 function resizeTable() {
+  dummy.value = null
   originCount.value = Math.min(MAX_SIZE, Math.max(1, Math.floor(Number(originCount.value)) || 1))
   destinationCount.value = Math.min(MAX_SIZE, Math.max(1, Math.floor(Number(destinationCount.value)) || 1))
 
@@ -787,6 +822,8 @@ function runNextStep() {
     return false
   }
 
+  if (!currentCell.value && history.value.length === 0) balanceProblem()
+
   if (!currentCell.value) currentCell.value = { row: 0, column: 0 }
 
   const { row, column } = currentCell.value
@@ -816,17 +853,17 @@ function runNextStep() {
   } else if (supplyAfter === 0) {
     if (!isLastRow) {
       next = { row: row + 1, column }
-      moveText = `El Origen ${row + 1} se agotó, así que bajamos a la siguiente fila.`
+      moveText = `El ${originLabel(row)} se agotó, así que bajamos a la siguiente fila.`
     }
   } else if (demandAfter === 0) {
     if (!isLastColumn) {
       next = { row, column: column + 1 }
-      moveText = `El Destino ${column + 1} quedó cubierto, así que avanzamos a la derecha.`
+      moveText = `El ${destinationLabel(column)} quedó cubierto, así que avanzamos a la derecha.`
     }
   }
 
   history.value.push({
-    title: `Asignación en Origen ${row + 1} → Destino ${column + 1}`,
+    title: `Asignación en ${originLabel(row)} → ${destinationLabel(column)}`,
     description:
       `Se asignan ${amount} unidades, el mínimo entre la disponibilidad restante (${supplyLeft}) y la demanda restante (${demandLeft}). ` +
       moveText,
@@ -952,6 +989,7 @@ function saveBoard() {
 }
 
 function confirmClear() {
+  removeDummy()
   costs.value = makeMatrix(originCount.value, destinationCount.value, 0)
   availability.value = Array(originCount.value).fill(0)
   demand.value = Array(destinationCount.value).fill(0)
@@ -974,7 +1012,6 @@ function modiCellClass(it, r, c) {
   return isImproving(it.deltas[r][c]) ? 'zero-cell' : ''
 }
 
-// Calcula u y v usando las celdas asignadas (u + v = valor), con u1 = 0
 function computePotentials(valueMatrix, basis, m, n) {
   const u = Array(m).fill(null)
   const v = Array(n).fill(null)
@@ -998,7 +1035,6 @@ function computePotentials(valueMatrix, basis, m, n) {
   return { u: u.map((x) => x ?? 0), v: v.map((x) => x ?? 0) }
 }
 
-// Busca el ciclo que pasa por la celda entrante y celdas asignadas (alterna horizontal / vertical)
 function findCycle(basis, enter, m, n) {
   const path = [enter]
   const used = new Set([`${enter.row}-${enter.column}`])
@@ -1041,7 +1077,7 @@ function runModi() {
   let alloc = cloneMatrix(allocations.value)
   const basis = cloneMatrix(visited.value)
   const costOf = (a) => a.reduce((sum, row, r) => sum + row.reduce((rs, amt, c) => rs + amt * unit[r][c], 0), 0)
-  const cellName = (cell) => `Origen ${cell.row + 1} → Destino ${cell.column + 1}`
+  const cellName = (cell) => `${originLabel(cell.row)} → ${destinationLabel(cell.column)}`
 
   const iterations = []
   let optimal = false
@@ -1102,7 +1138,7 @@ function runModi() {
     iteration.costAfter = costOf(alloc)
     iteration.explanation =
       `Mejor opción: ${cellName(entering)} con Δ = ${entering.delta}. ` +
-      `Ciclo: ${iteration.cycle.map((cell) => `${cell.sign} (O${cell.row + 1}, D${cell.column + 1})`).join(', ')}. ` +
+      `Ciclo: ${iteration.cycle.map((cell) => `${cell.sign} (${originLabel(cell.row)}, ${destinationLabel(cell.column)})`).join(', ')}. ` +
       `Se mueven θ = ${theta} unidades y sale ${cellName(leaving)}. ` +
       `El ${label} pasa de ${cost} a ${iteration.costAfter}.`
   }
@@ -1631,7 +1667,6 @@ if (props.initialData) {
   --neon-glow: #c026d3;
 }
 
-/* Marco con brillo suave */
 .neon-cell::before {
   content: '';
   position: absolute;
@@ -1646,7 +1681,6 @@ if (props.initialData) {
   animation: neonPulse 2.4s ease-in-out infinite;
 }
 
-/* Vértices brillantes: cuatro esquinas en L */
 .neon-cell::after {
   content: '';
   position: absolute;
@@ -1819,7 +1853,6 @@ if (props.initialData) {
 
 .confirm-text { margin: 0; font-size: 0.9rem; line-height: 1.5; color: #cbd5e1; }
 
-/* Títulos de las dos partes del paso a paso */
 .part-title {
   display: flex;
   align-items: center;
@@ -2012,7 +2045,6 @@ if (props.initialData) {
 .btn-danger-solid:hover { background: #dc2626; }
 
 /* ===== OBJETIVO (MIN / MAX) ===== */
-/* ===== OBJETIVO (MIN / MAX) ===== */
 .segmented {
   display: flex;
   border: 1px solid var(--border-color);
@@ -2034,7 +2066,6 @@ if (props.initialData) {
 
 .seg-btn + .seg-btn { border-left: 1px solid var(--border-color); }
 
-/* ✨ Seleccionado con brillo morado simple */
 .seg-active {
   background: rgba(168, 85, 247, 0.2);
   color: #d8b4fe;
