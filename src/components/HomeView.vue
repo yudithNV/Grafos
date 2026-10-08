@@ -143,56 +143,27 @@
 
         <div class="video-grid">
           <a
+            v-for="video in videos"
+            :key="video.id"
             class="video-card"
-            href="https://www.youtube.com/results?search_query=teoria+de+grafos+introduccion"
+            :href="`https://www.youtube.com/watch?v=${video.id}`"
             target="_blank"
             rel="noopener noreferrer"
           >
             <div class="video-cover">
-              <img src="/tipos.png.jpg" alt="Tipos de grafos" />
+              <img
+                :src="`https://img.youtube.com/vi/${video.id}/maxresdefault.jpg`"
+                :alt="video.title"
+                loading="lazy"
+                @error="(e) => e.target.src = `https://img.youtube.com/vi/${video.id}/hqdefault.jpg`"
+              />
               <span class="play-badge"><PlayCircle :size="24" /></span>
             </div>
             <div class="video-content">
-              <span class="video-label">CONCEPTOS BÁSICOS</span>
-              <h3>Introducción a la teoría de grafos</h3>
-              <p>Conoce vértices, aristas, caminos y las representaciones más comunes.</p>
-              <span class="video-link">Buscar videos <ArrowUpRight :size="15" /></span>
-            </div>
-          </a>
-
-          <a
-            class="video-card"
-            href="https://www.youtube.com/results?search_query=algoritmos+de+grafos+caminos+minimos"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <div class="video-cover">
-              <img src="/elementos.png.jpg" alt="Algoritmos de grafos" />
-              <span class="play-badge"><PlayCircle :size="24" /></span>
-            </div>
-            <div class="video-content">
-              <span class="video-label">ALGORITMOS</span>
-              <h3>Caminos mínimos y recorridos</h3>
-              <p>Observa cómo los algoritmos analizan conexiones, distancias y rutas.</p>
-              <span class="video-link">Buscar videos <ArrowUpRight :size="15" /></span>
-            </div>
-          </a>
-
-          <a
-            class="video-card"
-            href="https://www.youtube.com/results?search_query=problemas+de+asignacion+y+transporte+investigacion+de+operaciones"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <div class="video-cover">
-              <img src="/img/asignacion.png" alt="Problemas de asignación y transporte" />
-              <span class="play-badge"><PlayCircle :size="24" /></span>
-            </div>
-            <div class="video-content">
-              <span class="video-label">APLICACIONES</span>
-              <h3>Asignación y transporte</h3>
-              <p>Relaciona los modelos de asignación y transporte con situaciones reales.</p>
-              <span class="video-link">Buscar videos <ArrowUpRight :size="15" /></span>
+              <span class="video-label">{{ video.label }}</span>
+              <h3>{{ video.title }}</h3>
+              <p>{{ video.desc }}</p>
+              <span class="video-link">Ver en YouTube <ArrowUpRight :size="15" /></span>
             </div>
           </a>
         </div>
@@ -265,6 +236,28 @@ import { ArrowRight, ArrowUpRight, BookOpen, CheckCircle2, GraduationCap, MouseP
 import CanvasBackground from './CanvasBackground.vue'
 
 defineEmits(['select', 'navigate'])
+
+// ===== VIDEOS (reemplaza los IDs por los que quieras) =====
+const videos = [
+  {
+    id: '09_LlHjoEiY',
+    label: 'CONCEPTOS BÁSICOS',
+    title: 'Introducción a la teoría de grafos',
+    desc: 'Conoce vértices, aristas, caminos y las representaciones más comunes.'
+  },
+  {
+    id: 'B17Hm_chcHQ',
+    label: 'ALGORITMOS',
+    title: 'Caminos mínimos y recorridos',
+    desc: 'Observa cómo los algoritmos analizan conexiones, distancias y rutas.'
+  },
+  {
+    id: 'vs7GToBIN7M',
+    label: 'APLICACIONES',
+    title: 'Asignació',
+    desc: 'Relaciona los modelos de asignación y transporte con situaciones reales.'
+  }
+]
 
 // ===== ESTRELLAS 3D =====
 const STAR_COUNT = 800
