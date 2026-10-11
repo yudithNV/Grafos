@@ -165,6 +165,230 @@ function insertionSteps(source, direction) {
   return steps
 }
 
+
+/* ---------------- SHELL SORT ---------------- */
+// Secuencia de Shell original: n/2, n/4, ..., 1
+export const shellGaps = (n) => {
+  const gaps = []
+  for (let gap = Math.floor(n / 2); gap > 0; gap = Math.floor(gap / 2)) gaps.push(gap)
+  return gaps
+}
+
+function shellSteps(source, direction) {
+  const arr = copy(source)
+  const n = arr.length
+  const bigger = direction === 'asc' ? 'mayor' : 'menor'
+  const outOfPlace = (a, key) => (direction === 'asc' ? a > key : a < key)
+  const steps = []
+  let comparisons = 0
+  let moves = 0
+  const gaps = shellGaps(n)
+
+  const snap = (extra) => steps.push({
+    array: copy(arr), comparisons, moves, marks: {}, swapped: null, endOfPass: false, focus: null, ...extra
+  })
+  // Índices que pertenecen al mismo subgrupo (misma distancia gap) que la posición i
+  const groupOf = (i, gap) => {
+    const out = []
+    for (let k = i % gap; k < n; k += gap) out.push(k)
+    return out
+  }
+
+  gaps.forEach((gap, g) => {
+    const pass = g + 1
+    const compsBefore = comparisons
+    const movesBefore = moves
+
+    snap({
+      sortedCount: 0, line: 1, pass, gap,
+      title: `Pasada ${pass}: distancia gap = ${gap}`,
+      description: gap === 1
+        ? 'Con gap = 1 se hace un Insertion Sort normal, pero el arreglo ya está casi ordenado gracias a las pasadas anteriores, así que hay muy pocos desplazamientos.'
+        : `Se comparan pinos que están a ${gap} posiciones de distancia. Así los valores lejos de su lugar avanzan varias posiciones de un solo salto.`
+    })
+
+    for (let i = gap; i < n; i++) {
+      const key = arr[i].value
+      let keyIdx = i
+      const focus = groupOf(i, gap)
+      const sc = gap === 1 ? i : 0
+
+      snap({
+        marks: { key: i }, sortedCount: sc, line: 3, pass, gap, focus,
+        title: `Tomar la llave A[${i}] = ${key} (gap ${gap})`,
+        description: `Levantamos el pino ${key} y lo comparamos con los pinos de su subgrupo, que están a ${gap} posiciones hacia la izquierda.`
+      })
+
+      let j = i
+      while (j >= gap) {
+        comparisons++
+        const value = arr[j - gap].value
+        if (outOfPlace(value, key)) {
+          snap({
+            marks: { key: keyIdx, j: j - gap }, sortedCount: sc, line: 4, pass, gap, focus,
+            title: `Comparar A[${j - gap}] = ${value} con la llave ${key}`,
+            description: `${value} es ${bigger} que ${key}, así que salta ${gap} posiciones a la derecha.`
+          })
+          ;[arr[j - gap], arr[j]] = [arr[j], arr[j - gap]]
+          moves++
+          keyIdx = j - gap
+          snap({
+            marks: { key: keyIdx }, sortedCount: sc, line: 5, pass, gap, focus, swapped: [j - gap, j],
+            title: `Desplazar ${value} de ${j - gap} a ${j}`,
+            description: `${value} pasa a la posición ${j} y la llave ${key} queda en la posición ${j - gap}.`
+          })
+          j -= gap
+        } else {
+          snap({
+            marks: { key: keyIdx, j: j - gap }, sortedCount: sc, line: 4, pass, gap, focus,
+            title: `Comparar A[${j - gap}] = ${value} con la llave ${key}`,
+            description: `${value} no es ${bigger} que ${key}: la llave se queda en la posición ${j}.`
+          })
+          break
+        }
+      }
+    }
+
+    const passMoves = moves - movesBefore
+    snap({
+      sortedCount: gap === 1 ? n : 0, line: 7, pass, gap, endOfPass: true,
+      passComparisons: comparisons - compsBefore, passMoves, highlight: [],
+      passTitle: `gap = ${gap}`,
+      title: `Fin de la pasada con gap = ${gap}`,
+      description: gap === 1
+        ? `Última pasada (gap = 1): el arreglo queda ordenado. Se hicieron ${passMoves} desplazamientos en esta pasada.`
+        : `Todos los subgrupos separados por ${gap} posiciones quedaron ordenados (${passMoves} desplazamientos). Ahora el gap baja a ${Math.floor(gap / 2)}.`
+    })
+  })
+
+  snap({
+    sortedCount: n, line: null, pass: gaps.length,
+    title: '¡Pinos ordenados!',
+    description: `Terminamos en ${gaps.length} pasadas (gaps: ${gaps.join(', ')}): ${comparisons} comparaciones y ${moves} desplazamientos, en total ${comparisons + moves} pasos.`
+  })
+  return steps
+}
+
+/* ---------------- MERGE SORT ---------------- */
+// Escrituras que hace Merge Sort: no dependen de los datos, solo de n
+const mergeWrites = (n) => (n <= 1 ? 0 : n + mergeWrites(Math.ceil(n / 2)) + mergeWrites(Math.floor(n / 2)))
+const mergeMerges = (n) => Math.max(n - 1, 0)
+const log2ceil = (n) => (n <= 1 ? 0 : Math.ceil(Math.log2(n)))
+
+function mergeSteps(source, direction) {
+  const arr = copy(source)
+  const n = arr.length
+  const takeLeft = (a, b) => (direction === 'asc' ? a <= b : a >= b)
+  const word = direction === 'asc' ? 'menor' : 'mayor'
+  const steps = []
+  let comparisons = 0
+  let moves = 0
+  let mergeCount = 0
+  const range = (lo, hi) => Array.from({ length: hi - lo + 1 }, (_, k) => lo + k)
+  const vals = (lo, hi) => arr.slice(lo, hi + 1).map((it) => it.value).join(', ')
+
+  const snap = (extra) => steps.push({
+    array: copy(arr), comparisons, moves, marks: {}, swapped: null, endOfPass: false, focus: null, ...extra
+  })
+
+  function sort(lo, hi, depth) {
+    if (lo >= hi) return
+    const mid = Math.floor((lo + hi) / 2)
+    snap({
+      sortedCount: 0, line: 2, pass: mergeCount, focus: range(lo, hi), depth, phase: 'divide',
+      title: `Dividir [${lo}..${hi}] en [${lo}..${mid}] y [${mid + 1}..${hi}]`,
+      description: `La parte [${vals(lo, hi)}] se parte por la mitad. Cada mitad se ordena por separado y después se mezclan.`
+    })
+    sort(lo, mid, depth + 1)
+    sort(mid + 1, hi, depth + 1)
+    merge(lo, mid, hi)
+  }
+
+  function merge(lo, mid, hi) {
+    mergeCount++
+    const pass = mergeCount
+    const focus = range(lo, hi)
+    const left = arr.slice(lo, mid + 1)
+    const right = arr.slice(mid + 1, hi + 1)
+    const placed = []
+    let a = 0
+    let b = 0
+    const compsBefore = comparisons
+    const movesBefore = moves
+    // Reacomoda visualmente: lo ya colocado, luego lo que queda de la izquierda y de la derecha
+    const layout = () => {
+      const seq = [...placed, ...left.slice(a), ...right.slice(b)]
+      seq.forEach((item, k) => { arr[lo + k] = item })
+    }
+    const headL = () => lo + placed.length
+    const headR = () => lo + placed.length + (left.length - a)
+
+    snap({
+      sortedCount: 0, line: 5, pass, focus,
+      marks: { j: headL(), min: headR() },
+      title: `Mezclar [${left.map((x) => x.value).join(', ')}] con [${right.map((x) => x.value).join(', ')}]`,
+      description: 'Las dos mitades ya están ordenadas. Comparamos siempre el primer pino de cada una y colocamos el ' + word + '.'
+    })
+
+    while (a < left.length && b < right.length) {
+      comparisons++
+      const L = left[a].value
+      const R = right[b].value
+      const fromLeft = takeLeft(L, R)
+      snap({
+        sortedCount: 0, line: 6, pass, focus, marks: { j: headL(), min: headR() },
+        title: `Comparar ${L} (izquierda) con ${R} (derecha)`,
+        description: fromLeft
+          ? `${L} es ${word} o igual que ${R}, así que se coloca ${L}.`
+          : `${R} es ${word} que ${L}, así que se coloca ${R}.`
+      })
+      const target = headL()
+      const from = fromLeft ? headL() : headR()
+      placed.push(fromLeft ? left[a++] : right[b++])
+      moves++
+      layout()
+      snap({
+        sortedCount: 0, line: 7, pass, focus, swapped: from === target ? [target] : [target, from],
+        marks: { j: a < left.length ? headL() : undefined, min: b < right.length ? headR() : undefined },
+        title: `Colocar ${placed[placed.length - 1].value} en la posición ${target}`,
+        description: `Se escribe ${placed[placed.length - 1].value} en la posición ${target} de la mezcla.`
+      })
+    }
+
+    const rest = left.length - a + right.length - b
+    if (rest > 0) {
+      const restVals = [...left.slice(a), ...right.slice(b)].map((x) => x.value)
+      placed.push(...left.slice(a), ...right.slice(b))
+      a = left.length
+      b = right.length
+      moves += rest
+      layout()
+      snap({
+        sortedCount: 0, line: 8, pass, focus, swapped: range(hi - rest + 1, hi),
+        title: `Copiar los que sobran: ${restVals.join(', ')}`,
+        description: `Una de las mitades se terminó, así que los ${rest} pino${rest > 1 ? 's' : ''} restante${rest > 1 ? 's' : ''} se copian al final sin comparar.`
+      })
+    }
+
+    snap({
+      sortedCount: 0, line: 8, pass, focus, endOfPass: true,
+      passComparisons: comparisons - compsBefore, passMoves: moves - movesBefore, highlight: focus,
+      passTitle: `[${lo}..${hi}]`,
+      title: `Mezcla lista: [${vals(lo, hi)}]`,
+      description: `Las posiciones ${lo} a ${hi} ya forman una parte ordenada: [${vals(lo, hi)}].`
+    })
+  }
+
+  sort(0, n - 1, 0)
+
+  snap({
+    sortedCount: n, line: null, pass: mergeCount,
+    title: '¡Pinos ordenados!',
+    description: `Terminamos con ${mergeCount} mezclas: ${comparisons} comparaciones y ${moves} escrituras, en total ${comparisons + moves} pasos.`
+  })
+  return steps
+}
+
 // Cantidad de inversiones (pares fuera de orden) = desplazamientos de Insertion Sort
 export function countInversions(values, direction) {
   let inversions = 0
@@ -266,5 +490,183 @@ export const SORT_ALGORITHMS = {
     },
     summary: (n, last) =>
       `Con n = ${n} se hicieron ${last.comparisons} comparaciones y ${last.moves} desplazamientos. Insertion Sort es O(n) en el mejor caso (arreglo ya ordenado: ${n - 1} comparaciones) y O(n²) en el peor (arreglo al revés: ${tri(n)} comparaciones). Los desplazamientos siempre son iguales a la cantidad de pares fuera de orden del arreglo.`
+  },
+  shell: {
+    id: 'shell',
+    name: 'Shell Sort',
+    movesLabel: 'Desplazamientos',
+    movesSingular: 'desplazamiento',
+    passLabel: 'Pasada',
+    totalPasses: (n) => shellGaps(n).length,
+    generate: shellSteps,
+    pseudocode: (direction) => [
+      'gap ← ⌊n / 2⌋',
+      'mientras gap > 0',
+      '  para i ← gap hasta n − 1',
+      '    llave ← A[i];  j ← i',
+      `    mientras j ≥ gap y A[j − gap] ${direction === 'asc' ? '>' : '<'} llave`,
+      '      A[j] ← A[j − gap];  j ← j − gap   (desplazar)',
+      '    A[j] ← llave',
+      '  gap ← ⌊gap / 2⌋'
+    ],
+    tags: () => [
+      { mark: 'key', label: 'llave', cls: 'tag-key' },
+      { mark: 'j', label: 'j − gap', cls: 'tag-j' }
+    ],
+    legend: () => [
+      { cls: 'dot-group', label: 'Subgrupo del gap' },
+      { cls: 'dot-key', label: 'Llave (pino levantado)' },
+      { cls: 'dot-j', label: 'Comparando (j − gap)' },
+      { cls: 'dot-swap', label: 'Desplazamiento' },
+      { cls: 'dot-sorted', label: 'Ordenado' }
+    ],
+    note: () =>
+      'Shell Sort es un Insertion Sort "con saltos": primero ordena pinos separados por una distancia grande (gap) y la va reduciendo a la mitad hasta llegar a 1. Así los valores lejanos llegan rápido cerca de su lugar.',
+    theory: (n, values, direction) => {
+      const gaps = shellGaps(n)
+      const best = gaps.reduce((sum, gap) => sum + (n - gap), 0)
+      return {
+        text: `Con n = ${n} se usan los gaps ${gaps.join(', ') || '—'} (${gaps.length} pasadas). Si el arreglo ya está ordenado solo hace ${best} comparaciones. Su complejidad depende de la secuencia de gaps: con la secuencia de Shell (n/2, n/4, …, 1) el peor caso es O(n²), pero en la práctica suele ser mucho más rápido que Insertion Sort.`,
+        rows: [
+          ['Mejor (ya ordenado)', best, 'O(n log n)'],
+          ['Promedio', 'depende de los gaps', '≈ O(n^1.5)'],
+          ['Peor', 'depende de los datos', 'O(n²)']
+        ],
+        movesNote: `gaps: ${gaps.join(' → ') || '—'}`
+      }
+    },
+    summary: (n, last) =>
+      `Con n = ${n} se hicieron ${last.comparisons} comparaciones y ${last.moves} desplazamientos usando los gaps ${shellGaps(n).join(', ')}. Shell Sort mejora a Insertion Sort porque mueve los pinos lejanos de varios saltos a la vez; con esta secuencia de gaps su peor caso sigue siendo O(n²), pero el caso típico es mucho menor.`
+  },
+
+  merge: {
+    id: 'merge',
+    name: 'Merge Sort',
+    movesLabel: 'Escrituras',
+    movesSingular: 'escritura',
+    passLabel: 'Mezcla',
+    totalPasses: (n) => mergeMerges(n),
+    generate: mergeSteps,
+    pseudocode: () => [
+      'mergeSort(A, izq, der)',
+      '  si izq < der',
+      '    mid ← ⌊(izq + der) / 2⌋',
+      '    mergeSort(A, izq, mid);  mergeSort(A, mid + 1, der)',
+      '    mezclar(A, izq, mid, der)',
+      'mezclar: mientras queden pinos en las dos mitades',
+      '  comparar el primero de cada mitad',
+      '  colocar el elegido en la siguiente posición',
+      'copiar los que sobren'
+    ],
+    tags: () => [
+      { mark: 'j', label: 'izq', cls: 'tag-j' },
+      { mark: 'min', label: 'der', cls: 'tag-min' }
+    ],
+    legend: () => [
+      { cls: 'dot-group', label: 'Parte que se está trabajando' },
+      { cls: 'dot-j', label: 'Primero de la izquierda' },
+      { cls: 'dot-min', label: 'Primero de la derecha' },
+      { cls: 'dot-swap', label: 'Pino colocado' },
+      { cls: 'dot-sorted', label: 'Ordenado' }
+    ],
+    note: () =>
+      'Merge Sort usa "divide y vencerás": parte el arreglo por la mitad una y otra vez hasta quedar con pinos sueltos, y luego los mezcla de dos en dos ya ordenados.',
+    theory: (n) => {
+      const L = log2ceil(n)
+      const worst = n <= 1 ? 0 : n * L - 2 ** L + 1
+      return {
+        text: `Con n = ${n} el arreglo se divide en ${L} niveles (⌈log₂ ${n}⌉ = ${L}) y se hacen ${mergeMerges(n)} mezclas. En cada nivel se recorren los n pinos, por eso su complejidad es O(n log n) en todos los casos. Siempre escribe ${mergeWrites(n)} veces, y compara como máximo ${worst} veces.`,
+        rows: [
+          ['Mejor', `≈ ${Math.floor((n * L) / 2)}`, 'O(n log n)'],
+          ['Promedio', `≈ ${worst}`, 'O(n log n)'],
+          ['Peor', worst, 'O(n log n)']
+        ],
+        movesNote: `escrituras siempre = ${mergeWrites(n)} · niveles = ${L}`
+      }
+    },
+    summary: (n, last) =>
+      `Con n = ${n} se hicieron ${last.comparisons} comparaciones y ${last.moves} escrituras en ${mergeMerges(n)} mezclas. Merge Sort es O(n log n) en el mejor, promedio y peor caso, porque siempre divide en ${log2ceil(n)} niveles; a cambio necesita memoria extra para mezclar las mitades.`
   }
+}
+
+/* =============================================================
+   TIEMPO DE EJECUCIÓN
+   Versiones "puras" de cada algoritmo (sin guardar pasos ni fotos)
+   para medir cuánto tarda realmente en ordenar el arreglo.
+   ============================================================= */
+const before = (direction) => (direction === 'asc' ? (a, b) => a < b : (a, b) => a > b)
+
+const PURE_SORTS = {
+  seleccion(a, direction) {
+    const lt = before(direction)
+    for (let i = 0; i < a.length - 1; i++) {
+      let m = i
+      for (let j = i + 1; j < a.length; j++) if (lt(a[j], a[m])) m = j
+      if (m !== i) { const t = a[i]; a[i] = a[m]; a[m] = t }
+    }
+    return a
+  },
+  insercion(a, direction) {
+    const lt = before(direction)
+    for (let i = 1; i < a.length; i++) {
+      const key = a[i]
+      let j = i - 1
+      while (j >= 0 && lt(key, a[j])) { a[j + 1] = a[j]; j-- }
+      a[j + 1] = key
+    }
+    return a
+  },
+  shell(a, direction) {
+    const lt = before(direction)
+    for (let gap = Math.floor(a.length / 2); gap > 0; gap = Math.floor(gap / 2)) {
+      for (let i = gap; i < a.length; i++) {
+        const key = a[i]
+        let j = i
+        while (j >= gap && lt(key, a[j - gap])) { a[j] = a[j - gap]; j -= gap }
+        a[j] = key
+      }
+    }
+    return a
+  },
+  merge(a, direction) {
+    const lt = before(direction)
+    const tmp = new Array(a.length)
+    const sort = (lo, hi) => {
+      if (lo >= hi) return
+      const mid = (lo + hi) >> 1
+      sort(lo, mid)
+      sort(mid + 1, hi)
+      let i = lo, j = mid + 1, k = lo
+      while (i <= mid && j <= hi) tmp[k++] = lt(a[j], a[i]) ? a[j++] : a[i++]
+      while (i <= mid) tmp[k++] = a[i++]
+      while (j <= hi) tmp[k++] = a[j++]
+      for (k = lo; k <= hi; k++) a[k] = tmp[k]
+    }
+    sort(0, a.length - 1)
+    return a
+  }
+}
+
+// Devuelve el tiempo promedio en milisegundos. Con pocos datos un solo
+// ordenamiento dura microsegundos, así que se repite varias veces y se promedia.
+export function measureExecutionTime(algorithmId, values, direction) {
+  const run = PURE_SORTS[algorithmId]
+  if (!run || !values.length) return 0
+  const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now())
+  run(values.slice(), direction) // calentamiento
+  let reps = 0
+  const start = now()
+  let elapsed = 0
+  do {
+    run(values.slice(), direction)
+    reps++
+    elapsed = now() - start
+  } while (elapsed < 15 && reps < 100000)
+  return elapsed / reps
+}
+
+export function formatExecutionTime(ms) {
+  // Siempre en milisegundos; con pocos datos el valor es una fracción de ms
+  if (!ms) return '0 ms'
+  return `${ms >= 1 ? ms.toFixed(3) : Number(ms.toPrecision(3))} ms`
 }

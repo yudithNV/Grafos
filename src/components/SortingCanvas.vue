@@ -8,12 +8,36 @@
         <clipPath id="ss-pin-clip" clipPathUnits="userSpaceOnUse">
           <path :d="PIN_PATH" />
         </clipPath>
+        <!-- Sombreado cilíndrico: borde oscuro, centro iluminado, rebote de luz a la derecha -->
         <linearGradient id="ss-pin-shade" x1="0" x2="1" y1="0" y2="0">
-          <stop offset="0" stop-color="#000" stop-opacity="0.22" />
-          <stop offset="0.32" stop-color="#fff" stop-opacity="0.55" />
-          <stop offset="0.5" stop-color="#fff" stop-opacity="0" />
-          <stop offset="1" stop-color="#000" stop-opacity="0.28" />
+          <stop offset="0" stop-color="#000" stop-opacity="0.55" />
+          <stop offset="0.12" stop-color="#000" stop-opacity="0.22" />
+          <stop offset="0.36" stop-color="#fff" stop-opacity="0.18" />
+          <stop offset="0.58" stop-color="#000" stop-opacity="0" />
+          <stop offset="0.86" stop-color="#000" stop-opacity="0.32" />
+          <stop offset="0.95" stop-color="#fff" stop-opacity="0.12" />
+          <stop offset="1" stop-color="#000" stop-opacity="0.5" />
         </linearGradient>
+        <!-- Oclusión: más oscuro abajo, donde toca la pista -->
+        <linearGradient id="ss-pin-vshade" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0" stop-color="#fff" stop-opacity="0.18" />
+          <stop offset="0.25" stop-color="#fff" stop-opacity="0" />
+          <stop offset="0.82" stop-color="#000" stop-opacity="0" />
+          <stop offset="1" stop-color="#000" stop-opacity="0.35" />
+        </linearGradient>
+        <!-- Brillo especular (laca) -->
+        <linearGradient id="ss-pin-spec" x1="0" x2="1" y1="0" y2="0">
+          <stop offset="0" stop-color="#fff" stop-opacity="0" />
+          <stop offset="0.5" stop-color="#fff" stop-opacity="0.95" />
+          <stop offset="1" stop-color="#fff" stop-opacity="0" />
+        </linearGradient>
+        <filter id="ss-pin-blur" x="-50%" y="-10%" width="200%" height="120%">
+          <feGaussianBlur stdDeviation="0.9" />
+        </filter>
+        <radialGradient id="ss-pin-contact" cx="0.5" cy="0.5" r="0.5">
+          <stop offset="0" stop-color="#000" stop-opacity="0.55" />
+          <stop offset="1" stop-color="#000" stop-opacity="0" />
+        </radialGradient>
       </defs>
     </svg>
 
@@ -52,9 +76,13 @@
           <Save class="btn-icon" />
           <span>Guardar</span>
         </button>
+        <button @click="$emit('open-load')" class="btn-text btn-load-graph" title="Abrir un arreglo guardado">
+          <FolderOpen class="btn-icon" />
+          <span>Cargar</span>
+        </button>
         <button @click="openSolver" class="btn-text btn-resolver">
           <Sparkles class="btn-icon" />
-          <span>Resolver</span>
+          <span>Mostrar resultados</span>
         </button>
         <button @click="showClearModal = true" class="btn-text btn-danger">
           <Trash2 class="btn-icon" />
@@ -74,7 +102,7 @@
               <input
                 type="range"
                 :min="N_MIN"
-                :max="N_MAX"
+                :max="Math.max(N_SLIDER_MAX, cells.length)"
                 :value="cells.length"
                 @input="setN($event.target.value)"
                 aria-label="Cantidad de números"
@@ -82,7 +110,6 @@
               <input
                 type="number"
                 :min="N_MIN"
-                :max="N_MAX"
                 :value="cells.length"
                 @change="setN($event.target.value)"
                 aria-label="Cantidad de números"
@@ -140,13 +167,13 @@
             <Undo2 class="btn-icon" />
             <span>Atrás</span>
           </button>
-          <button class="btn-text btn-step" @click="manualNext" :disabled="finished || !canSort">
-            <StepForward class="btn-icon" />
-            <span>{{ finished ? 'Completado' : nextStepLabel }}</span>
-          </button>
-          <button class="btn-text" @click="togglePlay" :disabled="finished || !canSort">
+          <button class="btn-text btn-step" @click="togglePlay" :disabled="finished || !canSort">
             <component :is="playing ? Pause : Play" class="btn-icon" />
             <span>{{ playing ? 'Pausar' : 'Reproducir' }}</span>
+          </button>
+          <button class="btn-text" @click="manualNext" :disabled="finished || !canSort">
+            <StepForward class="btn-icon" />
+            <span>{{ finished ? 'Completado' : nextStepLabel }}</span>
           </button>
           <button class="btn-text" @click="runAll" :disabled="finished || !canSort">
             <FastForward class="btn-icon" />
@@ -169,7 +196,13 @@
 
       <!-- ===== Pista de boliche ===== -->
       <section class="board-card lane-card">
+        <!-- Pista + índices en un mismo contenedor: con muchos datos se desplaza en horizontal -->
+        <div class="lane-scroll" :class="densityClass">
+        <div class="lane-track" :style="{ minWidth: cells.length * MIN_SLOT + 16 + 'px' }">
         <div class="lane">
+          <!-- Mismo fondo que las pizarras de grafos: estrellas + cuadrícula de puntos -->
+          <StarryBackground class="lane-stars" />
+          <div class="lane-floor" aria-hidden="true"></div>
           <TransitionGroup ref="pinsRef" name="pin" tag="div" class="pins">
             <div
               v-for="(item, index) in current.array"
@@ -179,22 +212,42 @@
               :style="{ visibility: item.value === null ? 'hidden' : 'visible' }"
             >
               <span class="pin-value">{{ item.value }}</span>
-              <svg
-                class="pin-svg"
-                viewBox="0 0 40 100"
-                preserveAspectRatio="none"
-                :style="pinSize(item.value)"
-                aria-hidden="true"
-              >
-                <g clip-path="url(#ss-pin-clip)">
+              <div class="pin-stage" :style="pinSize(item.value)">
+                <svg class="pin-svg" viewBox="0 0 40 100" preserveAspectRatio="none" aria-hidden="true">
+                  <g clip-path="url(#ss-pin-clip)">
                   <rect class="pin-body" x="0" y="0" width="40" height="100" />
-                  <rect class="pin-stripe" x="0" y="23" width="40" height="3.2" />
-                  <rect class="pin-stripe" x="0" y="28.5" width="40" height="3.2" />
+                  <!-- franjas curvas: siguen la forma del cuello -->
+                  <path class="pin-stripe" d="M0 22.6 Q20 25.4 40 22.6 L40 25.8 Q20 28.6 0 25.8 Z" />
+                  <path class="pin-stripe" d="M0 28 Q20 30.8 40 28 L40 31.2 Q20 34 0 31.2 Z" />
                   <rect x="0" y="0" width="40" height="100" fill="url(#ss-pin-shade)" />
+                  <rect x="0" y="0" width="40" height="100" fill="url(#ss-pin-vshade)" />
+                  <!-- brillos: cabeza y vientre -->
+                  <ellipse cx="15.5" cy="9" rx="2.6" ry="5.5" fill="url(#ss-pin-spec)" filter="url(#ss-pin-blur)" opacity="0.85" />
+                  <ellipse cx="13" cy="60" rx="3.2" ry="22" fill="url(#ss-pin-spec)" filter="url(#ss-pin-blur)" opacity="0.75" />
                 </g>
                 <path class="pin-outline" :d="PIN_PATH" />
-              </svg>
-              <span class="pin-spot"></span>
+                </svg>
+                <svg class="pin-contact" viewBox="0 0 40 10" preserveAspectRatio="none" aria-hidden="true">
+                  <ellipse cx="20" cy="5" rx="20" ry="5" fill="url(#ss-pin-contact)" />
+                </svg>
+              </div>
+              <!-- reflejo sobre la pista barnizada -->
+              <div class="pin-reflection" aria-hidden="true">
+                <svg class="pin-svg" viewBox="0 0 40 100" preserveAspectRatio="none" :style="pinSize(item.value)">
+                  <g clip-path="url(#ss-pin-clip)">
+                  <rect class="pin-body" x="0" y="0" width="40" height="100" />
+                  <!-- franjas curvas: siguen la forma del cuello -->
+                  <path class="pin-stripe" d="M0 22.6 Q20 25.4 40 22.6 L40 25.8 Q20 28.6 0 25.8 Z" />
+                  <path class="pin-stripe" d="M0 28 Q20 30.8 40 28 L40 31.2 Q20 34 0 31.2 Z" />
+                  <rect x="0" y="0" width="40" height="100" fill="url(#ss-pin-shade)" />
+                  <rect x="0" y="0" width="40" height="100" fill="url(#ss-pin-vshade)" />
+                  <!-- brillos: cabeza y vientre -->
+                  <ellipse cx="15.5" cy="9" rx="2.6" ry="5.5" fill="url(#ss-pin-spec)" filter="url(#ss-pin-blur)" opacity="0.85" />
+                  <ellipse cx="13" cy="60" rx="3.2" ry="22" fill="url(#ss-pin-spec)" filter="url(#ss-pin-blur)" opacity="0.75" />
+                </g>
+                <path class="pin-outline" :d="PIN_PATH" />
+                </svg>
+              </div>
             </div>
           </TransitionGroup>
         </div>
@@ -210,9 +263,61 @@
           </div>
         </div>
 
+        </div>
+        </div>
+
         <div class="legend">
           <span v-for="item in legend" :key="item.cls"><i class="dot" :class="item.cls"></i>{{ item.label }}</span>
         </div>
+      </section>
+
+      <!-- ===== Resultados ===== -->
+      <section v-if="canSort" class="board-card results-card">
+        <div class="results-head">
+          <h3 class="step-main-title">Resultados</h3>
+          <span class="results-status" :class="{ done: finished }">
+            {{ finished ? 'Ordenamiento completado' : 'Se completa al terminar el ordenamiento' }}
+          </span>
+        </div>
+
+        <div class="results-metrics">
+          <div class="result-metric highlight">
+            <span>Tiempo de ejecución</span>
+            <strong>{{ finished ? executionTimeLabel : '—' }}</strong>
+          </div>
+          <div class="result-metric">
+            <span>Pasos totales</span>
+            <strong>{{ finished ? lastStep.comparisons + lastStep.moves : '—' }}</strong>
+          </div>
+          <div class="result-metric">
+            <span>Comparaciones</span>
+            <strong>{{ finished ? lastStep.comparisons : '—' }}</strong>
+          </div>
+          <div class="result-metric">
+            <span>{{ meta.movesLabel }}</span>
+            <strong>{{ finished ? lastStep.moves : '—' }}</strong>
+          </div>
+        </div>
+
+        <div class="results-arrays">
+          <div>
+            <span class="results-label">Arreglo inicial</span>
+            <div class="mini-array">
+              <span v-for="item in validItems" :key="'ri' + item.id" class="mini-cell">{{ item.value }}</span>
+            </div>
+          </div>
+          <div>
+            <span class="results-label">Arreglo final ({{ order === 'asc' ? 'ascendente' : 'descendente' }})</span>
+            <div v-if="finished" class="mini-array">
+              <span v-for="item in lastStep.array" :key="'rf' + item.id" class="mini-cell mini-cell-sorted">{{ item.value }}</span>
+            </div>
+            <p v-else class="results-pending">Presiona “Reproducir”, “Paso a paso” o “Ejecutar todo” para obtenerlo.</p>
+          </div>
+        </div>
+        <p class="results-note">
+          El tiempo de ejecución es lo que tarda {{ meta.name }} en ordenar este arreglo en tu navegador
+          (promedio de varias ejecuciones, sin contar la animación).
+        </p>
       </section>
 
       <!-- ===== Contador de pasos / Big O ===== -->
@@ -227,20 +332,20 @@
             <div class="counter-split">
               <div><span>Comparaciones</span><strong>{{ current.comparisons }}</strong></div>
               <div><span>{{ meta.movesLabel }}</span><strong>{{ current.moves }}</strong></div>
-              <div><span>Pasada</span><strong>{{ current.pass }} de {{ Math.max(cells.length - 1, 0) }}</strong></div>
+              <div><span>{{ passLabel }}</span><strong>{{ current.pass }} de {{ totalPasses }}</strong></div>
             </div>
             <div
               class="progress"
               role="progressbar"
               aria-label="Comparaciones realizadas"
               aria-valuemin="0"
-              :aria-valuemax="maxComparisons"
+              :aria-valuemax="lastStep.comparisons"
               :aria-valuenow="current.comparisons"
             >
               <div :style="{ width: progressPct + '%' }"></div>
             </div>
             <p class="progress-caption">
-              {{ current.comparisons }} comparaciones · {{ theory.movesNote }}
+              {{ current.comparisons }} de {{ lastStep.comparisons }} comparaciones de este arreglo · {{ theory.movesNote }}
             </p>
           </div>
 
@@ -260,22 +365,12 @@
         </div>
       </section>
 
-      <!-- ===== Explicación + pseudocódigo ===== -->
+      <!-- ===== Explicación del paso actual ===== -->
       <div class="explain-grid">
         <section class="step-card-main">
           <h3 class="step-main-title">{{ current.title }}</h3>
           <p class="step-main-desc">{{ current.description }}</p>
           <p class="step-main-note">{{ meta.note(order) }}</p>
-        </section>
-
-        <section class="step-card-main">
-          <h3 class="step-main-title">Pseudocódigo</h3>
-          <pre class="pseudocode"><code><span
-            v-for="(line, index) in pseudocode"
-            :key="index"
-            class="code-line"
-            :class="{ 'code-line-active': current.line === index }"
-          >{{ line }}</span></code></pre>
         </section>
       </div>
     </div>
@@ -292,8 +387,12 @@
         </div>
 
         <div class="modal-body">
-          <div class="metrics-grid metrics-3">
+          <div class="metrics-grid metrics-4">
             <div class="metric-card highlight">
+              <span class="metric-label">Tiempo de ejecución</span>
+              <span class="metric-value metric-time">{{ executionTimeLabel }}</span>
+            </div>
+            <div class="metric-card">
               <span class="metric-label">Pasos totales</span>
               <span class="metric-value">{{ lastStep.comparisons + lastStep.moves }}</span>
             </div>
@@ -308,11 +407,11 @@
           </div>
 
           <div class="section-container">
-            <h4 class="section-heading">Arreglo original</h4>
+            <h4 class="section-heading">Arreglo inicial</h4>
             <div class="mini-array">
               <span v-for="item in validItems" :key="'o' + item.id" class="mini-cell">{{ item.value }}</span>
             </div>
-            <h4 class="section-heading">Arreglo ordenado ({{ order === 'asc' ? 'ascendente' : 'descendente' }})</h4>
+            <h4 class="section-heading">Arreglo final ({{ order === 'asc' ? 'ascendente' : 'descendente' }})</h4>
             <div class="mini-array">
               <span v-for="item in lastStep.array" :key="'f' + item.id" class="mini-cell mini-cell-sorted">{{ item.value }}</span>
             </div>
@@ -322,7 +421,7 @@
             <h4 class="section-heading">Evolución por pasada</h4>
             <div class="steps-accordion">
               <div v-for="pass in passSummary" :key="pass.number" class="step-card">
-                <span class="step-title">Pasada {{ pass.number }}</span>
+                <span class="step-title">{{ passLabel }} {{ pass.number }}<template v-if="pass.title"> · {{ pass.title }}</template></span>
                 <p class="step-desc">{{ pass.description }}</p>
                 <div class="mini-array">
                   <span
@@ -392,6 +491,7 @@ import {
   Trash2,
   Save,
   Sparkles,
+  FolderOpen,
   Undo2,
   StepForward,
   FastForward,
@@ -402,9 +502,9 @@ import {
 } from '@lucide/vue'
 import StarryBackground from './StarryBackground.vue'
 import AssignmentWarning from './AssignmentWarning.vue'
-import { SORT_ALGORITHMS } from '../utils/sorting'
+import { SORT_ALGORITHMS, measureExecutionTime, formatExecutionTime } from '../utils/sorting'
 
-const emit = defineEmits(['back', 'save', 'clear'])
+const emit = defineEmits(['back', 'save', 'open-load', 'clear'])
 
 const props = defineProps({
   // Id del algoritmo en src/utils/sorting.js: 'seleccion' | 'insercion'
@@ -417,7 +517,11 @@ const meta = computed(() => SORT_ALGORITHMS[props.algorithm] || SORT_ALGORITHMS.
 /* ---------- Configuración ---------- */
 const N_DEFAULT = 10
 const N_MIN = 2
-const N_MAX = 20
+// Sin límite fijo de datos: el slider llega a N_SLIDER_MAX, pero en la casilla
+// numérica se puede escribir cualquier cantidad (los pinos se hacen más delgados
+// y la pista permite desplazarse horizontalmente).
+const N_SLIDER_MAX = 50
+const MIN_SLOT = 16 // ancho mínimo por pino (px); si no caben, la pista se desplaza
 const V_MIN = 1
 const V_MAX = 99
 
@@ -448,7 +552,7 @@ const canSort = computed(() => cells.value.length >= N_MIN && invalidCount.value
 const validItems = computed(() => (canSort.value ? parsedItems.value : []))
 
 function setN(value) {
-  const n = Math.min(N_MAX, Math.max(N_MIN, Math.floor(Number(value)) || N_DEFAULT))
+  const n = Math.max(N_MIN, Math.floor(Number(value)) || N_DEFAULT)
   const list = cells.value.slice(0, n)
   while (list.length < n) list.push({ id: nextId++, raw: String(randomValue()) })
   cells.value = list
@@ -480,7 +584,6 @@ const openWarning = (title, message, subMessage = '') => {
 }
 
 /* ---------- Pasos del algoritmo (ver src/utils/sorting.js) ---------- */
-const pseudocode = computed(() => meta.value.pseudocode(order.value))
 const tags = computed(() => meta.value.tags(order.value))
 const legend = computed(() => meta.value.legend(order.value))
 
@@ -497,7 +600,7 @@ const initialState = computed(() => ({
   swapped: null,
   title: canSort.value ? 'Listo para ordenar' : 'Faltan datos',
   description: canSort.value
-    ? 'Presiona “Iniciar” para avanzar paso a paso, o “Reproducir” para verlo de forma automática.'
+    ? 'Presiona “Reproducir” para verlo de forma automática, o “Paso a paso” para avanzar tú mismo.'
     : `Completa todas las casillas con números del ${V_MIN} al ${V_MAX}, o presiona Random.`
 }))
 
@@ -505,10 +608,22 @@ const current = computed(() => (stepIndex.value >= 0 ? steps.value[stepIndex.val
 const lastStep = computed(() => steps.value[steps.value.length - 1] || initialState.value)
 const finished = computed(() => canSort.value && stepIndex.value === steps.value.length - 1)
 
-const nextStepLabel = computed(() => (stepIndex.value < 0 ? 'Iniciar' : 'Siguiente paso'))
-const maxComparisons = computed(() => meta.value.maxComparisons(cells.value.length))
+const nextStepLabel = computed(() => (stepIndex.value < 0 ? 'Paso a paso' : 'Siguiente paso'))
+// Tiempo real de ejecución del algoritmo (sin animación ni registro de pasos)
+const executionTime = computed(() =>
+  canSort.value
+    ? measureExecutionTime(props.algorithm, validItems.value.map((item) => item.value), order.value)
+    : 0
+)
+const executionTimeLabel = computed(() => formatExecutionTime(executionTime.value))
+
+// Progreso respecto al total real de comparaciones que hará este arreglo
 const progressPct = computed(() =>
-  maxComparisons.value ? (current.value.comparisons / maxComparisons.value) * 100 : 0
+  lastStep.value.comparisons ? (current.value.comparisons / lastStep.value.comparisons) * 100 : 0
+)
+const passLabel = computed(() => meta.value.passLabel || 'Pasada')
+const totalPasses = computed(() =>
+  meta.value.totalPasses ? meta.value.totalPasses(cells.value.length) : Math.max(cells.value.length - 1, 0)
 )
 const theory = computed(() =>
   meta.value.theory(
@@ -520,9 +635,12 @@ const theory = computed(() =>
 
 const modeDescription = computed(() => {
   if (!canSort.value) return 'Completa los números para ordenarlos'
-  if (finished.value) return 'Arreglo ordenado. Mira el resumen con “Resolver”.'
+  if (finished.value) return 'Arreglo ordenado. Mira el detalle con “Mostrar resultados”.'
   if (stepIndex.value < 0) return `Ordena ${order.value === 'asc' ? 'de menor a mayor' : 'de mayor a menor'}`
-  return `Pasada ${current.value.pass} de ${cells.value.length - 1}`
+  if (current.value.phase === 'divide') {
+    return `Dividiendo el arreglo (${current.value.pass} de ${totalPasses.value} mezclas hechas)`
+  }
+  return `${passLabel.value} ${current.value.pass} de ${totalPasses.value}`
 })
 
 const passSummary = computed(() =>
@@ -534,6 +652,7 @@ const passSummary = computed(() =>
       sortedCount: step.sortedCount,
       highlight: step.highlight || [],
       description: step.description,
+      title: step.passTitle || '',
       comparisons: step.passComparisons,
       moves: step.passMoves
     }))
@@ -543,6 +662,10 @@ const passSummary = computed(() =>
 watch([cells, order], () => resetSteps(), { deep: true })
 
 /* ---------- Pinos: tamaño según el valor ---------- */
+const densityClass = computed(() => ({
+  dense: cells.value.length > 20,
+  'very-dense': cells.value.length > 40
+}))
 const pinsRef = ref(null)
 const laneHeight = ref(330)
 let resizeObserver = null
@@ -554,9 +677,12 @@ const maxValue = computed(() => {
 
 const pinSize = (value) => {
   if (value === null) return { height: '0px', width: '0px' }
-  const maxPinHeight = Math.max(laneHeight.value - 40, 120)
-  const height = Math.max(22, (value / maxValue.value) * maxPinHeight)
-  return { height: `${height}px`, width: `min(86%, ${height * 0.4}px)` }
+  // Espacio reservado: reflejo (34px), número (~28px) y elevación de la llave (20px)
+  const maxPinHeight = Math.max(laneHeight.value - 90, 110)
+  // Altura mínima para que los valores chicos sigan pareciendo pinos y no agujas
+  const minHeight = Math.min(48, maxPinHeight * 0.25)
+  const height = minHeight + (value / maxValue.value) * (maxPinHeight - minHeight)
+  return { height: `${height}px`, width: `min(86%, ${height * 0.38}px)` }
 }
 
 const pinClass = (index) => {
@@ -564,7 +690,10 @@ const pinClass = (index) => {
   const marks = finished.value ? {} : step.marks
   const isSwap = !finished.value && step.swapped?.includes(index)
   const isKey = marks.key === index
+  const inFocus = !finished.value && step.focus ? step.focus.includes(index) : null
   return {
+    'st-dim': inFocus === false,
+    'st-group': inFocus === true,
     'st-sorted': index < step.sortedCount && !isSwap && !isKey,
     'st-min': marks.min === index && !isSwap,
     'st-j': marks.j === index,
@@ -671,7 +800,7 @@ function confirmClear() {
 /* ---------- Carga inicial (arreglo guardado o 10 aleatorios) ---------- */
 const saved = props.initialData
 if (saved && Array.isArray(saved.values) && saved.values.length >= N_MIN) {
-  cells.value = saved.values.slice(0, N_MAX).map((value) => ({ id: nextId++, raw: String(value) }))
+  cells.value = saved.values.map((value) => ({ id: nextId++, raw: String(value) }))
   order.value = saved.order === 'desc' ? 'desc' : 'asc'
 } else {
   setN(N_DEFAULT)
@@ -1354,17 +1483,9 @@ if (saved && Array.isArray(saved.values) && saved.values.length >= N_MIN) {
   --st-min: #f59e0b;
   --st-j: #3b82f6;
   --st-swap: #ec4899;
-  --lane-1: #e9c79a;
-  --lane-2: #d9b07c;
-  --lane-edge: #b98a55;
   --code-bg: #f0ecff;
 }
-:global([data-theme='dark']) .ss-workspace {
-  --lane-1: #6b4a2b;
-  --lane-2: #5a3d22;
-  --lane-edge: #3d2915;
-  --code-bg: #0f0c1c;
-}
+
 .svg-defs { position: absolute; width: 0; height: 0; }
 
 .board-container > .board-card,
@@ -1421,18 +1542,39 @@ if (saved && Array.isArray(saved.values) && saved.values.length >= N_MIN) {
 
 /* ----- Pista y pinos ----- */
 .lane-card { padding-bottom: 0.75rem; }
+
+/* Pista con el mismo fondo que las pizarras de grafos */
 .lane {
   position: relative;
-  border-radius: 12px;
+  border-radius: 14px;
   overflow: hidden;
-  background: repeating-linear-gradient(90deg, var(--lane-1) 0 22px, var(--lane-2) 22px 24px);
-  border: 1px solid var(--lane-edge);
+  border: 1px solid var(--border-color);
+  background-color: #ffffff;
 }
-.lane::after {
+[data-theme='dark'] .lane { background-color: var(--bg-body); }
+.lane > :deep(.starry-background) { position: absolute; inset: 0; z-index: 0; }
+/* Cuadrícula de puntos (igual que .svg-canvas de GraphCanvas) */
+.lane::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.22), transparent 45%, rgba(0, 0, 0, 0.12));
+  z-index: 0;
+  background-image: radial-gradient(var(--border-color) 1px, transparent 1px);
+  background-size: 24px 24px;
+  pointer-events: none;
+}
+/* Piso: una línea suave con brillo donde se apoyan los pinos */
+.lane-floor {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 34px;
+  height: 34px;
+  transform: translateY(100%);
+  z-index: 0;
+  background: linear-gradient(180deg, rgba(139, 92, 246, 0.10), transparent);
+  border-top: 1px solid rgba(139, 92, 246, 0.35);
+  box-shadow: 0 -1px 12px rgba(139, 92, 246, 0.25);
   pointer-events: none;
 }
 .pins {
@@ -1444,49 +1586,100 @@ if (saved && Array.isArray(saved.values) && saved.values.length >= N_MIN) {
   gap: clamp(2px, 0.8vw, 10px);
   height: 330px;
   padding: 0 0.5rem;
-  overflow-x: auto;
+  overflow: hidden;
 }
+.lane-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 0.25rem;
+  scrollbar-width: thin;
+}
+.lane-track { width: 100%; }
 .pin-slot {
   flex: 1 1 0;
   max-width: 68px;
-  min-width: 22px;
+  min-width: 0;
   height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
+  transition: opacity 0.3s ease, filter 0.3s ease;
 }
-.pin-move { transition: transform 0.45s cubic-bezier(0.2, 0.7, 0.2, 1); }
+.pin-move { transition: transform 0.45s cubic-bezier(0.2, 0.7, 0.2, 1), opacity 0.3s ease; }
 .pin-value {
+  position: relative;
+  z-index: 2;
   font-size: 0.8rem;
   font-weight: 700;
   color: #2b1a0c;
-  padding: 0.05rem 0.35rem;
+  padding: 0.05rem 0.4rem;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.75);
-  margin-bottom: 0.2rem;
+  background: linear-gradient(180deg, #fff, #f1e9dc);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+  margin-bottom: 0.25rem;
 }
-.pin-svg { display: block; overflow: visible; transition: height 0.35s ease, width 0.35s ease, filter 0.2s ease; }
+.pin-stage {
+  position: relative;
+  flex: none;
+  transition: height 0.35s ease, width 0.35s ease, transform 0.3s ease;
+}
+.pin-stage > .pin-svg {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(3px 4px 3px rgba(0, 0, 0, 0.35));
+}
+.pin-svg { display: block; overflow: visible; transition: filter 0.2s ease; }
+.pin-contact {
+  position: absolute;
+  left: -25%;
+  width: 150%;
+  bottom: -5px;
+  height: 10px;
+  z-index: 0;
+}
+/* Reflejo invertido y desvanecido sobre el barniz */
+.pin-reflection {
+  height: 34px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+  pointer-events: none;
+}
+.pin-reflection > .pin-svg {
+  flex: none;
+  transform: scaleY(-1);
+  transform-origin: center;
+  opacity: 0.3;
+  -webkit-mask-image: linear-gradient(180deg, transparent 72%, #000 100%);
+  mask-image: linear-gradient(180deg, transparent 72%, #000 100%);
+  transition: height 0.35s ease, width 0.35s ease;
+}
 .pin-body { fill: var(--pin-body); transition: fill 0.25s ease; }
 .pin-stripe { fill: var(--pin-color, var(--pin-stripe)); transition: fill 0.25s ease; }
-.pin-outline { fill: none; stroke: rgba(60, 35, 10, 0.35); stroke-width: 0.8; vector-effect: non-scaling-stroke; }
-.pin-spot { width: 70%; height: 6px; margin-top: 1px; border-radius: 50%; background: rgba(0, 0, 0, 0.25); }
+.pin-outline { fill: none; stroke: rgba(40, 22, 6, 0.35); stroke-width: 0.6; vector-effect: non-scaling-stroke; }
 
 .st-sorted { --pin-color: var(--st-sorted); }
-.st-sorted .pin-body { fill: color-mix(in srgb, var(--st-sorted) 22%, var(--pin-body)); }
+.st-sorted .pin-body { fill: color-mix(in srgb, var(--st-sorted) 26%, var(--pin-body)); }
 .st-j { --pin-color: var(--st-j); }
-.st-j .pin-body { fill: color-mix(in srgb, var(--st-j) 25%, var(--pin-body)); }
+.st-j .pin-body { fill: color-mix(in srgb, var(--st-j) 30%, var(--pin-body)); }
 .st-min { --pin-color: var(--st-min); }
-.st-min .pin-body { fill: color-mix(in srgb, var(--st-min) 35%, var(--pin-body)); }
+.st-min .pin-body { fill: color-mix(in srgb, var(--st-min) 38%, var(--pin-body)); }
 .st-swap { --pin-color: var(--st-swap); }
-.st-swap .pin-body { fill: color-mix(in srgb, var(--st-swap) 30%, var(--pin-body)); }
-.st-i .pin-svg { filter: drop-shadow(0 0 0 var(--st-i)) drop-shadow(0 0 4px var(--st-i)); }
+.st-swap .pin-body { fill: color-mix(in srgb, var(--st-swap) 34%, var(--pin-body)); }
+.st-i .pin-stage > .pin-svg { filter: drop-shadow(0 0 1.5px var(--st-i)) drop-shadow(0 0 6px var(--st-i)) drop-shadow(3px 4px 3px rgba(0, 0, 0, 0.35)); }
+/* Shell / Merge: pinos fuera del subgrupo o rango activo se atenúan */
+.st-dim { opacity: 0.4; filter: saturate(0.5); }
+.st-group .pin-value { box-shadow: 0 0 0 2px var(--st-group), 0 2px 4px rgba(0, 0, 0, 0.25); }
 
 .pin-labels { display: flex; justify-content: center; gap: clamp(2px, 0.8vw, 10px); padding: 0.35rem 0.5rem 0; }
 .pin-label {
   flex: 1 1 0;
   max-width: 68px;
-  min-width: 22px;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1546,21 +1739,8 @@ if (saved && Array.isArray(saved.values) && saved.values.length >= N_MIN) {
 
 /* ----- Explicación y pseudocódigo ----- */
 .explain-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; }
-@media (min-width: 860px) { .explain-grid { grid-template-columns: 1.2fr 1fr; } }
 .explain-grid .step-card-main { max-width: none; }
-.pseudocode {
-  margin: 0;
-  padding: 0.6rem;
-  border-radius: 10px;
-  background: var(--code-bg);
-  color: var(--text-primary);
-  overflow-x: auto;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 0.8rem;
-  line-height: 1.75;
-}
-.code-line { display: block; padding: 0 0.45rem; border-radius: 5px; white-space: pre; }
-.code-line-active { background: rgba(139, 92, 246, 0.3); font-weight: 600; }
+
 
 /* ----- Modal de resolución ----- */
 .metrics-3 { grid-template-columns: repeat(3, 1fr); }
@@ -1571,27 +1751,69 @@ if (saved && Array.isArray(saved.values) && saved.values.length >= N_MIN) {
   padding: 0.3rem 0.4rem;
   text-align: center;
   border-radius: 6px;
-  border: 1px solid #334155;
-  background: #0f172a;
-  color: #cbd5e1;
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface-2, var(--bg-surface));
+  color: var(--text-primary);
   font-size: 0.8rem;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
-.mini-cell-sorted { border-color: #22c55e; background: rgba(34, 197, 94, 0.15); color: #86efac; }
-.mini-cell-swap { border-color: #ec4899; background: rgba(236, 72, 153, 0.18); color: #f9a8d4; }
+.mini-cell-sorted { border-color: #22c55e; background: rgba(34, 197, 94, 0.15); color: #16a34a; }
+[data-theme='dark'] .mini-cell-sorted { color: #86efac; }
+.mini-cell-swap { border-color: #ec4899; background: rgba(236, 72, 153, 0.18); color: #db2777; }
+[data-theme='dark'] .mini-cell-swap { color: #f9a8d4; }
 .pass-count { margin: 0.5rem 0 0; font-size: 0.75rem; color: #94a3b8; }
 
 @media (prefers-reduced-motion: reduce) {
-  .pin-move, .pin-svg, .pin-body, .pin-stripe, .progress > div { transition: none; }
+  .pin-move, .pin-svg, .pin-stage, .pin-body, .pin-stripe, .pin-slot, .progress > div { transition: none; }
 }
 
 /* ----- Insertion Sort: la llave se levanta ----- */
 .ss-workspace { --st-key: #8b5cf6; }
 .st-key { --pin-color: var(--st-key); }
 .st-key .pin-body { fill: color-mix(in srgb, var(--st-key) 30%, var(--pin-body)); }
-.st-key .pin-svg { transform: translateY(-18px); filter: drop-shadow(0 10px 6px rgba(0, 0, 0, 0.3)); }
-.st-key .pin-value { transform: translateY(-18px); }
-.pin-svg, .pin-value { transition: height 0.35s ease, width 0.35s ease, transform 0.3s ease, filter 0.2s ease; }
+.st-key .pin-stage { transform: translateY(-20px); }
+.st-key .pin-stage > .pin-svg { filter: drop-shadow(0 16px 8px rgba(0, 0, 0, 0.35)); }
+.st-key .pin-contact { transform: translateY(20px) scale(0.75); opacity: 0.6; }
+.st-key .pin-value { transform: translateY(-20px); }
+.pin-value, .pin-contact { transition: transform 0.3s ease, opacity 0.3s ease; }
+.ss-workspace { --st-group: #06b6d4; }
+.dot-group { background: var(--st-group); }
 .tag-key { background: var(--st-key); }
 .dot-key { background: var(--st-key); }
+
+/* ----- Resultados ----- */
+.results-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.5rem; }
+.results-status { font-size: 0.75rem; color: var(--text-secondary); }
+.results-status.done { color: #22c55e; font-weight: 600; }
+.results-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-top: 0.75rem; }
+.result-metric {
+  padding: 0.6rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface-2, var(--bg-surface));
+}
+.result-metric.highlight { border-color: #8b5cf6; background: rgba(139, 92, 246, 0.1); }
+.result-metric span { display: block; font-size: 0.72rem; color: var(--text-secondary); }
+.result-metric strong { font-size: 1.1rem; font-variant-numeric: tabular-nums; color: var(--text-primary); }
+.results-arrays { display: grid; gap: 0.75rem; margin-top: 0.9rem; }
+.results-label { display: block; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.35rem; }
+.results-pending { margin: 0; font-size: 0.8rem; color: var(--text-secondary); font-style: italic; }
+.results-note { margin: 0.75rem 0 0; font-size: 0.72rem; color: var(--text-secondary); }
+.metrics-4 { grid-template-columns: repeat(4, 1fr); }
+.metric-time { font-size: 1.1rem; }
+@media (max-width: 640px) {
+  .results-metrics, .metrics-4 { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ----- Muchos datos: etiquetas más compactas ----- */
+.dense .pin-value { font-size: 0.6rem; padding: 0 0.15rem; border-radius: 4px; }
+.dense .pin-label { font-size: 0.6rem; }
+.dense .tag { font-size: 0.55rem; padding: 0 0.15rem; }
+.dense .pins, .dense .pin-labels { gap: 2px; }
+/* Con muchísimos pinos el número se ve solo en los pinos marcados */
+.very-dense .pin-value { visibility: hidden; }
+.very-dense .st-key .pin-value, .very-dense .st-j .pin-value, .very-dense .st-min .pin-value,
+.very-dense .st-swap .pin-value, .very-dense .st-i .pin-value { visibility: visible; }
+.very-dense .pin-label > span:first-child { font-size: 0.5rem; }
 </style>

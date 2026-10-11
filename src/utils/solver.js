@@ -1,7 +1,6 @@
 /**
- * Utilidad para la resolucion del Algoritmo de Asignacion.
- * Construye una matriz completa entre nodos origen y destino y aplica el
- * metodo hungaro sobre toda la matriz.
+ * Utilidad para la resolución del Algoritmo de Asignación (Método Húngaro).
+ * Soporta Minimización y Maximización directa mediante reducción por columna (vector Alpha).
  */
 
 export const INF = Number.MAX_SAFE_INTEGER
@@ -10,42 +9,41 @@ export function solveAlgorithm(nodes, edges, mode = 'minimize') {
   if (nodes.length === 0 || edges.length === 0) {
     return {
       costoTotal: 0,
-      metodo: `Asignacion (${mode === 'maximize' ? 'Maximizar' : 'Minimizar'})`,
+      metodo: `Asignación (${mode === 'maximize' ? 'Maximizar' : 'Minimizar'})`,
       asignaciones: [],
       pasos: [],
       optimalEdgeIds: []
     }
   }
 
-  // 1. Identificar Nodos Origen (salidas) y Nodos Destino (entradas)
+  // 1. Identificar Nodos Origen (filas) y Nodos Destino (columnas)
   const sourceIds = [...new Set(edges.map(e => e.sourceId))]
   const targetIds = [...new Set(edges.map(e => e.targetId))]
 
   const sourceNodes = nodes.filter(n => sourceIds.includes(n.id))
   const targetNodes = nodes.filter(n => targetIds.includes(n.id))
 
-  const rowLabels = sourceNodes.map(n => n.label)
-  const colLabels = targetNodes.map(n => n.label)
-
   const numRows = sourceNodes.length
   const numCols = targetNodes.length
-  const targetAssignments = Math.min(numRows, numCols)
 
-  // 2. Obtener peso maximo para maximizacion
-  let maxWeight = -Infinity
-  edges.forEach(e => {
-    const parsedWeight = Number(e.weight)
-    const w = Number.isFinite(parsedWeight) ? parsedWeight : 0
-    if (w > maxWeight) maxWeight = w
-  })
-  if (!Number.isFinite(maxWeight)) maxWeight = 0
+  // Dimensión cuadrada N x N para el Método Húngaro
+  const N = Math.max(numRows, numCols)
+  const targetAssignments = N
 
-  // 3. Construir la matriz completa [numRows x numCols].
-  // Una combinacion sin arista representa un 0, igual que en la matriz
-  // mostrada por AssignmentMatrixModal.vue.
-  const rawCostMatrix = Array.from({ length: numRows }, () => Array(numCols).fill(0))
-  const costMatrix = Array.from({ length: numRows }, () => Array(numCols).fill(0))
-  const edgeMatrix = Array.from({ length: numRows }, () => Array(numCols).fill(null))
+  // Generar etiquetas (incluyendo ficticios si la matriz no es cuadrada)
+  const rowLabels = sourceNodes.map(n => n.label)
+  for (let i = numRows + 1; i <= N; i++) {
+    rowLabels.push(`Ficticio ${i - numRows}`)
+  }
+
+  const colLabels = targetNodes.map(n => n.label)
+  for (let j = numCols + 1; j <= N; j++) {
+    colLabels.push(`Ficticio ${j - numCols}`)
+  }
+
+  // 2. Construir Matriz Balanceada Original (A)
+  const rawCostMatrix = Array.from({ length: N }, () => Array(N).fill(0))
+  const edgeMatrix = Array.from({ length: N }, () => Array(N).fill(null))
 
   edges.forEach(edge => {
     const rIdx = sourceNodes.findIndex(n => n.id === edge.sourceId)
@@ -55,84 +53,93 @@ export function solveAlgorithm(nodes, edges, mode = 'minimize') {
       const w = Number.isFinite(parsedWeight) ? parsedWeight : 0
       edgeMatrix[rIdx][cIdx] = edge
       rawCostMatrix[rIdx][cIdx] = w
-      costMatrix[rIdx][cIdx] = mode === 'minimize' ? w : (maxWeight - w)
     }
   })
 
   const pasos = []
 
+  // Paso 1: Matriz Inicial
   pasos.push({
     titulo: '1. Matriz de Trabajo Inicial',
-    descripcion: 'Matriz original entre origenes (filas) y destinos (columnas).',
+    descripcion: numRows !== numCols
+      ? `Matriz balanceada (${N}x${N}) agregando ${numRows < N ? 'filas' : 'columnas'} ficticias con costo 0.`
+      : 'Matriz original balanceada.',
     rowLabels,
     colLabels,
     matrix: rawCostMatrix.map(r => [...r])
   })
 
+  let workingMatrix = Array.from({ length: N }, () => Array(N).fill(0))
+  let alpha = []
+
+  // 3. Conversión de Maximización (Vector Alpha = Máximos por Columna)
   if (mode === 'maximize') {
+    alpha = Array.from({ length: N }, (_, j) => {
+      const col = rawCostMatrix.map(r => r[j])
+      return Math.max(...col)
+    })
+
+    // C'ij = Alpha_j - A_ij
+    workingMatrix = rawCostMatrix.map((row) =>
+      row.map((val, j) => alpha[j] - val)
+    )
+
     pasos.push({
-      titulo: '2. Conversion por Maximizacion',
-      descripcion: `Inversion de costos (M = ${maxWeight}) calculada como C'ij = M - Cij.`,
+      titulo: '2. Máximos por Columna (Alpha)',
+      descripcion: `Vector Alpha (Máximos de columna): [${alpha.join(', ')}]. Matriz reducida C'ij = Alpha_j - A_ij.`,
       rowLabels,
       colLabels,
-      matrix: costMatrix.map(r => [...r])
+      matrix: workingMatrix.map(r => [...r]),
+      alpha
+    })
+  } else {
+    // Minimización: Mínimos por fila (Alpha)
+    alpha = rawCostMatrix.map(row => Math.min(...row))
+    workingMatrix = rawCostMatrix.map((row, i) =>
+      row.map(val => val - alpha[i])
+    )
+
+    pasos.push({
+      titulo: '2. Reducción por Filas (Alpha)',
+      descripcion: `Mínimos de fila restados (Alpha): [${alpha.join(', ')}].`,
+      rowLabels,
+      colLabels,
+      matrix: workingMatrix.map(r => [...r]),
+      alpha
     })
   }
 
-  // 4. Reduccion por Filas (Alpha)
-  const alpha = costMatrix.map(row => {
-    const valid = row.filter(v => v !== INF)
-    return valid.length > 0 ? Math.min(...valid) : 0
+  // 4. Reducción por Columnas / Filas Secundarias (Beta)
+  const beta = Array.from({ length: N }, (_, j) => {
+    const col = workingMatrix.map(r => r[j])
+    return Math.min(...col)
   })
 
-  const rowReducedMatrix = costMatrix.map((row, i) =>
-    row.map(val => (val === INF ? INF : val - alpha[i]))
+  let finalMatrix = workingMatrix.map(row =>
+    row.map((val, j) => val - beta[j])
   )
 
   pasos.push({
-    titulo: `${mode === 'maximize' ? '3' : '2'}. Reduccion por Filas`,
-    descripcion: `Minimos restados por fila (alpha): [${alpha.join(', ')}].`,
+    titulo: mode === 'maximize' ? '3. Reducción Secundaría (Beta)' : '3. Reducción por Columnas (Beta)',
+    descripcion: `Vector Beta (Mínimos sobrantes): [${beta.join(', ')}].`,
     rowLabels,
     colLabels,
-    matrix: rowReducedMatrix.map(r => [...r])
+    matrix: finalMatrix.map(r => [...r]),
+    beta
   })
 
-  // 5. Reduccion por Columnas (Beta).
-  // En una matriz con mas columnas que filas, reducir cada columna
-  // individualmente elimina la diferencia entre alternativas de una misma
-  // fila (por ejemplo [0, 2] se convierte en [0, 0]). La reduccion por
-  // filas ya es suficiente para el problema rectangular en ese sentido.
-  const beta = numRows < numCols
-    ? Array(numCols).fill(0)
-    : Array.from({ length: numCols }, (_, j) => {
-      const col = rowReducedMatrix.map(r => r[j]).filter(v => v !== INF)
-      return col.length > 0 ? Math.min(...col) : 0
-    })
-
-  let finalMatrix = rowReducedMatrix.map(row =>
-    row.map((val, j) => (val === INF ? INF : val - beta[j]))
-  )
-
-  pasos.push({
-    titulo: `${mode === 'maximize' ? '4' : '3'}. Reduccion por Columnas`,
-    descripcion: `Minimos restados por columna (beta): [${beta.join(', ')}].`,
-    rowLabels,
-    colLabels,
-    matrix: finalMatrix.map(r => [...r])
-  })
-
-  // 6. Emparejamiento por ceros + ajuste hungaro iterativo.
-  let matchTargetToSource = findZeroMatching(finalMatrix, numRows, numCols)
+  // 5. Cobertura Mínima de Ceros y Ajuste Húngaro Iterativo
+  let matchTargetToSource = findZeroMatching(finalMatrix, N, N)
   let matchedCount = countMatches(matchTargetToSource)
   let iteration = 1
 
   while (matchedCount < targetAssignments) {
-    const cover = findMinimumZeroCover(finalMatrix, numRows, numCols)
+    const cover = findMinimumZeroCover(finalMatrix, N, N)
     const lineCount = countCoveredLines(cover)
 
     pasos.push({
-      titulo: `${mode === 'maximize' ? '5' : '4'}.${iteration} Cobertura de Ceros`,
-      descripcion: `Lineas necesarias: ${lineCount}. Ceros independientes: ${matchedCount}/${targetAssignments}.`,
+      titulo: `4.${iteration} Cobertura de Ceros`,
+      descripcion: `Líneas trazadas: ${lineCount}. Ceros independientes: ${matchedCount}/${targetAssignments}.`,
       rowLabels,
       colLabels,
       matrix: finalMatrix.map(r => [...r]),
@@ -140,21 +147,16 @@ export function solveAlgorithm(nodes, edges, mode = 'minimize') {
       coveredCols: [...cover.coveredCols]
     })
 
-    if (lineCount >= targetAssignments) {
-      // En una matriz rectangular, esta es la condicion de optimalidad.
-      // El matching ya debe tener targetAssignments pares si la matriz
-      // completa es factible.
-      break
-    }
+    if (lineCount >= targetAssignments) break
 
-    const minUncovered = findMinUncovered(finalMatrix, cover.coveredRows, cover.coveredCols, numRows, numCols)
+    const minUncovered = findMinUncovered(finalMatrix, cover.coveredRows, cover.coveredCols, N, N)
     if (minUncovered === INF) break
 
     finalMatrix = applyHungarianAdjustment(finalMatrix, cover.coveredRows, cover.coveredCols, minUncovered)
 
     pasos.push({
-      titulo: `${mode === 'maximize' ? '5' : '4'}.${iteration} Ajuste Hungaro`,
-      descripcion: `Menor no cubierto: ${minUncovered}. Se resta a celdas no cubiertas y se suma en intersecciones.`,
+      titulo: `4.${iteration} Ajuste Húngaro (gamma = ${minUncovered})`,
+      descripcion: `Valor no cubierto menor: ${minUncovered}. Restado a celdas descubiertas y sumado a intersecciones.`,
       rowLabels,
       colLabels,
       matrix: finalMatrix.map(r => [...r]),
@@ -162,43 +164,50 @@ export function solveAlgorithm(nodes, edges, mode = 'minimize') {
       coveredCols: [...cover.coveredCols]
     })
 
-    matchTargetToSource = findZeroMatching(finalMatrix, numRows, numCols)
+    matchTargetToSource = findZeroMatching(finalMatrix, N, N)
     matchedCount = countMatches(matchTargetToSource)
     iteration++
   }
 
-  matchTargetToSource = findZeroMatching(finalMatrix, numRows, numCols)
+  matchTargetToSource = findZeroMatching(finalMatrix, N, N)
 
-  // 7. Extraer Asignaciones Optimas
+  // 6. Extracción de Asignaciones Óptimas
   const uiAsignaciones = []
   const optimalEdgeIds = []
   let totalCost = 0
 
-  for (let v = 0; v < numCols; v++) {
+  for (let v = 0; v < N; v++) {
     const u = matchTargetToSource[v]
     if (u !== -1) {
-      const sNode = sourceNodes[u]
-      const tNode = targetNodes[v]
+      const isRealRow = u < numRows
+      const isRealCol = v < numCols
 
-      const edge = edgeMatrix[u][v]
-      const origWeight = rawCostMatrix[u][v]
+      const origenLabel = rowLabels[u]
+      const destinoLabel = colLabels[v]
 
-      if (edge) optimalEdgeIds.push(edge.id)
+      let origWeight = (isRealRow && isRealCol) ? rawCostMatrix[u][v] : 0
+
+      if (isRealRow && isRealCol) {
+        const edge = edgeMatrix[u][v]
+        if (edge) optimalEdgeIds.push(edge.id)
+      }
+
       totalCost += origWeight
 
       uiAsignaciones.push({
-        origen: sNode.label,
-        destino: tNode.label,
+        origen: origenLabel,
+        destino: destinoLabel,
         costo: origWeight,
         rowIdx: u,
-        colIdx: v
+        colIdx: v,
+        esFicticio: !(isRealRow && isRealCol)
       })
     }
   }
 
   pasos.push({
-    titulo: `${mode === 'maximize' ? '6' : '5'}. Asignacion Optima`,
-    descripcion: `Ceros independientes seleccionados: ${uiAsignaciones.length}/${targetAssignments}.`,
+    titulo: '5. Asignación Óptima Final',
+    descripcion: `Asignaciones independientes seleccionadas. Beneficio/Costo Total: ${totalCost}.`,
     rowLabels,
     colLabels,
     matrix: finalMatrix.map(r => [...r]),
@@ -206,7 +215,7 @@ export function solveAlgorithm(nodes, edges, mode = 'minimize') {
   })
 
   return {
-    metodo: `Asignacion (Metodo de Ceros - ${mode === 'maximize' ? 'Maximizar' : 'Minimizar'})`,
+    metodo: `Asignación (Método Húngaro - ${mode === 'maximize' ? 'Maximizar' : 'Minimizar'})`,
     costoTotal: totalCost,
     asignaciones: uiAsignaciones,
     optimalEdgeIds,
@@ -215,6 +224,7 @@ export function solveAlgorithm(nodes, edges, mode = 'minimize') {
   }
 }
 
+// Algoritmo de Kuhn para emparejamiento máximo en grafos bipartitos
 function findZeroMatching(matrix, numRows, numCols) {
   const matchTargetToSource = Array(numCols).fill(-1)
 
@@ -240,21 +250,22 @@ function findZeroMatching(matrix, numRows, numCols) {
 }
 
 function countMatches(matchTargetToSource) {
-  return matchTargetToSource.filter(sourceIdx => sourceIdx !== -1).length
+  return matchTargetToSource.filter(s => s !== -1).length
 }
 
 function countCoveredLines(cover) {
   return cover.coveredRows.filter(Boolean).length + cover.coveredCols.filter(Boolean).length
 }
 
+// Teorema de König para la cobertura mínima de ceros
 function findMinimumZeroCover(matrix, numRows, numCols) {
   const matchTargetToSource = findZeroMatching(matrix, numRows, numCols)
   const matchedRows = Array(numRows).fill(false)
   const markedRows = Array(numRows).fill(false)
   const markedCols = Array(numCols).fill(false)
 
-  matchTargetToSource.forEach(sourceIdx => {
-    if (sourceIdx !== -1) matchedRows[sourceIdx] = true
+  matchTargetToSource.forEach(s => {
+    if (s !== -1) matchedRows[s] = true
   })
 
   for (let i = 0; i < numRows; i++) {
@@ -267,7 +278,6 @@ function findMinimumZeroCover(matrix, numRows, numCols) {
 
     for (let i = 0; i < numRows; i++) {
       if (!markedRows[i]) continue
-
       for (let j = 0; j < numCols; j++) {
         if (matrix[i][j] === 0 && !markedCols[j]) {
           markedCols[j] = true
@@ -286,24 +296,21 @@ function findMinimumZeroCover(matrix, numRows, numCols) {
   }
 
   return {
-    coveredRows: markedRows.map(marked => !marked),
+    coveredRows: markedRows.map(m => !m),
     coveredCols: markedCols
   }
 }
 
 function findMinUncovered(matrix, coveredRows, coveredCols, numRows, numCols) {
   let min = INF
-
   for (let i = 0; i < numRows; i++) {
     if (coveredRows[i]) continue
-
     for (let j = 0; j < numCols; j++) {
       if (!coveredCols[j] && matrix[i][j] < min) {
         min = matrix[i][j]
       }
     }
   }
-
   return min
 }
 

@@ -102,12 +102,6 @@
           </p>
         </div>
 
-        <!-- MIS GRAFOS -->
-        <button @click="$emit('show-saved')" class="btn-my-graphs" title="Ver mis grafos">
-          <FolderOpen class="btn-icon" />
-          <span>Mis grafos</span>
-        </button>
-
       </div>
 
       <!-- Estadísticas Académicas -->
@@ -458,7 +452,6 @@ const emit = defineEmits([
   'back',
   'show-instructions',
   'show-matrix',
-  'show-saved',
   'save',
   'open-load',
   'clear',
@@ -861,6 +854,79 @@ const getFooterTip = () => {
   }
 }
 
+// ==========================================
+// JOHNSON - DETECTAR CAMINOS DE RETORNO
+// ==========================================
+const hasDirectedPath = (startId, endId, visited = new Set()) => {
+  if (startId === endId) return true
+
+  visited.add(startId)
+
+  const outgoing = props.edges.filter(
+    edge => edge.sourceId === startId
+  )
+
+  for (const edge of outgoing) {
+    if (!visited.has(edge.targetId)) {
+      if (hasDirectedPath(edge.targetId, endId, visited)) {
+        return true
+      }
+    }
+  }
+
+  return false
+}
+
+// ==========================================
+// JOHNSON - VALIDAR CONEXIONES DE AVANCE
+// ==========================================
+const validarConexionJohnson = (sourceId, targetId) => {
+
+  // Esta restricción SOLO se aplica a Johnson
+  if (!esJohnson.value) {
+    return true
+  }
+
+  // No permitir conexión del nodo consigo mismo
+  if (sourceId === targetId) {
+    mostrarAlerta(
+      'Conexión no permitida',
+      'En Johnson no se permiten auto-bucles.'
+    )
+    return false
+  }
+
+  // No permitir retorno directo
+  // Ejemplo: si existe A → B, impedir B → A
+  const existeRetornoDirecto = props.edges.some(
+    edge =>
+      edge.sourceId === targetId &&
+      edge.targetId === sourceId
+  )
+
+  if (existeRetornoDirecto) {
+    mostrarAlerta(
+      'Dirección de retorno no permitida',
+      'En Johnson las conexiones deben ir únicamente en sentido de avance.'
+    )
+    return false
+  }
+
+  // No permitir ciclos
+  // Ejemplo: A → B → C, impedir C → A
+  const produciriaCiclo = hasDirectedPath(targetId, sourceId)
+
+  if (produciriaCiclo) {
+    mostrarAlerta(
+      'Ciclo no permitido',
+      'Esta conexión produciría un retorno. En Johnson las conexiones deben avanzar en una sola dirección.'
+    )
+    return false
+  }
+
+  return true
+}
+
 const truncateLabel = (label) => {
   return label.length > 6 ? label.slice(0, 5) + '..' : label
 }
@@ -1130,6 +1196,15 @@ const handleConnectNode = (node) => {
 
   const sourceId = selectedNodeId.value
   const targetId = node.id
+
+
+  // ==========================================
+// JOHNSON - IMPEDIR CONEXIONES DE RETORNO
+// ==========================================
+if (!validarConexionJohnson(sourceId, targetId)) {
+  selectedNodeId.value = null
+  return
+}
 
   // ==========================================
   // REGLAS ESPECIALES PARA JOHNSON
@@ -1511,56 +1586,6 @@ const confirmClear = () => {
   flex-direction: column;
   flex: 1;
 }
-/* ===================================
-   BOTÓN MIS GRAFOS
-=================================== */
-
-.btn-my-graphs {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-
-  padding: 0.45rem 0.75rem;
-
-  background: rgba(99, 102, 241, 0.08);
-  border: 1px solid rgba(99, 102, 241, 0.45);
-  border-radius: 0.6rem;
-
-  color: #818cf8;
-
-  font-size: 0.75rem;
-  font-weight: 600;
-
-  cursor: pointer;
-  white-space: nowrap;
-
-  transition:
-    background 0.2s ease,
-    border-color 0.2s ease,
-    color 0.2s ease,
-    transform 0.15s ease,
-    box-shadow 0.2s ease;
-}
-
-.btn-my-graphs:hover {
-  background: rgba(99, 102, 241, 0.15);
-  border-color: #818cf8;
-  color: #a5b4fc;
-
-  box-shadow:
-    0 0 10px rgba(99, 102, 241, 0.15);
-}
-
-.btn-my-graphs:active {
-  transform: scale(0.96);
-}
-
-.btn-my-graphs .btn-icon {
-  width: 1rem;
-  height: 1rem;
-}
-
 .header-title {
   font-size: 0.85rem;
   font-weight: 600;

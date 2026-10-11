@@ -489,51 +489,38 @@
               </div>
             </section>
 
-            <!-- 03 · RECORRIDOS: BFS vs DFS -->
-            <section id="recorridos">
-              <span class="section-kicker">03 · EJEMPLO</span>
-              <h2>Recorridos: BFS vs DFS</h2>
+            <!-- 03 · COMPLEJIDAD -->
+            <section id="complejidad-algoritmos">
+              <span class="section-kicker">03 · ANÁLISIS</span>
+              <h2>¿Qué significa la complejidad?</h2>
               <p>
-                Son las dos formas básicas de recorrer un grafo, es decir, de visitar todos sus nodos.
-                Los dos grafos de abajo son idénticos y ambos empiezan en <strong>A</strong>;
-                el número en cada nodo indica en qué <strong>orden</strong> se visita.
+                La complejidad describe cómo crecen el tiempo de ejecución y la memoria que necesita un
+                algoritmo cuando aumenta el tamaño de la entrada. Se expresa normalmente con
+                <strong>notación Big O</strong>, que permite comparar algoritmos sin depender de la velocidad
+                de una computadora concreta.
               </p>
-
-              <div class="traversal-grid">
-                <div v-for="t in traversals" :key="t.id" class="traversal-card">
-                  <h3>{{ t.name }}</h3>
-                  <svg viewBox="0 0 190 190" class="traversal-svg">
-                    <line
-                      v-for="(e, i) in traversalEdges"
-                      :key="i"
-                      :x1="nodeMap[e[0]].x"
-                      :y1="nodeMap[e[0]].y"
-                      :x2="nodeMap[e[1]].x"
-                      :y2="nodeMap[e[1]].y"
-                      class="edge-line"
-                    />
-                    <g v-for="n in traversalNodes" :key="n.id">
-                      <circle :cx="n.x" :cy="n.y" r="16" class="node-hollow" />
-                      <text :x="n.x" :y="n.y + 4" class="node-label-sm">{{ n.id }}</text>
-                      <circle :cx="n.x + 14" :cy="n.y - 14" r="8" class="order-badge" />
-                      <text :x="n.x + 14" :y="n.y - 10.5" class="order-text">{{ t.order.indexOf(n.id) + 1 }}</text>
-                    </g>
-                  </svg>
-                  <div class="traversal-order">{{ t.order.join(' → ') }}</div>
-                  <p>{{ t.analogy }}</p>
-                  <small>{{ t.structure }} · O(V + E)</small>
-                </div>
-              </div>
 
               <div class="comparison">
                 <div>
-                  <h3>Usa BFS cuando…</h3>
-                  <p>Quieres el camino con menos aristas en un grafo sin pesos, o explorar por cercanía al nodo inicial.</p>
+                  <h3>Complejidad temporal</h3>
+                  <p>Indica cuántas operaciones puede realizar el algoritmo en función de sus datos de entrada.</p>
+                  <code>O(n) &lt; O(n²) &lt; O(n³)</code>
                 </div>
                 <div>
-                  <h3>Usa DFS cuando…</h3>
-                  <p>Necesitas detectar ciclos, ordenar tareas con dependencias (orden topológico) o explorar todos los caminos posibles.</p>
+                  <h3>Complejidad espacial</h3>
+                  <p>Indica cuánta memoria adicional necesita mientras calcula la solución.</p>
+                  <code>O(1) &lt; O(n) &lt; O(n²)</code>
                 </div>
+              </div>
+
+              <div class="callout">
+                <strong>Cómo leer las fórmulas</strong>
+                <span>
+                  En las pizarras de Graphix, <strong>V</strong> representa el número de vértices,
+                  <strong>E</strong> el número de aristas, y <strong>m</strong> y <strong>n</strong> las
+                  filas y columnas de una tabla de transporte. Las complejidades de cada pizarra aparecen
+                  debajo de su enlace en la sección de práctica.
+                </span>
               </div>
             </section>
 
@@ -592,9 +579,10 @@
                     </div>
                   </div>
                   <figcaption>
-                    <a :href="s.url" class="shot-link">
+                    <a :href="s.url" class="shot-link" :aria-label="`Abrir pizarra de ${s.name}`">
                       {{ s.name }} <ArrowRight :size="14" />
                     </a>
+                    <small class="shot-complexity">{{ s.complexity }}</small>
                   </figcaption>
                 </figure>
               </div>
@@ -646,7 +634,7 @@ const sectionsByTab = {
   algoritmos: [
     { id: 'definicion-algoritmo', label: '¿Qué es un algoritmo?' },
     { id: 'tipos-algoritmos', label: 'Tipos de algoritmos' },
-    { id: 'recorridos', label: 'BFS vs DFS' },
+    { id: 'complejidad-algoritmos', label: 'Complejidad' },
     { id: 'aplicaciones', label: 'Aplicaciones' },
     { id: 'practica', label: 'Pruébalo en Graphix' }
   ]
@@ -676,7 +664,7 @@ onMounted(applyRequestedTab)             // viene de otra página
 watch(requestedTheoryTab, applyRequestedTab) // ya estaba en Fundamentos
 
 /* ============ TIPOS DE ALGORITMOS ============ */
-// Para marcar uno como disponible en Graphix, solo añade su `url`
+// Las rutas de estas pizarras se mantienen en config/routes.js.
 const algorithmTypes = [
   { id: 'recorrido', icon: Compass, name: 'Recorrido',
     desc: 'Exploran todos los vértices de forma sistemática.',
@@ -711,37 +699,6 @@ const algorithmTypes = [
     algos: [{ name: 'Kahn' }, { name: 'DFS topológico' }] }
 ]
 
-/* ============ BFS vs DFS (mismo grafo, distinto orden) ============ */
-const traversalNodes = [
-  { id: 'A', x: 105, y: 30 },
-  { id: 'B', x: 55,  y: 90 },
-  { id: 'C', x: 155, y: 90 },
-  { id: 'D', x: 25,  y: 160 },
-  { id: 'E', x: 85,  y: 160 },
-  { id: 'F', x: 155, y: 160 }
-]
-const traversalEdges = [
-  ['A', 'B'], ['A', 'C'], ['B', 'D'], ['B', 'E'], ['C', 'F']
-]
-const nodeMap = Object.fromEntries(traversalNodes.map(n => [n.id, n]))
-
-const traversals = [
-  {
-    id: 'bfs',
-    name: 'BFS · Anchura',
-    order: ['A', 'B', 'C', 'D', 'E', 'F'],
-    analogy: 'Como las ondas de una piedra en un estanque: primero los vecinos, luego los vecinos de los vecinos, por capas.',
-    structure: 'Usa una cola'
-  },
-  {
-    id: 'dfs',
-    name: 'DFS · Profundidad',
-    order: ['A', 'B', 'D', 'E', 'C', 'F'],
-    analogy: 'Como explorar un laberinto: sigues un camino hasta el fondo y, si no hay salida, regresas al último cruce.',
-    structure: 'Usa una pila'
-  }
-]
-
 /* ============ APLICACIONES ============ */
 const applications = [
   { id: 'nav', icon: MapIcon, name: 'Navegación y mapas',
@@ -773,7 +730,8 @@ const graphixShots = ALGORITHMS
     id: algorithm.id,
     name: algorithm.name,
     img: algorithm.image,
-    url: algorithm.route
+    url: algorithm.route,
+    complexity: algorithm.complexity
   }))
 </script>
 
@@ -1202,56 +1160,6 @@ const graphixShots = ALGORITHMS
   text-transform: uppercase;
 }
 
-/* ============ BFS vs DFS ============ */
-.traversal-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
-  margin-top: 1.5rem;
-}
-.traversal-card {
-  padding: 1.2rem;
-  border: 1px solid var(--border-color);
-  border-radius: .8rem;
-  background: var(--bg-surface);
-  text-align: center;
-}
-.traversal-card h3 {
-  font-size: .95rem;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-  color: var(--text-primary);
-}
-.traversal-card p { font-size: .85rem; margin: .5rem 0 0; }
-.traversal-card small {
-  display: block;
-  margin-top: .6rem;
-  color: var(--accent-solid);
-  font-size: .75rem;
-  font-weight: 700;
-}
-.traversal-svg {
-  width: 100%;
-  max-width: 260px;
-  height: auto;
-  margin: .4rem auto;
-  display: block;
-}
-.order-badge { fill: var(--accent-solid); }
-.order-text {
-  fill: #fff;
-  font-size: 10px;
-  font-weight: 800;
-  text-anchor: middle;
-}
-.traversal-order {
-  margin-top: .3rem;
-  color: var(--text-primary);
-  font-family: 'Fira Code', 'Cascadia Code', monospace;
-  font-size: .85rem;
-  font-weight: 700;
-}
-
 /* ============ APLICACIONES (lista ligera) ============ */
 .apps-list {
   display: grid;
@@ -1309,6 +1217,12 @@ const graphixShots = ALGORITHMS
   font-weight: 700;
   font-size: .85rem;
   text-decoration: none;
+}
+.shot-complexity {
+  display: block;
+  margin-top: .2rem;
+  color: var(--text-secondary);
+  font-size: .75rem;
 }
 
 /* ============ CTA PRÁCTICA ============ */
@@ -1400,7 +1314,6 @@ const graphixShots = ALGORITHMS
   .comparison,
   .concept-visual,
   .graph-types-grid,
-  .traversal-grid,
   .shots-grid,
   .apps-list {
     grid-template-columns: 1fr;

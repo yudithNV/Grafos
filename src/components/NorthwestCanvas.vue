@@ -24,9 +24,15 @@
         <div class="stat-badge">
           Destinos: <strong class="stat-number">{{ destinationCount }}</strong>
         </div>
+        <div class="stat-badge">
+          Objetivo: <strong class="stat-number">{{ objective === 'maximize' ? 'Maximizar' : 'Minimizar' }}</strong>
+        </div>
         <div v-if="finished" class="stat-badge stat-badge-optimal">
-          Costo: <strong class="stat-number">{{ totalCost }}</strong>
+          {{ objectiveLabel }}: <strong class="stat-number">{{ totalCost }}</strong>
           <button @click="resetAllocations" class="btn-clear-opt" title="Quitar solución">✕</button>
+        </div>
+        <div v-if="modiResult" class="stat-badge" :class="modiResult.optimal ? 'badge-ok' : 'badge-warn'">
+          {{ modiResult.optimal ? 'Óptimo alcanzado ✓' : 'Óptimo no determinado' }}
         </div>
       </div>
 
@@ -35,13 +41,17 @@
           <Save class="btn-icon" />
           <span>Guardar</span>
         </button>
+        <button @click="$emit('open-load')" class="btn-text btn-load-graph" title="Abrir un problema guardado">
+          <FolderOpen class="btn-icon" />
+          <span>Cargar</span>
+        </button>
         <button @click="showMatrixModal = true" class="btn-text btn-matrix">
           <Grid3x3 class="btn-icon" />
           <span>Matriz</span>
         </button>
         <button @click="openSolver" class="btn-text btn-resolver">
           <Sparkles class="btn-icon" />
-          <span>Resolver</span>
+          <span>Ver paso a paso</span>
         </button>
         <button @click="$emit('show-instructions', 'northwest')" class="btn-text">
           <BookOpen class="btn-icon" />
@@ -58,32 +68,65 @@
     <div class="board-container">
       <!-- Controles del método -->
       <section class="controls">
-        <label class="field">
-          <span>Orígenes</span>
-          <input v-model.number="originCount" type="number" min="1" :max="MAX_SIZE" @change="resizeTable" />
-        </label>
-        <label class="field">
-          <span>Destinos</span>
-          <input v-model.number="destinationCount" type="number" min="1" :max="MAX_SIZE" @change="resizeTable" />
-        </label>
+        <!-- Caja: Northwest -->
+        <div class="control-box control-box-main">
+          <h4 class="control-title">Northwest</h4>
+          <div class="control-body">
+            <label class="field">
+              <span>Orígenes/Filas</span>
+              <input v-model.number="originCount" type="number" min="1" :max="MAX_SIZE" @change="resizeTable" />
+            </label>
+            <label class="field">
+              <span>Destinos/Columnas</span>
+              <input v-model.number="destinationCount" type="number" min="1" :max="MAX_SIZE" @change="resizeTable" />
+            </label>
 
-        <div class="controls-actions">
-          <button class="btn-text" @click="undoStep" :disabled="history.length === 0">
-            <Undo2 class="btn-icon" />
-            <span>Atrás</span>
-          </button>
-          <button class="btn-text btn-step" @click="runNextStep" :disabled="finished">
-            <StepForward class="btn-icon" />
-            <span>{{ finished ? 'Completado' : nextStepLabel }}</span>
-          </button>
-          <button class="btn-text" @click="runAll" :disabled="finished">
-            <FastForward class="btn-icon" />
-            <span>Ejecutar todo</span>
-          </button>
-          <button class="btn-text" @click="resetAllocations">
-            <RotateCcw class="btn-icon" />
-            <span>Reiniciar</span>
-          </button>
+            <div class="controls-actions">
+              <button class="btn-text" @click="undoStep" :disabled="history.length === 0">
+                <Undo2 class="btn-icon" />
+                <span>Atrás</span>
+              </button>
+              <button class="btn-text btn-step" @click="runNextStep" :disabled="finished">
+                <StepForward class="btn-icon" />
+                <span>{{ finished ? 'Completado' : nextStepLabel }}</span>
+              </button>
+              <button class="btn-text" @click="runAll" :disabled="finished">
+                <FastForward class="btn-icon" />
+                <span>Ejecutar todo</span>
+              </button>
+              <button class="btn-text" @click="resetAllocations">
+                <RotateCcw class="btn-icon" />
+                <span>Reiniciar</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Caja: Objetivo -->
+        <div class="control-box">
+          <h4 class="control-title">Objetivo</h4>
+          <div class="control-body">
+            <div class="segmented" role="group" aria-label="Objetivo de la optimización">
+              <button
+                type="button"
+                class="seg-btn"
+                :class="{ 'seg-active seg-neon': objective === 'minimize' }"
+                @click="setObjective('minimize')"
+              >
+                <TrendingDown class="seg-icon" />
+                <span>Minimizar</span>
+              </button>
+              <button
+                type="button"
+                class="seg-btn"
+                :class="{ 'seg-active seg-neon': objective === 'maximize' }"
+                @click="setObjective('maximize')"
+              >
+                <TrendingUp class="seg-icon" />
+                <span>Maximizar</span>
+              </button>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -92,37 +135,56 @@
         <span class="pulse-dot"></span>
         <span>
           La disponibilidad total ({{ totalAvailability }}) y la demanda total ({{ totalDemand }}) no coinciden.
-          Ajusta los valores para obtener una solución completa.
+          Al ejecutar se agregará un {{ totalAvailability < totalDemand ? 'origen' : 'destino' }} ficticio con costo 0.
+        </span>
+      </div>
+      <div v-else-if="dummy" class="connection-tip">
+        <span>
+          Se agregó un {{ dummy.type === 'row' ? 'origen' : 'destino' }} ficticio (costo 0) para balancear el problema.
         </span>
       </div>
 
       <!-- Tabla de transporte -->
       <section class="board-card">
+        <!-- Interruptor Óptimo / Inicial -->
+        <div v-if="canToggleView" class="view-switch">
+          <span class="view-switch-label">Ver reparto:</span>
+          <div class="segmented" role="group" aria-label="Reparto a mostrar">
+            <button type="button" class="seg-btn" :class="{ 'seg-active': viewMode === 'optimal' }" @click="viewMode = 'optimal'">
+              Óptimo
+            </button>
+            <button type="button" class="seg-btn" :class="{ 'seg-active': viewMode === 'initial' }" @click="viewMode = 'initial'">
+              Inicial (Northwest)
+            </button>
+          </div>
+        </div>
+
         <div class="table-scroll">
           <table class="transport-table">
             <thead>
               <tr>
                 <th>Origen / Destino</th>
                 <th v-for="(_, column) in destinationCount" :key="`heading-${column}`">
-                  Destino {{ column + 1 }}
+                  {{ destinationLabel(column) }}
                 </th>
                 <th>Disponibilidad</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="(row, origin) in costs" :key="`row-${origin}`">
-                <th>Origen {{ origin + 1 }}</th>
+                <th>{{ originLabel(origin) }}</th>
                 <td
                   v-for="(_, destination) in row"
                   :key="`cell-${origin}-${destination}`"
                   :class="{
                     active: currentCell?.row === origin && currentCell?.column === destination,
-                    assigned: visited[origin]?.[destination]
+                    assigned: isAssigned(origin, destination) && !showOptimal,
+                    'neon-cell': showOptimal && isAssigned(origin, destination)
                   }"
                 >
                   <input v-model.number="costs[origin][destination]" type="number" @input="resetAllocations" />
-                  <span v-if="visited[origin]?.[destination]" class="allocation">
-                    +{{ allocations[origin][destination] }}
+                  <span v-if="isAssigned(origin, destination)" class="allocation">
+                    +{{ cellAmount(origin, destination) }}
                   </span>
                 </td>
                 <td class="supply-cell">
@@ -143,9 +205,18 @@
         </div>
 
         <div class="summary">
-          <div><span>Costo acumulado</span><strong>{{ totalCost }}</strong></div>
+          <div>
+            <span>{{ objectiveLabel }} total</span>
+            <strong>{{ totalCost }}</strong>
+            <small v-if="showOptimal && initialCost !== totalCost" class="summary-sub">Northwest (inicial): {{ initialCost }}</small>
+          </div>
           <div><span>Asignaciones</span><strong>{{ assignmentCount }}</strong></div>
-          <div><span>Estado</span><strong>{{ finished ? 'Solución inicial lista' : 'Pendiente' }}</strong></div>
+          <div><span>Estado</span><strong>{{ statusText }}</strong></div>
+          <div class="summary-opt" :class="'opt-' + optimalityTone">
+            <span>Optimalidad</span>
+            <strong>{{ optimalityText }}</strong>
+            <button v-if="modiResult" class="link-btn" @click="showStepsModal = true">Ver detalle</button>
+          </div>
         </div>
       </section>
 
@@ -156,6 +227,9 @@
         <p class="step-main-note">
           Los números dentro de las celdas son costos unitarios. Las cantidades asignadas aparecen en color junto a cada costo.
         </p>
+        <p class="step-main-note">
+          El objetivo (minimizar o maximizar) no cambia la solución inicial de Northwest. Se usa para buscar el reparto óptimo con MODI.
+        </p>
       </section>
     </div>
 
@@ -165,7 +239,7 @@
         <div class="modal-header">
           <div class="header-title-group">
             <h3 class="modal-title">Matriz de Transporte</h3>
-            <span class="algorithm-badge">Northwest</span>
+            <span class="algorithm-badge">{{ showOptimal ? 'Solución óptima' : 'Northwest' }}</span>
           </div>
           <button @click="showMatrixModal = false" class="btn-close-icon">&times;</button>
         </div>
@@ -178,13 +252,13 @@
                 <thead>
                   <tr>
                     <th class="corner-cell">Origen \ Destino</th>
-                    <th v-for="(_, c) in destinationCount" :key="'mc' + c">Destino {{ c + 1 }}</th>
+                    <th v-for="(_, c) in destinationCount" :key="'mc' + c">{{ destinationLabel(c) }}</th>
                     <th>Disponibilidad</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-for="(row, r) in costs" :key="'mr' + r">
-                    <td class="row-label-cell">Origen {{ r + 1 }}</td>
+                    <td class="row-label-cell">{{ originLabel(r) }}</td>
                     <td v-for="(val, c) in row" :key="'mv' + r + '-' + c">{{ val }}</td>
                     <td class="row-label-cell">{{ availability[r] }}</td>
                   </tr>
@@ -199,24 +273,28 @@
           </div>
 
           <div class="section-container">
-            <h4 class="section-heading">Cantidades asignadas</h4>
+            <h4 class="section-heading">Cantidades asignadas{{ showOptimal ? ' (solución óptima)' : '' }}</h4>
             <div class="matrix-preview-wrapper">
               <table class="step-matrix-table">
                 <thead>
                   <tr>
                     <th class="corner-cell">Origen \ Destino</th>
-                    <th v-for="(_, c) in destinationCount" :key="'ac' + c">Destino {{ c + 1 }}</th>
+                    <th v-for="(_, c) in destinationCount" :key="'ac' + c">{{ destinationLabel(c) }}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="(row, r) in allocations" :key="'ar' + r">
-                    <td class="row-label-cell">Origen {{ r + 1 }}</td>
+                  <tr v-for="(row, r) in displayAllocations" :key="'ar' + r">
+                    <td class="row-label-cell">{{ originLabel(r) }}</td>
                     <td
                       v-for="(val, c) in row"
                       :key="'av' + r + '-' + c"
-                      :class="{ 'assigned-cell': val > 0, 'zero-cell': visited[r][c] && val === 0 }"
+                      :class="{
+                        'assigned-cell': !showOptimal && val > 0,
+                        'neon-cell': showOptimal && val > 0,
+                        'zero-cell': !showOptimal && visited[r]?.[c] && val === 0
+                      }"
                     >
-                      {{ visited[r][c] ? val : '—' }}
+                      {{ isAssigned(r, c) ? val : '—' }}
                     </td>
                   </tr>
                 </tbody>
@@ -231,22 +309,28 @@
       </div>
     </div>
 
-    <!-- Modal Resolución Paso a Paso -->
+    <!-- Modal Resolución Paso a Paso (Northwest + MODI) -->
     <div v-if="showStepsModal" class="modal-overlay" @click.self="showStepsModal = false">
       <div class="modal-card">
         <div class="modal-header">
           <div class="header-title-group">
             <h3 class="modal-title">Resolución Paso a Paso</h3>
-            <span class="algorithm-badge">Esquina Noroeste</span>
+            <span class="algorithm-badge">Northwest{{ modiResult ? ' + MODI' : '' }}</span>
           </div>
           <button @click="showStepsModal = false" class="btn-close-icon">&times;</button>
         </div>
 
         <div class="modal-body">
+          <!-- PARTE 1: Northwest -->
+          <h3 class="part-title">
+            <span class="part-badge">1</span>
+            Solución inicial (Northwest)
+          </h3>
+
           <div class="metrics-grid">
-            <div class="metric-card highlight">
-              <span class="metric-label">Costo Total (solución inicial)</span>
-              <span class="metric-value">{{ totalCost }}</span>
+            <div class="metric-card" :class="{ highlight: !modiResult }">
+              <span class="metric-label">{{ objectiveLabel }} de Northwest (inicial)</span>
+              <span class="metric-value">{{ initialCost }}</span>
             </div>
             <div class="metric-card">
               <span class="metric-label">Asignaciones</span>
@@ -270,9 +354,9 @@
                 </thead>
                 <tbody>
                   <tr v-for="(item, index) in assignmentList" :key="index">
-                    <td class="font-medium">Origen {{ item.origin }}</td>
+                    <td class="font-medium">{{ originLabel(item.origin - 1) }}</td>
                     <td class="arrow-cell">→</td>
-                    <td class="font-medium">Destino {{ item.destination }}</td>
+                    <td class="font-medium">{{ destinationLabel(item.destination - 1) }}</td>
                     <td>{{ item.amount }}</td>
                     <td>{{ item.unitCost }}</td>
                     <td class="cost-badge">{{ item.subtotal }}</td>
@@ -295,13 +379,13 @@
                     <thead>
                       <tr>
                         <th class="corner-cell">Origen \ Destino</th>
-                        <th v-for="(_, c) in destinationCount" :key="'sc' + sIndex + '-' + c">Destino {{ c + 1 }}</th>
+                        <th v-for="(_, c) in destinationCount" :key="'sc' + sIndex + '-' + c">{{ destinationLabel(c) }}</th>
                         <th>Disp. restante</th>
                       </tr>
                     </thead>
                     <tbody>
                       <tr v-for="(row, r) in step.allocations" :key="'sr' + sIndex + '-' + r">
-                        <td class="row-label-cell">Origen {{ r + 1 }}</td>
+                        <td class="row-label-cell">{{ originLabel(r) }}</td>
                         <td
                           v-for="(val, c) in row"
                           :key="'sv' + sIndex + '-' + r + '-' + c"
@@ -328,6 +412,106 @@
               </div>
             </div>
           </div>
+
+          <!-- Aviso si no se puede aplicar MODI -->
+          <div v-if="finished && !isBalanced" class="verdict verdict-warn">
+            <strong>MODI no se puede aplicar</strong>
+            <p>Para mejorar la solución hasta el óptimo, la disponibilidad total y la demanda total deben coincidir.</p>
+          </div>
+
+          <!-- PARTE 2: MODI -->
+          <template v-if="modiResult">
+            <h3 class="part-title part-title-2">
+              <span class="part-badge">2</span>
+              Mejora hasta el óptimo (MODI · {{ objective === 'maximize' ? 'Maximizar' : 'Minimizar' }})
+            </h3>
+
+            <div class="verdict" :class="'verdict-' + modiResult.tone">
+              <strong>{{ modiResult.title }}</strong>
+              <p>{{ modiResult.text }}</p>
+            </div>
+
+            <div class="metrics-grid">
+              <div class="metric-card">
+                <span class="metric-label">{{ objectiveLabel }} de Northwest (inicial)</span>
+                <span class="metric-value">{{ modiResult.initialCost }}</span>
+              </div>
+              <div class="metric-card highlight metric-neon">
+                <span class="metric-label">{{ objectiveLabel }} {{ modiResult.optimal ? 'óptimo' : 'final' }}</span>
+                <span class="metric-value">{{ modiResult.finalCost }}</span>
+              </div>
+            </div>
+
+            <div class="section-container" v-if="modiResult.assignments.length">
+              <h4 class="section-heading">Solución {{ modiResult.optimal ? 'óptima' : 'final' }}</h4>
+              <div class="table-wrapper neon-wrapper">
+                <table class="result-table">
+                  <thead>
+                    <tr>
+                      <th>Origen</th>
+                      <th class="arrow-header"></th>
+                      <th>Destino</th>
+                      <th>Cantidad</th>
+                      <th>Valor unit.</th>
+                      <th>Subtotal</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(item, index) in modiResult.assignments" :key="index">
+                      <td class="font-medium">{{ originLabel(item.origin - 1) }}</td>
+                      <td class="arrow-cell">→</td>
+                      <td class="font-medium">{{ destinationLabel(item.destination - 1) }}</td>
+                      <td>{{ item.amount }}</td>
+                      <td>{{ item.unitCost }}</td>
+                      <td class="cost-badge">{{ item.subtotal }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="section-container">
+              <h4 class="section-heading">Iteraciones</h4>
+              <div class="steps-accordion">
+                <div v-for="(it, i) in modiResult.iterations" :key="'it' + i" class="step-card">
+                  <span class="step-title">Iteración {{ i + 1 }}</span>
+                  <p class="step-desc">
+                    En las celdas asignadas se cumple u + v = valor. Para cada celda vacía se calcula Δ = valor − (u + v).
+                  </p>
+
+                  <div class="matrix-preview-wrapper">
+                    <table class="step-matrix-table">
+                      <thead>
+                        <tr>
+                          <th class="corner-cell">Origen \ Destino</th>
+                          <th v-for="(_, c) in destinationCount" :key="'mh' + i + '-' + c">{{ destinationLabel(c) }}</th>
+                          <th>u</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="(row, r) in it.allocations" :key="'mr' + i + '-' + r">
+                          <td class="row-label-cell">{{ originLabel(r) }}</td>
+                          <td v-for="(val, c) in row" :key="'mc' + i + '-' + r + '-' + c" :class="modiCellClass(it, r, c)">
+                            <template v-if="it.basis[r][c]">{{ val }}</template>
+                            <template v-else>Δ {{ it.deltas[r][c] }}</template>
+                            <small class="cell-cost">valor: {{ costs[r][c] }}</small>
+                          </td>
+                          <td class="row-label-cell">{{ it.u[r] }}</td>
+                        </tr>
+                        <tr>
+                          <td class="row-label-cell">v</td>
+                          <td v-for="(val, c) in it.v" :key="'mv' + i + '-' + c" class="row-label-cell">{{ val }}</td>
+                          <td class="row-label-cell"></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <p class="step-desc modi-note">{{ it.explanation }}</p>
+                </div>
+              </div>
+            </div>
+          </template>
         </div>
 
         <div class="modal-footer">
@@ -374,22 +558,26 @@ import {
   BookOpen,
   Grid3x3,
   Save,
+  FolderOpen,
   Sparkles,
   Undo2,
   StepForward,
   FastForward,
-  RotateCcw
+  RotateCcw,
+  TrendingDown,
+  TrendingUp
 } from '@lucide/vue'
 import StarryBackground from './StarryBackground.vue'
 import AssignmentWarning from './AssignmentWarning.vue'
 
-const emit = defineEmits(['back', 'show-instructions', 'save', 'clear', 'solution-found'])
+const emit = defineEmits(['back', 'show-instructions', 'save', 'open-load', 'clear', 'solution-found'])
 
 const props = defineProps({
   initialData: { type: Object, default: null }
 })
 
 const MAX_SIZE = 8
+const MAX_MODI_STEPS = 30
 
 /* ---------- Helpers ---------- */
 const num = (value) => Math.max(0, Number(value) || 0)
@@ -413,6 +601,52 @@ const visited = ref(makeMatrix(3, 3, false))
 const currentCell = ref(null)
 const finished = ref(false)
 const history = ref([])
+
+/* ---------- Objetivo y optimalidad (MODI) ---------- */
+const objective = ref('minimize')
+const viewMode = ref('optimal')
+const modiResult = computed(() => (finished.value && isBalanced.value ? runModi() : null))
+
+/* ---------- Balanceo con fila/columna ficticia ---------- */
+const dummy = ref(null) // { type: 'row' | 'column', index }
+
+const originLabel = (i) =>
+  dummy.value?.type === 'row' && dummy.value.index === i ? 'Origen ficticio' : `Origen ${i + 1}`
+const destinationLabel = (i) =>
+  dummy.value?.type === 'column' && dummy.value.index === i ? 'Destino ficticio' : `Destino ${i + 1}`
+
+function removeDummy() {
+  if (!dummy.value) return
+  const { type, index } = dummy.value
+  if (type === 'row') {
+    costs.value.splice(index, 1)
+    availability.value.splice(index, 1)
+    originCount.value -= 1
+  } else {
+    costs.value.forEach((row) => row.splice(index, 1))
+    demand.value.splice(index, 1)
+    destinationCount.value -= 1
+  }
+  dummy.value = null
+}
+
+function balanceProblem() {
+  removeDummy()
+  const diff = totalAvailability.value - totalDemand.value
+
+  if (diff < 0) {
+    costs.value.push(Array(destinationCount.value).fill(0))
+    availability.value.push(-diff)
+    dummy.value = { type: 'row', index: originCount.value }
+    originCount.value += 1
+  } else if (diff > 0) {
+    costs.value.forEach((row) => row.push(0))
+    demand.value.push(diff)
+    dummy.value = { type: 'column', index: destinationCount.value }
+    destinationCount.value += 1
+  }
+  resetAllocations()
+}
 
 /* ---------- Modales ---------- */
 const showMatrixModal = ref(false)
@@ -450,15 +684,26 @@ const remainingDemand = computed(() =>
   })
 )
 
-const totalCost = computed(() =>
-  allocations.value.reduce(
+const showOptimal = computed(() => viewMode.value === 'optimal' && !!modiResult.value?.optimal)
+const canToggleView = computed(() => !!modiResult.value?.optimal && !modiResult.value.initialOptimal)
+
+const displayAllocations = computed(() =>
+  showOptimal.value ? modiResult.value.finalAllocations : allocations.value
+)
+
+const cellAmount = (r, c) => displayAllocations.value[r]?.[c] ?? 0
+const isAssigned = (r, c) => (showOptimal.value ? cellAmount(r, c) > 0 : !!visited.value[r]?.[c])
+
+const costFromMatrix = (matrix) =>
+  matrix.reduce(
     (sum, row, origin) =>
       sum + row.reduce((rowSum, amount, destination) => rowSum + amount * (Number(costs.value[origin]?.[destination]) || 0), 0),
     0
   )
-)
 
-const assignmentCount = computed(() => allocations.value.flat().filter((amount) => amount > 0).length)
+const initialCost = computed(() => costFromMatrix(allocations.value))
+const totalCost = computed(() => costFromMatrix(displayAllocations.value))
+const assignmentCount = computed(() => displayAllocations.value.flat().filter((amount) => amount > 0).length)
 
 const assignmentList = computed(() => {
   const list = []
@@ -473,32 +718,73 @@ const assignmentList = computed(() => {
   return list
 })
 
+const statusText = computed(() => {
+  if (!finished.value) return 'Pendiente'
+  return showOptimal.value ? 'Solución óptima lista' : 'Solución inicial lista'
+})
+
+const optimalityText = computed(() => {
+  if (!finished.value) return 'Se calcula al terminar Northwest'
+  if (!isBalanced.value) return 'Requiere disponibilidad = demanda'
+  if (!modiResult.value) return 'No se pudo determinar'
+  if (modiResult.value.optimal) return 'Óptimo alcanzado ✓'
+  return 'No se pudo determinar'
+})
+
+const optimalityTone = computed(() => {
+  if (!modiResult.value) return 'none'
+  return modiResult.value.optimal ? 'ok' : 'warn'
+})
+
+const objectiveLabel = computed(() => (objective.value === 'maximize' ? 'Ganancia' : 'Costo'))
 const nextStepLabel = computed(() => (currentCell.value ? 'Siguiente paso' : 'Iniciar método'))
 
 const modeDescription = computed(() => {
-  if (finished.value) return 'Solución inicial lista. Revisa el costo y el paso a paso.'
-  if (currentCell.value) return `Siguiente celda: Origen ${currentCell.value.row + 1} → Destino ${currentCell.value.column + 1}`
+  if (finished.value) {
+    return showOptimal.value
+      ? 'Solución óptima lista. Revisa el resultado y el paso a paso.'
+      : 'Solución inicial lista. Revisa el resultado y el paso a paso.'
+  }
+  if (currentCell.value) return `Siguiente celda: ${originLabel(currentCell.value.row)} → ${destinationLabel(currentCell.value.column)}`
   return 'Asigna desde la esquina noroeste hasta cubrir disponibilidad y demanda'
 })
 
 const currentStep = computed(() => {
   if (finished.value) {
     const last = history.value[history.value.length - 1]
+    const better = objective.value === 'maximize' ? 'de mayor ganancia' : 'de menor costo'
+    const noun = objective.value === 'maximize' ? 'una ganancia' : 'un costo'
+    const modi = modiResult.value
+
+    let extra
+    if (modi?.optimal && viewMode.value === 'optimal') {
+      extra = modi.initialOptimal
+        ? 'La solución de Northwest ya es la óptima.'
+        : `MODI encontró rutas mejores y llevó el resultado de ${modi.initialCost} a ${modi.finalCost}, que es el óptimo. La tabla muestra ese reparto óptimo.`
+    } else if (modi?.optimal) {
+      extra = `Estás viendo el reparto inicial de Northwest (${modi.initialCost}). El óptimo es ${modi.finalCost}.`
+    } else if (!isBalanced.value) {
+      extra = 'Para comprobar el óptimo, la disponibilidad y la demanda deben coincidir. Esta solución es factible, pero no necesariamente la ' + better.replace('de ', 'de ') + '.'
+    } else {
+      extra = 'No se pudo determinar el óptimo.'
+    }
+
     return {
-      title: 'Solución inicial completada',
-      description: `${last ? last.description + ' ' : ''}Northwest terminó las asignaciones con un costo total de ${totalCost.value}. Esta solución es factible, pero no necesariamente tiene el costo mínimo.`
+      title: showOptimal.value ? 'Solución óptima completada' : 'Solución inicial completada',
+      description: `${last ? last.description + ' ' : ''}Northwest terminó las asignaciones con ${noun} total de ${initialCost.value}. ${extra}`
     }
   }
   const last = history.value[history.value.length - 1]
   if (last) return { title: last.title, description: last.description }
   return {
     title: 'Comienza en la esquina noroeste',
-    description: 'Presiona “Iniciar método” para asignar la cantidad posible en la primera celda.'
+    description: 'Presiona "Iniciar método" para asignar la cantidad posible en la primera celda.'
   }
 })
 
 /* ---------- Tamaño de la tabla ---------- */
 function resizeTable() {
+  dummy.value = null
   originCount.value = Math.min(MAX_SIZE, Math.max(1, Math.floor(Number(originCount.value)) || 1))
   destinationCount.value = Math.min(MAX_SIZE, Math.max(1, Math.floor(Number(destinationCount.value)) || 1))
 
@@ -521,6 +807,7 @@ function resetAllocations() {
   currentCell.value = null
   finished.value = false
   history.value = []
+  viewMode.value = 'optimal'
 }
 
 function runNextStep() {
@@ -534,6 +821,8 @@ function runNextStep() {
     )
     return false
   }
+
+  if (!currentCell.value && history.value.length === 0) balanceProblem()
 
   if (!currentCell.value) currentCell.value = { row: 0, column: 0 }
 
@@ -564,17 +853,17 @@ function runNextStep() {
   } else if (supplyAfter === 0) {
     if (!isLastRow) {
       next = { row: row + 1, column }
-      moveText = `El Origen ${row + 1} se agotó, así que bajamos a la siguiente fila.`
+      moveText = `El ${originLabel(row)} se agotó, así que bajamos a la siguiente fila.`
     }
   } else if (demandAfter === 0) {
     if (!isLastColumn) {
       next = { row, column: column + 1 }
-      moveText = `El Destino ${column + 1} quedó cubierto, así que avanzamos a la derecha.`
+      moveText = `El ${destinationLabel(column)} quedó cubierto, así que avanzamos a la derecha.`
     }
   }
 
   history.value.push({
-    title: `Asignación en Origen ${row + 1} → Destino ${column + 1}`,
+    title: `Asignación en ${originLabel(row)} → ${destinationLabel(column)}`,
     description:
       `Se asignan ${amount} unidades, el mínimo entre la disponibilidad restante (${supplyLeft}) y la demanda restante (${demandLeft}). ` +
       moveText,
@@ -595,9 +884,11 @@ function runNextStep() {
     finished.value = true
     emit('solution-found', {
       metodo: 'Esquina Noroeste',
-      costoTotal: totalCost.value,
+      costoTotal: initialCost.value,
       asignaciones: assignmentList.value,
-      allocations: cloneMatrix(allocations.value)
+      allocations: cloneMatrix(allocations.value),
+      costoOptimo: modiResult.value?.optimal ? modiResult.value.finalCost : null,
+      allocationsOptimas: modiResult.value?.optimal ? cloneMatrix(modiResult.value.finalAllocations) : null
     })
   }
 
@@ -642,20 +933,63 @@ function openSolver() {
   if (finished.value) showStepsModal.value = true
 }
 
+// Validar que la matriz no esté vacía
+function isMatrixEmpty() {
+  // Verificar si la matriz de costos está vacía (todos ceros o nulos)
+  for (let i = 0; i < costs.value.length; i++) {
+    for (let j = 0; j < costs.value[i].length; j++) {
+      if (costs.value[i][j] !== 0 && costs.value[i][j] !== null && costs.value[i][j] !== undefined) {
+        return false
+      }
+    }
+  }
+  return true
+}
+
+// Validar que disponibilidad y demanda no estén vacías
+function isAvailabilityOrDemandEmpty() {
+  const hasAvailability = availability.value.some(v => v !== 0 && v !== null && v !== undefined)
+  const hasDemand = demand.value.some(v => v !== 0 && v !== null && v !== undefined)
+  return !hasAvailability || !hasDemand
+}
+
 function saveBoard() {
+  // Validar que la matriz no esté vacía
+  if (isMatrixEmpty()) {
+    openWarning(
+      'Tabla vacía',
+      'La matriz de costos está vacía.',
+      'Ingresa valores en la matriz de costos antes de guardar.'
+    )
+    return
+  }
+
+  // Validar que haya disponibilidad y demanda
+  if (isAvailabilityOrDemandEmpty()) {
+    openWarning(
+      'Datos incompletos',
+      'No hay disponibilidad o demanda ingresada.',
+      'Ingresa valores en disponibilidad y demanda antes de guardar.'
+    )
+    return
+  }
+
   emit('save', {
     algorithm: 'northwest',
+    objective: objective.value,
     originCount: originCount.value,
     destinationCount: destinationCount.value,
     costs: cloneMatrix(costs.value),
     availability: [...availability.value],
     demand: [...demand.value],
-    allocations: cloneMatrix(allocations.value),
-    totalCost: totalCost.value
+    allocations: cloneMatrix(displayAllocations.value),
+    totalCost: totalCost.value,
+    initialCost: initialCost.value
   })
 }
 
 function confirmClear() {
+  removeDummy()
   costs.value = makeMatrix(originCount.value, destinationCount.value, 0)
   availability.value = Array(originCount.value).fill(0)
   demand.value = Array(destinationCount.value).fill(0)
@@ -663,6 +997,190 @@ function confirmClear() {
   showClearModal.value = false
   emit('clear')
 }
+
+/* ---------- Optimalidad (MODI) ---------- */
+function setObjective(mode) {
+  if (objective.value === mode) return
+  objective.value = mode
+}
+
+const isImproving = (delta) => (objective.value === 'maximize' ? delta > 0 : delta < 0)
+
+function modiCellClass(it, r, c) {
+  if (it.entering && it.entering.row === r && it.entering.column === c) return 'enter-cell'
+  if (it.basis[r][c]) return 'assigned-cell'
+  return isImproving(it.deltas[r][c]) ? 'zero-cell' : ''
+}
+
+function computePotentials(valueMatrix, basis, m, n) {
+  const u = Array(m).fill(null)
+  const v = Array(n).fill(null)
+  u[0] = 0
+  let changed = true
+  while (changed) {
+    changed = false
+    for (let r = 0; r < m; r++) {
+      for (let c = 0; c < n; c++) {
+        if (!basis[r][c]) continue
+        if (u[r] !== null && v[c] === null) {
+          v[c] = valueMatrix[r][c] - u[r]
+          changed = true
+        } else if (v[c] !== null && u[r] === null) {
+          u[r] = valueMatrix[r][c] - v[c]
+          changed = true
+        }
+      }
+    }
+  }
+  return { u: u.map((x) => x ?? 0), v: v.map((x) => x ?? 0) }
+}
+
+function findCycle(basis, enter, m, n) {
+  const path = [enter]
+  const used = new Set([`${enter.row}-${enter.column}`])
+
+  const dfs = (cell, horizontal) => {
+    if (path.length >= 4) {
+      if (horizontal && cell.row === enter.row) return true
+      if (!horizontal && cell.column === enter.column) return true
+    }
+    const candidates = []
+    if (horizontal) {
+      for (let c = 0; c < n; c++) {
+        if (c !== cell.column && basis[cell.row][c] && !used.has(`${cell.row}-${c}`)) candidates.push({ row: cell.row, column: c })
+      }
+    } else {
+      for (let r = 0; r < m; r++) {
+        if (r !== cell.row && basis[r][cell.column] && !used.has(`${r}-${cell.column}`)) candidates.push({ row: r, column: cell.column })
+      }
+    }
+    for (const next of candidates) {
+      path.push(next)
+      used.add(`${next.row}-${next.column}`)
+      if (dfs(next, !horizontal)) return true
+      path.pop()
+      used.delete(`${next.row}-${next.column}`)
+    }
+    return false
+  }
+
+  return dfs(enter, true) ? [...path] : null
+}
+
+function runModi() {
+  const m = originCount.value
+  const n = destinationCount.value
+  const maximize = objective.value === 'maximize'
+  const label = maximize ? 'ganancia' : 'costo'
+  const unit = costs.value.map((row) => row.map((v) => Number(v) || 0))
+
+  let alloc = cloneMatrix(allocations.value)
+  const basis = cloneMatrix(visited.value)
+  const costOf = (a) => a.reduce((sum, row, r) => sum + row.reduce((rs, amt, c) => rs + amt * unit[r][c], 0), 0)
+  const cellName = (cell) => `${originLabel(cell.row)} → ${destinationLabel(cell.column)}`
+
+  const iterations = []
+  let optimal = false
+
+  for (let step = 0; step < MAX_MODI_STEPS; step++) {
+    const { u, v } = computePotentials(unit, basis, m, n)
+    const deltas = makeMatrix(m, n, null)
+    let entering = null
+
+    for (let r = 0; r < m; r++) {
+      for (let c = 0; c < n; c++) {
+        if (basis[r][c]) continue
+        const delta = unit[r][c] - (u[r] + v[c])
+        deltas[r][c] = delta
+        if (isImproving(delta) && (!entering || (maximize ? delta > entering.delta : delta < entering.delta))) {
+          entering = { row: r, column: c, delta }
+        }
+      }
+    }
+
+    const cost = costOf(alloc)
+    const iteration = {
+      u, v, deltas,
+      basis: cloneMatrix(basis),
+      allocations: cloneMatrix(alloc),
+      cost, entering,
+      optimal: !entering,
+      cycle: [], theta: 0, leaving: null, costAfter: cost,
+      explanation: ''
+    }
+    iterations.push(iteration)
+
+    if (!entering) {
+      optimal = true
+      iteration.explanation = `Todos los Δ de las celdas vacías son ${maximize ? '≤ 0' : '≥ 0'}. Ninguna ruta mejora el ${label}, así que esta solución es óptima.`
+      break
+    }
+
+    const cycle = findCycle(basis, entering, m, n)
+    if (!cycle) {
+      iteration.explanation = 'No se pudo formar el ciclo de mejora para esta celda.'
+      break
+    }
+
+    const minusCells = cycle.filter((_, i) => i % 2 === 1)
+    const theta = Math.min(...minusCells.map((cell) => alloc[cell.row][cell.column]))
+    const leaving = minusCells.find((cell) => alloc[cell.row][cell.column] === theta)
+
+    cycle.forEach((cell, i) => {
+      alloc[cell.row][cell.column] += i % 2 === 0 ? theta : -theta
+    })
+    basis[entering.row][entering.column] = true
+    basis[leaving.row][leaving.column] = false
+
+    iteration.cycle = cycle.map((cell, i) => ({ ...cell, sign: i % 2 === 0 ? '+' : '−' }))
+    iteration.theta = theta
+    iteration.leaving = leaving
+    iteration.costAfter = costOf(alloc)
+    iteration.explanation =
+      `Mejor opción: ${cellName(entering)} con Δ = ${entering.delta}. ` +
+      `Ciclo: ${iteration.cycle.map((cell) => `${cell.sign} (${originLabel(cell.row)}, ${destinationLabel(cell.column)})`).join(', ')}. ` +
+      `Se mueven θ = ${theta} unidades y sale ${cellName(leaving)}. ` +
+      `El ${label} pasa de ${cost} a ${iteration.costAfter}.`
+  }
+
+  const initialCostValue = iterations[0].cost
+  const finalCost = costOf(alloc)
+  const initialOptimal = iterations[0].optimal
+
+  let tone = 'ok'
+  let title = 'La solución inicial ya es óptima'
+  let text = `Ninguna ruta vacía permite mejorar el ${label}. Northwest dio directamente el mejor resultado.`
+  if (!optimal) {
+    tone = 'bad'
+    title = 'No se alcanzó el óptimo'
+    text = 'Se llegó al límite de iteraciones o no se pudo formar un ciclo. Revisa los datos.'
+  } else if (!initialOptimal) {
+    tone = 'warn'
+    title = 'La solución inicial no era óptima: MODI la mejoró'
+    text = `Se mejoró en ${iterations.length - 1} iteración(es) y el ${label} pasó de ${initialCostValue} a ${finalCost}, que es el óptimo.`
+  }
+
+  const assignments = []
+  alloc.forEach((row, r) => {
+    row.forEach((amount, c) => {
+      if (amount > 0) assignments.push({ origin: r + 1, destination: c + 1, amount, unitCost: unit[r][c], subtotal: amount * unit[r][c] })
+    })
+  })
+
+  return {
+    iterations,
+    optimal,
+    initialOptimal,
+    initialCost: initialCostValue,
+    finalCost,
+    finalAllocations: cloneMatrix(alloc),
+    tone,
+    title,
+    text,
+    assignments
+  }
+}
+
 /* ---------- Cargar problema guardado ---------- */
 if (props.initialData) {
   const d = props.initialData
@@ -671,6 +1189,7 @@ if (props.initialData) {
   costs.value = d.costs
   availability.value = d.availability
   demand.value = d.demand
+  objective.value = d.objective === 'maximize' ? 'maximize' : 'minimize'
   resetAllocations()
 }
 </script>
@@ -884,6 +1403,18 @@ if (props.initialData) {
   color: #4ade80;
 }
 
+.btn-load-graph {
+  background-color: #dbeafe;
+  border-color: #93c5fd;
+  color: #2563eb;
+}
+
+[data-theme='dark'] .btn-load-graph {
+  background-color: rgba(37, 99, 235, 0.15);
+  border-color: rgba(96, 165, 250, 0.35);
+  color: #60a5fa;
+}
+
 .btn-danger {
   background-color: #fef2f2;
   border-color: #fca5a5;
@@ -936,12 +1467,34 @@ if (props.initialData) {
 .controls {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: stretch;
   gap: 0.75rem;
-  padding: 0.75rem;
+}
+
+.control-box {
+  padding: 0.6rem 0.75rem 0.75rem;
   background-color: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.control-box-main { flex: 1 1 28rem; }
+
+.control-title {
+  margin: 0;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.control-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
 }
 
 .field {
@@ -1020,6 +1573,21 @@ if (props.initialData) {
   box-shadow: 0 4px 6px -1px var(--shadow-color);
 }
 
+/* ===== INTERRUPTOR ÓPTIMO / INICIAL ===== */
+.view-switch {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-bottom: 0.75rem;
+}
+
+.view-switch-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
 /* ===== TABLA ===== */
 .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
@@ -1046,6 +1614,8 @@ if (props.initialData) {
   background: var(--bg-body);
   color: var(--text-primary);
   text-align: center;
+  position: relative;
+  z-index: 1;
 }
 
 .transport-table td.active {
@@ -1064,6 +1634,8 @@ if (props.initialData) {
   color: var(--accent-solid);
   font-size: 0.75rem;
   font-weight: 700;
+  position: relative;
+  z-index: 1;
 }
 
 .remaining {
@@ -1079,6 +1651,80 @@ if (props.initialData) {
 .total-cell {
   background: var(--bg-body);
   font-weight: 700;
+}
+
+/* ===== CELDAS DE LA SOLUCIÓN ÓPTIMA (MORADO NEÓN) ===== */
+.neon-cell {
+  --neon-core: #a855f7;
+  --neon-glow: #d946ef;
+  position: relative;
+  background: rgba(168, 85, 247, 0.14) !important;
+}
+
+[data-theme='dark'] .neon-cell,
+.modal-card .neon-cell {
+  --neon-core: #d8b4fe;
+  --neon-glow: #c026d3;
+}
+
+.neon-cell::before {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border: 1.5px solid color-mix(in srgb, var(--neon-core) 70%, transparent);
+  border-radius: 0.5rem;
+  box-shadow:
+    0 0 8px rgba(168, 85, 247, 0.75),
+    0 0 18px rgba(217, 70, 239, 0.35),
+    inset 0 0 12px rgba(168, 85, 247, 0.35);
+  pointer-events: none;
+  animation: neonPulse 2.4s ease-in-out infinite;
+}
+
+.neon-cell::after {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  pointer-events: none;
+  background:
+    linear-gradient(var(--neon-core), var(--neon-core)) left top / 14px 3px no-repeat,
+    linear-gradient(var(--neon-core), var(--neon-core)) left top / 3px 14px no-repeat,
+    linear-gradient(var(--neon-core), var(--neon-core)) right top / 14px 3px no-repeat,
+    linear-gradient(var(--neon-core), var(--neon-core)) right top / 3px 14px no-repeat,
+    linear-gradient(var(--neon-core), var(--neon-core)) left bottom / 14px 3px no-repeat,
+    linear-gradient(var(--neon-core), var(--neon-core)) left bottom / 3px 14px no-repeat,
+    linear-gradient(var(--neon-core), var(--neon-core)) right bottom / 14px 3px no-repeat,
+    linear-gradient(var(--neon-core), var(--neon-core)) right bottom / 3px 14px no-repeat;
+  filter: drop-shadow(0 0 3px var(--neon-glow)) drop-shadow(0 0 7px #a855f7);
+  animation: neonPulse 2.4s ease-in-out infinite;
+}
+
+.neon-cell .allocation {
+  color: #9333ea;
+  font-size: 0.8rem;
+  text-shadow: 0 0 8px rgba(168, 85, 247, 0.55);
+}
+
+[data-theme='dark'] .neon-cell .allocation,
+.modal-card .neon-cell .allocation {
+  color: #f3e8ff;
+  text-shadow: 0 0 8px #a855f7, 0 0 14px #c026d3;
+}
+
+.modal-card td.neon-cell {
+  color: #f3e8ff !important;
+  font-weight: 700;
+  text-shadow: 0 0 8px #a855f7;
+}
+
+@keyframes neonPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.65; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .neon-cell::before,
+  .neon-cell::after { animation: none; }
 }
 
 /* ===== RESUMEN ===== */
@@ -1097,6 +1743,14 @@ if (props.initialData) {
 
 .summary span { color: var(--text-secondary); font-size: 0.75rem; }
 .summary strong { margin-top: 0.3rem; }
+
+.summary-sub {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
 
 @media (max-width: 650px) {
   .summary div { min-width: 100%; }
@@ -1199,6 +1853,41 @@ if (props.initialData) {
 
 .confirm-text { margin: 0; font-size: 0.9rem; line-height: 1.5; color: #cbd5e1; }
 
+.part-title {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.part-title-2 {
+  margin-top: 0.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px dashed #475569;
+}
+
+.part-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: #6366f1;
+  color: #ffffff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.part-title-2 .part-badge {
+  background: #a855f7;
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.8);
+}
+
 .metrics-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
 
 .metric-card {
@@ -1213,6 +1902,14 @@ if (props.initialData) {
 
 .metric-card.highlight { border-color: #6366f1; background: rgba(99, 102, 241, 0.1); }
 
+.metric-card.metric-neon {
+  border-color: #c084fc;
+  background: rgba(168, 85, 247, 0.12);
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.55), inset 0 0 10px rgba(168, 85, 247, 0.2);
+}
+
+.metric-card.metric-neon .metric-value { color: #f3e8ff; text-shadow: 0 0 10px #a855f7; }
+
 .metric-label { font-size: 0.85rem; color: #94a3b8; }
 .metric-value { font-size: 1.5rem; font-weight: 700; color: #38bdf8; }
 
@@ -1220,6 +1917,11 @@ if (props.initialData) {
 .section-heading { font-size: 1rem; font-weight: 600; color: #cbd5e1; margin: 0; }
 
 .table-wrapper { border: 1px solid #334155; border-radius: 8px; overflow: hidden; }
+
+.table-wrapper.neon-wrapper {
+  border: 1.5px solid #c084fc;
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.6), 0 0 26px rgba(217, 70, 239, 0.25), inset 0 0 10px rgba(168, 85, 247, 0.2);
+}
 
 .result-table,
 .step-matrix-table {
@@ -1248,6 +1950,9 @@ if (props.initialData) {
 .font-medium { font-weight: 500; }
 .arrow-cell { color: #6366f1; }
 .cost-badge { color: #38bdf8; font-weight: 600; }
+
+.neon-wrapper .arrow-cell { color: #c084fc; text-shadow: 0 0 6px #a855f7; }
+.neon-wrapper .cost-badge { color: #f3e8ff; text-shadow: 0 0 8px #a855f7; }
 
 .steps-accordion { display: flex; flex-direction: column; gap: 1rem; }
 
@@ -1338,4 +2043,98 @@ if (props.initialData) {
 }
 
 .btn-danger-solid:hover { background: #dc2626; }
+
+/* ===== OBJETIVO (MIN / MAX) ===== */
+.segmented {
+  display: flex;
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background: var(--bg-body);
+}
+
+.seg-btn {
+  padding: 0.5rem 0.8rem;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.seg-btn + .seg-btn { border-left: 1px solid var(--border-color); }
+
+.seg-active {
+  background: rgba(168, 85, 247, 0.2);
+  color: #d8b4fe;
+  box-shadow:
+    0 0 8px rgba(168, 85, 247, 0.7),
+    inset 0 0 8px rgba(168, 85, 247, 0.3);
+  text-shadow: 0 0 6px rgba(168, 85, 247, 0.8);
+}
+
+[data-theme='dark'] .seg-active {
+  background: rgba(168, 85, 247, 0.25);
+  color: #f3e8ff;
+}
+
+.btn-verify {
+  background-color: var(--accent-soft-bg);
+  border-color: var(--accent-solid);
+  color: var(--accent-solid);
+  font-weight: 600;
+}
+
+.badge-ok {
+  background-color: rgba(34, 197, 94, 0.15);
+  border-color: rgba(74, 222, 128, 0.4);
+  color: #4ade80;
+}
+
+.badge-warn {
+  background-color: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.45);
+  color: #f59e0b;
+}
+
+/* ===== MODI ===== */
+.verdict {
+  padding: 0.9rem 1rem;
+  border-radius: 8px;
+  border: 1px solid #334155;
+}
+
+.verdict strong { display: block; font-size: 1rem; }
+.verdict p { margin: 0.35rem 0 0; font-size: 0.85rem; line-height: 1.5; color: #cbd5e1; }
+
+.verdict-ok { background: rgba(34, 197, 94, 0.12); border-color: #22c55e; color: #4ade80; }
+.verdict-warn { background: rgba(245, 158, 11, 0.12); border-color: #f59e0b; color: #fbbf24; }
+.verdict-bad { background: rgba(239, 68, 68, 0.12); border-color: #ef4444; color: #f87171; }
+
+.enter-cell {
+  background: rgba(0, 242, 255, 0.18) !important;
+  color: #00f2ff !important;
+  font-weight: 700;
+  border: 1px solid #00f2ff !important;
+}
+
+.modi-note { margin: 0.75rem 0 0; }
+
+/* ===== OPTIMALIDAD EN EL RESUMEN ===== */
+.opt-ok strong { color: #4ade80; }
+.opt-warn strong { color: #f59e0b; }
+
+.link-btn {
+  margin-top: 0.4rem;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--accent-solid);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
 </style>
