@@ -551,7 +551,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import {
   ArrowLeft,
   Trash2,
@@ -1182,16 +1182,31 @@ function runModi() {
 }
 
 /* ---------- Cargar problema guardado ---------- */
-if (props.initialData) {
-  const d = props.initialData
+function applyProblemData(data) {
+  const d = data || {
+    originCount: 3,
+    destinationCount: 3,
+    costs: [
+      [4, 6, 8],
+      [5, 3, 7],
+      [6, 5, 4]
+    ],
+    availability: [20, 30, 25],
+    demand: [10, 35, 30],
+    objective: 'minimize'
+  }
+
   originCount.value = d.originCount
   destinationCount.value = d.destinationCount
-  costs.value = d.costs
-  availability.value = d.availability
-  demand.value = d.demand
+  costs.value = cloneMatrix(d.costs)
+  availability.value = [...d.availability]
+  demand.value = [...d.demand]
   objective.value = d.objective === 'maximize' ? 'maximize' : 'minimize'
+  dummy.value = null
   resetAllocations()
 }
+
+watch(() => props.initialData, applyProblemData, { immediate: true })
 </script>
 
 <style scoped>
@@ -2073,6 +2088,15 @@ if (props.initialData) {
     0 0 8px rgba(168, 85, 247, 0.7),
     inset 0 0 8px rgba(168, 85, 247, 0.3);
   text-shadow: 0 0 6px rgba(168, 85, 247, 0.8);
+}
+
+[data-theme='light'] .seg-active {
+  background: #ede9fe;
+  color: #6d28d9;
+  box-shadow:
+    0 1px 3px rgba(109, 40, 217, 0.18),
+    inset 0 0 0 1px rgba(139, 92, 246, 0.18);
+  text-shadow: none;
 }
 
 [data-theme='dark'] .seg-active {
