@@ -255,7 +255,7 @@ const videos = [
   {
     id: 'vs7GToBIN7M',
     label: 'APLICACIONES',
-    title: 'Asignació',
+    title: 'Asignación',
     desc: 'Relaciona los modelos de asignación y transporte con situaciones reales.'
   }
 ]
