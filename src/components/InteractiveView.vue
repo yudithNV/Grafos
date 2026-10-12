@@ -5,7 +5,7 @@
       <header class="page-header">
         <span class="eyebrow">LABORATORIO VISUAL</span>
         <h1 class="interactive-title">Algoritmos Interactivos</h1>
-        <p>Elige una pizarra, construye tu grafo y observa cómo cada algoritmo transforma el problema en una solución.</p>
+        <p>Elige una pizarra, construye tu grafo o tu lista de números y observa cómo cada algoritmo transforma el problema en una solución.</p>
       </header>
 
       <div class="lab-badge-wrapper">
@@ -20,13 +20,26 @@
             <strong>¿Cómo funciona?</strong>
             <span>1. Elige una pizarra</span>
             <ArrowRight :size="14" />
-            <span>2. Diseña tu grafo</span>
+            <span>2. Arma tu grafo o tu lista</span>
             <ArrowRight :size="14" />
             <span>3. Ejecuta el algoritmo</span>
           </div>
+          <nav class="category-nav" aria-label="Categorías">
+            <strong>Categorías</strong>
+            <a
+              v-for="group in groups"
+              :key="group.id"
+              :href="`#categoria-${group.id}`"
+              class="category-link"
+              @click.prevent="scrollToCategory(group.id)"
+            >
+              <span>{{ group.title }}</span>
+              <em>{{ group.items.length }}</em>
+            </a>
+          </nav>
           <div class="tip">
             <Lightbulb :size="17" />
-            <p>Empieza con la pizarra de grafos para familiarizarte con nodos y aristas.</p>
+            <p>Empieza con la pizarra de grafos para familiarizarte con nodos y aristas, o con Selection Sort si vas a ordenamiento.</p>
           </div>
         </aside>
 
@@ -34,7 +47,7 @@
           <div class="workspace-heading">
             <div>
               <h2>Pizarras disponibles</h2>
-              <p>Selecciona una para comenzar</p>
+              <p>Organizadas por tema · selecciona una para comenzar</p>
             </div>
             <span class="result-count">{{ cards.length }} experiencias</span>
           </div>
@@ -55,78 +68,94 @@
             </button>
           </div>
 
-          <!-- VISTA CARRUSEL -->
-          <AlgorithmCarousel
-            v-if="viewMode === 'carousel'"
-            @select="$emit('select', $event)"
-          />
+          <!-- Un bloque por categoría (Grafos / Ordenamiento) -->
+          <section
+            v-for="group in groups"
+            :id="`categoria-${group.id}`"
+            :key="group.id"
+            class="category-block"
+          >
+            <div class="category-heading">
+              <div>
+                <h3>{{ group.title }}</h3>
+                <p>{{ group.desc }}</p>
+              </div>
+              <span class="category-count">{{ group.items.length }} pizarras</span>
+            </div>
 
-          <!-- VISTA CUADRÍCULA (3 por fila) -->
-          <ul v-else-if="viewMode === 'grid'" class="algorithm-grid">
-            <li v-for="card in cards" :key="card.id">
-              <button
-                class="grid-item"
-                :class="{ 'grid-item-disabled': card.comingSoon }"
-                @click="$emit('select', card.id)"
-              >
-                <div class="grid-thumb">
-                  <img
-                    v-if="card.image"
-                    :src="card.image"
-                    :alt="card.title"
-                    class="grid-thumb-img"
-                    loading="lazy"
-                  />
-                  <div v-else class="grid-thumb-icon" :style="{ background: card.iconBg }">
-                    <component :is="card.icon" :size="28" />
-                  </div>
-                </div>
+              <!-- VISTA CARRUSEL -->
+              <AlgorithmCarousel
+                v-if="viewMode === 'carousel'"
+                :items="group.items"
+                @select="$emit('select', $event)"
+              />
 
-                <div class="grid-item-text">
-                  <strong>
-                    {{ card.title }}
-                    <em v-if="card.comingSoon" class="grid-badge">Próximamente</em>
-                  </strong>
-                  <small>{{ card.desc }}</small>
-                </div>
-              </button>
-            </li>
-          </ul>
+              <!-- VISTA CUADRÍCULA (3 por fila) -->
+              <ul v-else-if="viewMode === 'grid'" class="algorithm-grid">
+                <li v-for="card in group.items" :key="card.id">
+                  <button
+                    class="grid-item"
+                    :class="{ 'grid-item-disabled': card.comingSoon }"
+                    @click="$emit('select', card.id)"
+                  >
+                    <div class="grid-thumb">
+                      <img
+                        v-if="card.image"
+                        :src="card.image"
+                        :alt="card.title"
+                        class="grid-thumb-img"
+                        loading="lazy"
+                      />
+                      <div v-else class="grid-thumb-icon" :style="{ background: card.iconBg }">
+                        <component :is="card.icon" :size="28" />
+                      </div>
+                    </div>
 
-          <!-- VISTA LISTA -->
-          <ul v-else class="algorithm-list">
-            <li v-for="card in cards" :key="card.id">
-              <button
-                class="list-item"
-                :class="{ 'list-item-disabled': card.comingSoon }"
-                @click="$emit('select', card.id)"
-              >
-                <div class="list-thumb">
-                  <img
-                    v-if="card.image"
-                    :src="card.image"
-                    :alt="card.title"
-                    class="list-thumb-img"
-                    loading="lazy"
-                  />
-                  <div v-else class="list-thumb-icon" :style="{ background: card.iconBg }">
-                    <component :is="card.icon" :size="24" />
-                  </div>
-                </div>
+                    <div class="grid-item-text">
+                      <strong>
+                        {{ card.title }}
+                        <em v-if="card.comingSoon" class="grid-badge">Próximamente</em>
+                      </strong>
+                      <small>{{ card.desc }}</small>
+                    </div>
+                  </button>
+                </li>
+              </ul>
 
-                <span class="list-item-text">
-                  <strong>
-                    {{ card.title }}
-                    <em v-if="card.comingSoon" class="list-badge">Próximamente</em>
-                  </strong>
-                  <small>{{ card.desc }}</small>
-                </span>
+              <!-- VISTA LISTA -->
+              <ul v-else class="algorithm-list">
+                <li v-for="card in group.items" :key="card.id">
+                  <button
+                    class="list-item"
+                    :class="{ 'list-item-disabled': card.comingSoon }"
+                    @click="$emit('select', card.id)"
+                  >
+                    <div class="list-thumb">
+                      <img
+                        v-if="card.image"
+                        :src="card.image"
+                        :alt="card.title"
+                        class="list-thumb-img"
+                        loading="lazy"
+                      />
+                      <div v-else class="list-thumb-icon" :style="{ background: card.iconBg }">
+                        <component :is="card.icon" :size="24" />
+                      </div>
+                    </div>
 
-                <ChevronRight :size="18" class="list-chevron" />
-              </button>
-            </li>
-          </ul>
+                    <span class="list-item-text">
+                      <strong>
+                        {{ card.title }}
+                        <em v-if="card.comingSoon" class="list-badge">Próximamente</em>
+                      </strong>
+                      <small>{{ card.desc }}</small>
+                    </span>
 
+                    <ChevronRight :size="18" class="list-chevron" />
+                  </button>
+                </li>
+              </ul>
+          </section>
           
         </section>
       </div>
@@ -148,6 +177,16 @@ import {
 import AlgorithmCarousel from './AlgorithmCarousel.vue'
 import CanvasBackground from './CanvasBackground.vue'
 import { cards } from './algorithmCards'
+import { ALGORITHM_CATEGORIES, getAlgorithmsByCategory } from '../config/routes'
+
+// Pizarras agrupadas por categoría (las categorías vacías no se muestran)
+const groups = ALGORITHM_CATEGORIES
+  .map((category) => ({ ...category, items: getAlgorithmsByCategory(category.id) }))
+  .filter((group) => group.items.length > 0)
+
+const scrollToCategory = (id) => {
+  document.getElementById(`categoria-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
 
 defineEmits(['select'])
 
@@ -680,5 +719,78 @@ watch(viewMode, (val) => {
     justify-content: flex-start;
     line-height: 1.4;
   }
+}
+
+/* ============ CATEGORÍAS ============ */
+.category-block {
+  margin-top: 1.75rem;
+  scroll-margin-top: 90px;
+}
+.category-block + .category-block {
+  margin-top: 2.5rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--border-color);
+}
+.category-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.category-heading h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.category-heading p {
+  margin: 0.3rem 0 0;
+  max-width: 60ch;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+.category-count {
+  flex: none;
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+.category-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: transparent;
+}
+.category-nav strong { font-size: 0.875rem; margin-bottom: 0.25rem; }
+.category-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.4rem 0.55rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.category-link:hover { background: var(--accent-soft-bg, rgba(139, 92, 246, 0.12)); color: var(--text-primary); }
+.category-link em {
+  font-style: normal;
+  font-size: 0.7rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(139, 92, 246, 0.15);
+  color: #8b5cf6;
+}
+@media (max-width: 640px) {
+  .category-heading { flex-direction: column; align-items: flex-start; }
 }
 </style>
