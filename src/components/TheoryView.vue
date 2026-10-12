@@ -518,7 +518,8 @@
                 <span>
                   En las pizarras de Graphix, <strong>V</strong> representa el número de vértices,
                   <strong>E</strong> el número de aristas, y <strong>m</strong> y <strong>n</strong> las
-                  filas y columnas de una tabla de transporte. Las complejidades de cada pizarra aparecen
+                  filas y columnas de una tabla de transporte; en los algoritmos de ordenamiento, <strong>n</strong>
+es la cantidad de elementos de la lista. Las complejidades de cada pizarra aparecen
                   debajo de su enlace en la sección de práctica.
                 </span>
               </div>
@@ -612,7 +613,7 @@ import { requestedTheoryTab } from '../composables/theoryNavigation'
 import {
   Compass, Route, Network, Link2, Grid3x3, ListOrdered, Boxes,
   Map as MapIcon, Users, Truck, Target, CalendarCheck, Server,
-  ArrowRight, Image as ImageIcon
+  ArrowRight, Image as ImageIcon,  ArrowDownUp
 } from 'lucide-vue-next'
 import { ALGORITHMS, VIEW_ROUTES, getAlgorithmRoute } from '../config/routes'
 
@@ -694,9 +695,18 @@ const algorithmTypes = [
       { name: 'Floyd-Warshall' },
       { name: 'Johnson', url: getAlgorithmRoute('johnson') }
     ] },
-  { id: 'orden', icon: ListOrdered, name: 'Ordenamiento',
+
+    { id: 'orden', icon: ListOrdered, name: 'Ordenamiento',
     desc: 'Ordenan vértices respetando dependencias (DAG).',
-    algos: [{ name: 'Kahn' }, { name: 'DFS topológico' }] }
+    algos: [{ name: 'Kahn' }, { name: 'DFS topológico' }] },
+  { id: 'sort', icon: ArrowDownUp, name: 'Ordenamiento de listas (sort)',
+    desc: 'Ordenan una lista de valores de menor a mayor. Base de muchos algoritmos.',
+    algos: [
+      { name: 'Selection Sort' },
+      { name: 'Insertion Sort' },
+      { name: 'Shell Sort' },
+      { name: 'Merge Sort' }
+    ] }
 ]
 
 /* ============ APLICACIONES ============ */

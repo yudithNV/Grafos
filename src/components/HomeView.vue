@@ -185,6 +185,7 @@
               <tr><td>Asignación</td><td>Encontrar asignaciones óptimas</td><td>Orígenes, destinos y costos</td></tr>
               <tr><td>Johnson</td><td>Analizar rutas y actividades</td><td>Conexiones, duraciones y holguras</td></tr>
               <tr><td>Northwest</td><td>Resolver problemas de transporte</td><td>Oferta, demanda y costos</td></tr>
+              <tr><td>Sort</td><td>Ordenar listas de valores</td><td>Listas y comparaciones</td></tr>
             </tbody>
           </table>
         </div>
@@ -197,7 +198,7 @@
         <div class="faq-list">
           <details>
             <summary>¿Qué pizarra debo elegir?</summary>
-            <p>Grafos sirve para construir estructuras libres; Asignación para relacionar orígenes y destinos; Johnson para analizar rutas y actividades; y Northwest para problemas de transporte.</p>
+            <p>Grafos sirve para construir estructuras libres; Asignación para relacionar orígenes y destinos; Johnson para analizar rutas y actividades; Northwest para problemas de transporte; y Sort para ver paso a paso cómo se ordena una lista (Selection, Insertion, Shell y Merge).</p>
           </details>
           <details>
             <summary>¿Puedo guardar mis ejercicios?</summary>
@@ -625,6 +626,60 @@ const stars = Array.from({ length: STAR_COUNT }, () => {
   filter: drop-shadow(0 0 8px var(--accent-solid));
 }
 .g-nodes .on text { fill: #fff; }
+
+/* ===== LISTA DE CAPACIDADES ===== */
+.capabilities-grid {
+  display: grid;
+  gap: 1.1rem;
+}
+
+.capability-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.capability-item h3 {
+  margin: 0 0 .2rem;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.capability-item p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: .88rem;
+  line-height: 1.5;
+}
+
+/* Icono brillante */
+.capability-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 2.8rem;
+  height: 2.8rem;
+  border-radius: .8rem;
+  color: #fff;
+  background: linear-gradient(135deg, #7c3aed, #a855f7, #d946ef);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, .25),
+    0 0 14px rgba(168, 85, 247, .65),
+    0 0 32px rgba(217, 70, 239, .4);
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.capability-icon svg {
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, .85));
+}
+
+.capability-item:hover .capability-icon {
+  transform: translateY(-2px) scale(1.06);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, .45),
+    0 0 20px rgba(168, 85, 247, .9),
+    0 0 46px rgba(217, 70, 239, .6);
+}
 
 /* ===== VIDEOS PARA APRENDER ===== */
 .videos-section {
