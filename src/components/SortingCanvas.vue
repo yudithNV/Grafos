@@ -84,6 +84,10 @@
           <Sparkles class="btn-icon" />
           <span>Mostrar resultados</span>
         </button>
+        <button @click="$emit('show-instructions', algorithm)" class="btn-text" title="Abrir el manual de uso de este algoritmo">
+          <BookOpen class="btn-icon" />
+          <span>Manual</span>
+        </button>
         <button @click="showClearModal = true" class="btn-text btn-danger">
           <Trash2 class="btn-icon" />
           <span>Limpiar</span>
@@ -492,6 +496,7 @@ import {
   Save,
   Sparkles,
   FolderOpen,
+  BookOpen,
   Undo2,
   StepForward,
   FastForward,
@@ -504,7 +509,7 @@ import StarryBackground from './StarryBackground.vue'
 import AssignmentWarning from './AssignmentWarning.vue'
 import { SORT_ALGORITHMS, measureExecutionTime, formatExecutionTime } from '../utils/sorting'
 
-const emit = defineEmits(['back', 'save', 'open-load', 'clear'])
+const emit = defineEmits(['back', 'save', 'open-load', 'show-instructions', 'clear'])
 
 const props = defineProps({
   // Id del algoritmo en src/utils/sorting.js: 'seleccion' | 'insercion'

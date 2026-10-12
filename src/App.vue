@@ -88,6 +88,7 @@
       @back="backToWelcome"
       @save="handleSaveSort"
       @open-load="showSortArrays"
+      @show-instructions="showInstructionsModal"
     />
 
     <!-- Custom Modal -->
@@ -895,10 +896,10 @@ const onSelectAlgorithm = (id) => {
     return
   }
 
-  // Ordenamiento: entra directo a la pizarra con 10 números aleatorios.
-  // Los arreglos guardados se abren desde el botón "Cargar" de la pizarra.
+  // Ordenamiento: igual que las demás pizarras, primero se elige
+  // crear un arreglo nuevo o abrir uno guardado.
   if (isSortAlgorithm(id)) {
-    createSort()
+    showSortArrays()
     return
   }
 
@@ -1171,7 +1172,11 @@ const showInstructionsModal = (manual = 'grafos') => {
     asignacion: '/Manual de Usuario - Graphix-3-4.pdf',
     johnson: '/Manual de Usuario - Graphix-5-6.pdf',
     grafos: '/Manual de Usuario - Graphix-1-2.pdf',
-    northwest: '/Manual de Usuario - Graphix-7-8.pdf'
+    northwest: '/Manual de Usuario - Graphix-7-8.pdf',
+    seleccion: '/Manual de Usuario - Graphix-9-10.pdf',
+    insercion: '/Manual de Usuario - Graphix-11-12.pdf',
+    shell: '/Manual de Usuario - Graphix-13-14.pdf',
+    merge: '/Manual de Usuario - Graphix-15-16.pdf'
   }[manual] || '/Manual de Uso - Pizarra de Grafos.pdf'
 
   window.open(file, '_blank')
