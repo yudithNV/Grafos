@@ -62,11 +62,16 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { ChevronLeft, ChevronRight, ArrowRight } from '@lucide/vue'
-import { cards } from './algorithmCards'
+import { cards as allCards } from './algorithmCards'
 
 defineEmits(['select'])
+
+// Si no se pasan tarjetas por prop, muestra todas (comportamiento anterior)
+const props = defineProps({
+  cards: { type: Array, default: () => allCards }
+})
 
 const trackRef = ref(null)
 
@@ -75,6 +80,11 @@ const scrollBy = (direction) => {
   const cardWidth = trackRef.value.firstElementChild?.offsetWidth || 280
   trackRef.value.scrollBy({ left: direction * (cardWidth + 24), behavior: 'smooth' })
 }
+
+// Si cambian las tarjetas, vuelve al inicio del carrusel
+watch(() => props.cards, () => {
+  if (trackRef.value) trackRef.value.scrollTo({ left: 0 })
+})
 </script>
 
 <style scoped>
