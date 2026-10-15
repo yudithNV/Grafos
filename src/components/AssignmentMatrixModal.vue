@@ -13,7 +13,7 @@
             <div class="header-left">
               <component :is="mode === 'solver' ? Sparkles : Grid3x3" class="header-icon" />
               <h3 class="matrix-title">
-                {{ mode === 'solver' ? 'Resolver Algoritmo' : 'Matriz de Adyacencia' }}
+                {{ mode === 'solver' ? 'Resolver Algoritmo' : 'Matriz de Adyacencia (Balanceada)' }}
               </h3>
             </div>
             <button @click="close" class="btn-close">
@@ -43,8 +43,6 @@
                 </div>
               </button>
             </div>
-
-            
           </div>
 
           <!-- MODO MATRIX: solo la tabla -->
@@ -57,8 +55,8 @@
                       <ArrowRightLeft class="th-icon" />
                       De \ A
                     </th>
-                    <th v-for="destId in uniqueDestinations" :key="destId" class="th-node">
-                      {{ getNodeLabel(destId) }}
+                    <th v-for="col in matrixHeaders.cols" :key="col.id" class="th-node">
+                      {{ col.label }}
                     </th>
                     <th class="th-sum">
                       <Sigma class="th-icon" />
@@ -71,26 +69,29 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="sourceId in uniqueSources" :key="sourceId">
-                    <td class="td-node">{{ getNodeLabel(sourceId) }}</td>
+                  <tr v-for="row in matrixHeaders.rows" :key="row.id">
+                    <td class="td-node">{{ row.label }}</td>
                     <td
-                      v-for="destId in uniqueDestinations"
-                      :key="`${sourceId}-${destId}`"
+                      v-for="col in matrixHeaders.cols"
+                      :key="`${row.id}-${col.id}`"
                       class="td-cell"
-                      :class="{ 'td-zero': getWeight(sourceId, destId) === 0 }"
+                      :class="{ 
+                        'td-zero': getWeight(row, col) === 0,
+                        'td-dummy': row.isDummy || col.isDummy 
+                      }"
                     >
-                      {{ getWeight(sourceId, destId) === 0 ? '0' : getWeight(sourceId, destId) }}
+                      {{ getWeight(row, col) }}
                     </td>
-                    <td class="td-sum">{{ getRowSum(sourceId) }}</td>
-                    <td class="td-count">{{ getRowCount(sourceId) }}</td>
+                    <td class="td-sum">{{ getRowSum(row) }}</td>
+                    <td class="td-count">{{ getRowCount(row) }}</td>
                   </tr>
                   <tr class="tr-sum">
                     <td class="td-node-sum">
                       <Sigma class="td-icon" />
                       Σ Pesos
                     </td>
-                    <td v-for="destId in uniqueDestinations" :key="`sum-${destId}`" class="td-sum-col">
-                      {{ getColSum(destId) }}
+                    <td v-for="col in matrixHeaders.cols" :key="`sum-${col.id}`" class="td-sum-col">
+                      {{ getColSum(col) }}
                     </td>
                     <td class="td-sum-total">{{ totalSum }}</td>
                     <td class="td-count-total">{{ totalCount }}</td>
@@ -100,8 +101,8 @@
                       <Hash class="td-icon" />
                       Cantidad
                     </td>
-                    <td v-for="destId in uniqueDestinations" :key="`count-${destId}`" class="td-count-col">
-                      {{ getColCount(destId) }}
+                    <td v-for="col in matrixHeaders.cols" :key="`count-${col.id}`" class="td-count-col">
+                      {{ getColCount(col) }}
                     </td>
                     <td class="td-count-total">{{ totalCount }}</td>
                     <td class="td-count-total">{{ totalCount }}</td>
@@ -156,60 +157,71 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'resolve'])
 
-const uniqueSources = computed(() => {
-  const sources = new Set()
-  props.edges.forEach(edge => sources.add(edge.sourceId))
-  return Array.from(sources).sort()
+// Calcula filas y columnas incluyendo ficticias para balancear a N x N
+const matrixHeaders = computed(() => {
+  const sourceIds = [...new Set(props.edges.map(e => e.sourceId))]
+  const targetIds = [...new Set(props.edges.map(e => e.targetId))]
+
+  const sourceNodes = props.nodes.filter(n => sourceIds.includes(n.id))
+  const targetNodes = props.nodes.filter(n => targetIds.includes(n.id))
+
+  const numRows = sourceNodes.length
+  const numCols = targetNodes.length
+  const N = Math.max(numRows, numCols)
+
+  // Construir filas
+  const rows = sourceNodes.map(n => ({ id: n.id, label: n.label, isDummy: false }))
+  for (let i = numRows + 1; i <= N; i++) {
+    rows.push({ id: `dummy-row-${i}`, label: `Ficticio ${i - numRows}`, isDummy: true })
+  }
+
+  // Construir columnas
+  const cols = targetNodes.map(n => ({ id: n.id, label: n.label, isDummy: false }))
+  for (let j = numCols + 1; j <= N; j++) {
+    cols.push({ id: `dummy-col-${j}`, label: `Ficticio ${j - numCols}`, isDummy: true })
+  }
+
+  return { rows, cols }
 })
 
-const uniqueDestinations = computed(() => {
-  const dests = new Set()
-  props.edges.forEach(edge => dests.add(edge.targetId))
-  return Array.from(dests).sort()
-})
-
-const getWeight = (sourceId, destId) => {
-  if (sourceId === destId) return 0
-  const edge = props.edges.find(e => e.sourceId === sourceId && e.targetId === destId)
+const getWeight = (row, col) => {
+  if (row.isDummy || col.isDummy) return 0
+  if (row.id === col.id) return 0
+  const edge = props.edges.find(e => e.sourceId === row.id && e.targetId === col.id)
   return edge ? Number(edge.weight) || 0 : 0
 }
 
-const getNodeLabel = (nodeId) => {
-  const node = props.nodes.find(n => n.id === nodeId)
-  return node ? node.label : '?'
-}
-
-const getRowSum = (sourceId) => {
+const getRowSum = (row) => {
   let sum = 0
-  uniqueDestinations.value.forEach(destId => sum += getWeight(sourceId, destId))
+  matrixHeaders.value.cols.forEach(col => sum += getWeight(row, col))
   return sum
 }
 
-const getRowCount = (sourceId) => {
+const getRowCount = (row) => {
   let count = 0
-  uniqueDestinations.value.forEach(destId => {
-    if (getWeight(sourceId, destId) !== 0) count += 1
+  matrixHeaders.value.cols.forEach(col => {
+    if (getWeight(row, col) !== 0) count += 1
   })
   return count
 }
 
-const getColSum = (destId) => {
+const getColSum = (col) => {
   let sum = 0
-  uniqueSources.value.forEach(sourceId => sum += getWeight(sourceId, destId))
+  matrixHeaders.value.rows.forEach(row => sum += getWeight(row, col))
   return sum
 }
 
-const getColCount = (destId) => {
+const getColCount = (col) => {
   let count = 0
-  uniqueSources.value.forEach(sourceId => {
-    if (getWeight(sourceId, destId) !== 0) count += 1
+  matrixHeaders.value.rows.forEach(row => {
+    if (getWeight(row, col) !== 0) count += 1
   })
   return count
 }
 
 const totalSum = computed(() => {
   let sum = 0
-  uniqueSources.value.forEach(sourceId => sum += getRowSum(sourceId))
+  matrixHeaders.value.rows.forEach(row => sum += getRowSum(row))
   return sum
 })
 
@@ -244,7 +256,6 @@ const choose = (m) => emit('resolve', m)
   overflow: hidden;
 }
 
-/* Ancho reducido solo para el modo solver */
 .matrix-container.container-solver {
   max-width: 24rem;
 }
@@ -331,23 +342,6 @@ const choose = (m) => emit('resolve', m)
 .btn-maximize { background-color: #10b981; }
 .btn-maximize:hover { background-color: #059669; }
 
-.btn-cancel {
-  display: inline-flex; align-items: center; gap: 0.35rem;
-  padding: 0.5rem 1rem;
-  background-color: var(--bg-surface-2, #f3f4f6);
-  border: 1px solid var(--border-color, #d1d5db);
-  border-radius: 0.5rem;
-  color: var(--text-secondary, #6b7280);
-  font-weight: 500; font-size: 0.8rem;
-  cursor: pointer; transition: all 0.15s ease;
-  margin-top: 0.25rem;
-}
-.btn-cancel:hover {
-  background-color: var(--bg-surface, #e5e7eb);
-  color: var(--text-primary, #374151);
-}
-.btn-cancel-icon { width: 0.9rem; height: 0.9rem; }
-
 /* ===== TABLA ===== */
 .matrix-scroll {
   overflow: auto; padding: 0.75rem; flex: 1;
@@ -411,6 +405,7 @@ const choose = (m) => emit('resolve', m)
 }
 @media (min-width: 640px) { .td-cell { padding: 0.4rem 0.5rem; min-width: 40px; } }
 .td-zero { color: var(--text-secondary, #94a3b8); opacity: 0.6; }
+.td-dummy { opacity: 0.75; font-style: italic; }
 
 .td-sum {
   padding: 0.3rem 0.2rem; text-align: center; font-weight: 700;
