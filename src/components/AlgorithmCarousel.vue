@@ -62,15 +62,9 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { ChevronLeft, ChevronRight, ArrowRight } from '@lucide/vue'
-import { cards as allCards } from './algorithmCards'
-
-// Tarjetas a mostrar; si no se pasan, se muestran todas
-const props = defineProps({
-  items: { type: Array, default: null }
-})
-const cards = computed(() => props.items || allCards)
+import { cards } from './algorithmCards'
 
 defineEmits(['select'])
 
