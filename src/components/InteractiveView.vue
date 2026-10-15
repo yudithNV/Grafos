@@ -10,7 +10,7 @@
 
       <div class="lab-badge-wrapper">
         <div class="lab-badge">
-          <MousePointer2 :size="18" /> {{ cards.length }} pizarras disponibles
+          <MousePointer2 :size="18" /> {{ displayCards.length }} pizarras disponibles
         </div>
       </div>
 
@@ -36,7 +36,7 @@
               <h2>Pizarras disponibles</h2>
               <p>Selecciona una para comenzar</p>
             </div>
-            <span class="result-count">{{ cards.length }} experiencias</span>
+            <span class="result-count">{{ displayCards.length }} experiencias</span>
           </div>
 
           <!-- TABS DE VISTA -->
@@ -55,90 +55,78 @@
             </button>
           </div>
 
-          <!-- GRUPOS: cada familia con su propio carrusel / cuadrícula / lista -->
-          <section v-for="group in groups" :key="group.id" class="algo-group">
-            <div class="group-heading">
-              <span class="group-icon"><component :is="group.icon" :size="18" /></span>
-              <div class="group-heading-text">
-                <h3>{{ group.title }}</h3>
-                <p>{{ group.desc }}</p>
-              </div>
-              <span class="result-count">{{ group.cards.length }} pizarras</span>
-            </div>
+          <!-- VISTA CARRUSEL -->
+          <AlgorithmCarousel
+            v-if="viewMode === 'carousel'"
+            :cards="displayCards"
+            @select="$emit('select', $event)"
+          />
 
-            <!-- VISTA CARRUSEL -->
-            <AlgorithmCarousel
-              v-if="viewMode === 'carousel'"
-              :cards="group.cards"
-              @select="$emit('select', $event)"
-            />
-
-            <!-- VISTA CUADRÍCULA (3 por fila) -->
-            <ul v-else-if="viewMode === 'grid'" class="algorithm-grid">
-              <li v-for="card in group.cards" :key="card.id">
-                <button
-                  class="grid-item"
-                  :class="{ 'grid-item-disabled': card.comingSoon }"
-                  @click="$emit('select', card.id)"
-                >
-                  <div class="grid-thumb">
-                    <img
-                      v-if="card.image"
-                      :src="card.image"
-                      :alt="card.title"
-                      class="grid-thumb-img"
-                      loading="lazy"
-                    />
-                    <div v-else class="grid-thumb-icon" :style="{ background: card.iconBg }">
-                      <component :is="card.icon" :size="28" />
-                    </div>
+          <!-- VISTA CUADRÍCULA (3 por fila) -->
+          <ul v-else-if="viewMode === 'grid'" class="algorithm-grid">
+            <li v-for="card in displayCards" :key="card.id">
+              <button
+                class="grid-item"
+                :class="{ 'grid-item-disabled': card.comingSoon }"
+                @click="$emit('select', card.id)"
+              >
+                <div class="grid-thumb">
+                  <img
+                    v-if="card.image"
+                    :src="card.image"
+                    :alt="card.title"
+                    class="grid-thumb-img"
+                    loading="lazy"
+                  />
+                  <div v-else class="grid-thumb-icon" :style="{ background: card.iconBg }">
+                    <component :is="card.icon" :size="28" />
                   </div>
+                </div>
 
-                  <div class="grid-item-text">
-                    <strong>
-                      {{ card.title }}
-                      <em v-if="card.comingSoon" class="grid-badge">Próximamente</em>
-                    </strong>
-                    <small>{{ card.desc }}</small>
+                <div class="grid-item-text">
+                  <strong>
+                    {{ card.title }}
+                    <em v-if="card.comingSoon" class="grid-badge">Próximamente</em>
+                  </strong>
+                  <small>{{ card.desc }}</small>
+                </div>
+              </button>
+            </li>
+          </ul>
+
+          <!-- VISTA LISTA -->
+          <ul v-else class="algorithm-list">
+            <li v-for="card in displayCards" :key="card.id">
+              <button
+                class="list-item"
+                :class="{ 'list-item-disabled': card.comingSoon }"
+                @click="$emit('select', card.id)"
+              >
+                <div class="list-thumb">
+                  <img
+                    v-if="card.image"
+                    :src="card.image"
+                    :alt="card.title"
+                    class="list-thumb-img"
+                    loading="lazy"
+                  />
+                  <div v-else class="list-thumb-icon" :style="{ background: card.iconBg }">
+                    <component :is="card.icon" :size="24" />
                   </div>
-                </button>
-              </li>
-            </ul>
+                </div>
 
-            <!-- VISTA LISTA -->
-            <ul v-else class="algorithm-list">
-              <li v-for="card in group.cards" :key="card.id">
-                <button
-                  class="list-item"
-                  :class="{ 'list-item-disabled': card.comingSoon }"
-                  @click="$emit('select', card.id)"
-                >
-                  <div class="list-thumb">
-                    <img
-                      v-if="card.image"
-                      :src="card.image"
-                      :alt="card.title"
-                      class="list-thumb-img"
-                      loading="lazy"
-                    />
-                    <div v-else class="list-thumb-icon" :style="{ background: card.iconBg }">
-                      <component :is="card.icon" :size="24" />
-                    </div>
-                  </div>
+                <span class="list-item-text">
+                  <strong>
+                    {{ card.title }}
+                    <em v-if="card.comingSoon" class="list-badge">Próximamente</em>
+                  </strong>
+                  <small>{{ card.desc }}</small>
+                </span>
 
-                  <span class="list-item-text">
-                    <strong>
-                      {{ card.title }}
-                      <em v-if="card.comingSoon" class="list-badge">Próximamente</em>
-                    </strong>
-                    <small>{{ card.desc }}</small>
-                  </span>
-
-                  <ChevronRight :size="18" class="list-chevron" />
-                </button>
-              </li>
-            </ul>
-          </section>
+                <ChevronRight :size="18" class="list-chevron" />
+              </button>
+            </li>
+          </ul>
         </section>
       </div>
     </div>
@@ -154,9 +142,7 @@ import {
   GalleryHorizontal,
   LayoutGrid,
   List,
-  ChevronRight,
-  Network,
-  ArrowDownUp
+  ChevronRight
 } from '@lucide/vue'
 import AlgorithmCarousel from './AlgorithmCarousel.vue'
 import CanvasBackground from './CanvasBackground.vue'
@@ -175,29 +161,34 @@ const viewTabs = [
 
 const viewMode = ref(DEFAULT_VIEW)
 
-// IDs de los algoritmos de ordenamiento (los mismos que usa App.vue)
+// IDs de los algoritmos de ordenamiento (los mismos que usa App.vue).
+// El primero es el que se abre por defecto; dentro de la pizarra
+// se cambia entre los demás.
 const SORT_IDS = ['seleccion', 'insercion', 'shell', 'merge']
 
-const groups = computed(() => {
-  const sorting = cards.filter(c => SORT_IDS.includes(c.id))
-  const graphs = cards.filter(c => !SORT_IDS.includes(c.id))
+// Las 4 tarjetas de ordenamiento se reemplazan por UNA sola tarjeta
+// "Ordenamiento", ubicada donde estaba la primera de ellas.
+const displayCards = computed(() => {
+  const result = []
+  let sortAdded = false
 
-  return [
-    {
-      id: 'grafos',
-      title: 'Grafos y redes',
-      desc: 'Rutas, asignación y transporte sobre nodos y aristas',
-      icon: Network,
-      cards: graphs
-    },
-    {
-      id: 'ordenamiento',
-      title: 'Algoritmos de ordenamiento',
-      desc: 'Selección, inserción, Shell y Merge Sort paso a paso',
-      icon: ArrowDownUp,
-      cards: sorting
+  for (const card of cards) {
+    if (!SORT_IDS.includes(card.id)) {
+      result.push(card)
+      continue
     }
-  ].filter(g => g.cards.length > 0)
+    if (!sortAdded) {
+      result.push({
+        ...card,
+        id: SORT_IDS[0],
+        title: 'Ordenamiento',
+        desc: 'Selección, inserción, Shell y Merge Sort en una sola pizarra. Cambia de algoritmo desde adentro y compara cómo ordena cada uno.'
+      })
+      sortAdded = true
+    }
+  }
+
+  return result
 })
 
 onMounted(() => {
@@ -396,7 +387,7 @@ watch(viewMode, (val) => {
   display: inline-flex;
   gap: .25rem;
   padding: .25rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.25rem;
   border: 1px solid var(--border-color);
   border-radius: 999px;
 }
@@ -421,42 +412,6 @@ watch(viewMode, (val) => {
   background: var(--accent-soft-bg);
   color: var(--accent-solid);
   font-weight: 700;
-}
-
-/* ============ GRUPOS ============ */
-.algo-group + .algo-group {
-  margin-top: 3rem;
-}
-.group-heading {
-  display: flex;
-  align-items: center;
-  gap: .8rem;
-  margin-bottom: 1rem;
-  padding-bottom: .8rem;
-  border-bottom: 1px solid var(--border-color);
-}
-.group-icon {
-  display: grid;
-  place-items: center;
-  width: 2.2rem;
-  height: 2.2rem;
-  border-radius: .6rem;
-  background: var(--accent-soft-bg);
-  color: var(--accent-solid);
-  flex-shrink: 0;
-}
-.group-heading-text {
-  flex: 1;
-  min-width: 0;
-}
-.group-heading-text h3 {
-  margin: 0;
-  font-size: 1.15rem;
-}
-.group-heading-text p {
-  margin: .15rem 0 0;
-  color: var(--text-secondary);
-  font-size: .8rem;
 }
 
 /* ============ VISTA CUADRÍCULA (3 por fila) ============ */
@@ -737,9 +692,6 @@ watch(viewMode, (val) => {
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
-  .group-heading .result-count {
-    display: none;
-  }
 }
 
 @media (max-width: 420px) {
@@ -749,7 +701,7 @@ watch(viewMode, (val) => {
   .workspace-heading {
     display: block;
   }
-  .workspace-heading .result-count {
+  .result-count {
     display: inline-block;
     margin-top: .7rem;
   }
