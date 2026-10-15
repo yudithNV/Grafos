@@ -649,7 +649,7 @@ const PURE_SORTS = {
 
 // Devuelve el tiempo promedio en milisegundos. Con pocos datos un solo
 // ordenamiento dura microsegundos, así que se repite varias veces y se promedia.
-export function measureExecutionTime(algorithmId, values, direction) {
+export function measureExecutionTime(algorithmId, values, direction, budgetMs = 15) {
   const run = PURE_SORTS[algorithmId]
   if (!run || !values.length) return 0
   const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now())
@@ -661,7 +661,7 @@ export function measureExecutionTime(algorithmId, values, direction) {
     run(values.slice(), direction)
     reps++
     elapsed = now() - start
-  } while (elapsed < 15 && reps < 100000)
+  } while (elapsed < budgetMs && reps < 100000)
   return elapsed / reps
 }
 
@@ -669,4 +669,63 @@ export function formatExecutionTime(ms) {
   // Siempre en milisegundos; con pocos datos el valor es una fracción de ms
   if (!ms) return '0 ms'
   return `${ms >= 1 ? ms.toFixed(3) : Number(ms.toPrecision(3))} ms`
+}
+
+/* =============================================================
+   CONTEO RÁPIDO DE OPERACIONES
+   Cuenta comparaciones y movimientos igual que la pizarra, pero sin
+   guardar los pasos de la animación. Se usa para comparar los 4
+   algoritmos con los mismos datos (tabla de Resultados).
+   ============================================================= */
+export function countOperations(algorithmId, values, direction) {
+  const a = values.slice()
+  const n = a.length
+  const lt = before(direction)
+  let comparisons = 0
+  let moves = 0
+
+  if (algorithmId === 'seleccion') {
+    for (let i = 0; i < n - 1; i++) {
+      let m = i
+      for (let j = i + 1; j < n; j++) {
+        comparisons++
+        if (lt(a[j], a[m])) m = j
+      }
+      if (m !== i) { const t = a[i]; a[i] = a[m]; a[m] = t; moves++ }
+    }
+  } else if (algorithmId === 'insercion' || algorithmId === 'shell') {
+    const gaps = algorithmId === 'shell' ? shellGaps(n) : [1]
+    for (const gap of gaps) {
+      for (let i = gap; i < n; i++) {
+        const key = a[i]
+        let j = i
+        while (j >= gap) {
+          comparisons++
+          if (lt(key, a[j - gap])) { a[j] = a[j - gap]; j -= gap; moves++ } else break
+        }
+        a[j] = key
+      }
+    }
+  } else if (algorithmId === 'merge') {
+    const sort = (lo, hi) => {
+      if (lo >= hi) return
+      const mid = Math.floor((lo + hi) / 2)
+      sort(lo, mid)
+      sort(mid + 1, hi)
+      const left = a.slice(lo, mid + 1)
+      const right = a.slice(mid + 1, hi + 1)
+      let i = 0, j = 0, k = lo
+      while (i < left.length && j < right.length) {
+        comparisons++
+        // Igual que la pizarra: en empate se toma el de la izquierda (estable)
+        a[k++] = lt(right[j], left[i]) ? right[j++] : left[i++]
+        moves++
+      }
+      while (i < left.length) { a[k++] = left[i++]; moves++ }
+      while (j < right.length) { a[k++] = right[j++]; moves++ }
+    }
+    sort(0, n - 1)
+  }
+
+  return { comparisons, moves, steps: comparisons + moves }
 }

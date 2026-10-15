@@ -82,13 +82,14 @@
     />
     <SortingCanvas
       v-else-if="currentView === 'canvas' && isSortAlgorithm(selectedAlgorithm)"
-      :key="selectedAlgorithm + '-' + sortCanvasKey"
+      :key="'sort-' + sortCanvasKey"
       :algorithm="selectedAlgorithm"
       :initial-data="sortData"
       @back="backToWelcome"
       @save="handleSaveSort"
       @open-load="showSortArrays"
       @show-instructions="showInstructionsModal"
+      @change-algorithm="changeSortAlgorithm"
     />
 
     <!-- Custom Modal -->
@@ -1189,6 +1190,15 @@ const showAssignmentGraphs = () => {
 const showSavedGraphs = () => {
   loadSavedGraphsList()
   showGraphSelector.value = true
+}
+
+// Cambia de algoritmo de ordenamiento dentro de la pizarra, conservando los datos.
+// El arreglo deja de estar ligado a un guardado (cada algoritmo tiene su propia lista).
+const changeSortAlgorithm = (id) => {
+  if (!isSortAlgorithm(id)) return
+  selectedAlgorithm.value = id
+  sortIndex.value = -1
+  setBrowserRoute(getAlgorithmRoute(id), { replace: true })
 }
 
 const showSortArrays = () => {
