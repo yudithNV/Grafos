@@ -241,107 +241,22 @@
       @close="showWarningModal = false"
     />
 
-    <!-- Modal de Resolución Paso a Paso -->
-    <div v-if="isStepsModalOpen" class="modal-overlay" @click.self="isStepsModalOpen = false">
-      <div class="modal-card">
+    <!-- Único Modal de Resolución Paso a Paso en Carrusel Animado -->
+    <HungarianCarouselStepsModal
+      :show="isStepsModalOpen"
+      :result="solverResult"
+      :rows="matrixHeaders.rows"
+      :cols="matrixHeaders.cols"
+      @close="isStepsModalOpen = false"
+      @apply="applySolutionOnCanvas"
+    />
+    <!-- Panel Resumen Flotante (Movible y Cerrable) -->
+<FloatingSummaryPanel
+  :show="showFloatingSummary"
+  :result="solverResult"
+  @close="showFloatingSummary = false"
+/>
 
-        <div class="modal-header">
-          <div class="header-title-group">
-            <h3 class="modal-title">Resolución Paso a Paso</h3>
-            <span class="algorithm-badge" v-if="solverResult?.metodo">
-              {{ solverResult.metodo }}
-            </span>
-          </div>
-          <button @click="isStepsModalOpen = false" class="btn-close-icon">&times;</button>
-        </div>
-
-        <div class="modal-body">
-
-          <div class="metrics-grid" v-if="solverResult">
-            <div class="metric-card highlight">
-              <span class="metric-label">
-                {{ solverMode === 'maximize' ? 'Beneficio Total Máximo' : 'Costo Total Óptimo' }}
-              </span>
-              <span class="metric-value">{{ solverResult.costoTotal ?? 0 }}</span>
-            </div>
-            <div class="metric-card">
-              <span class="metric-label">Asignaciones</span>
-              <span class="metric-value">{{ solverResult.asignaciones?.length ?? 0 }}</span>
-            </div>
-          </div>
-
-          <div class="section-container" v-if="solverResult?.asignaciones?.length">
-            <h4 class="section-heading">Resumen de Asignaciones Óptimas</h4>
-            <div class="table-wrapper">
-              <table class="result-table">
-                <thead>
-                  <tr>
-                    <th>Origen</th>
-                    <th class="arrow-header"></th>
-                    <th>Destino</th>
-                    <th>{{ solverMode === 'maximize' ? 'Beneficio Original' : 'Costo Original' }}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(asig, index) in solverResult.asignaciones" :key="index">
-                    <td class="font-medium">{{ asig.origen }}</td>
-                    <td class="arrow-cell">→</td>
-                    <td class="font-medium">{{ asig.destino }}</td>
-                    <td class="cost-badge">{{ asig.costo }}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div class="section-container" v-if="solverResult?.pasos?.length">
-            <h4 class="section-heading">Evolución de la Matriz</h4>
-
-            <div class="steps-accordion">
-              <div v-for="(paso, pIndex) in solverResult.pasos" :key="pIndex" class="step-card">
-                <span class="step-title">{{ paso.titulo }}</span>
-                <p class="step-desc">{{ paso.descripcion }}</p>
-
-                <div class="matrix-preview-wrapper" v-if="paso.matrix && paso.matrix.length">
-                  <table class="step-matrix-table">
-                    <thead>
-                      <tr>
-                        <th class="corner-cell">De \ A</th>
-                        <th v-for="(colLabel, cIdx) in paso.colLabels" :key="'col_' + cIdx">
-                          {{ colLabel }}
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-for="(row, rIdx) in paso.matrix" :key="'row_' + rIdx">
-                        <td class="row-label-cell">{{ paso.rowLabels[rIdx] }}</td>
-                        <td
-                          v-for="(val, cIdx) in row"
-                          :key="'cell_' + cIdx"
-                          :class="{ 
-                            'zero-cell': val === 0,
-                            'assigned-cell': isAssignedCell(paso.asignaciones, rIdx, cIdx)
-                          }"
-                        >
-                          {{ val === solverResult.INF || val >= 1000000 ? '—' : val }}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-
-              </div>
-            </div>
-          </div>
-
-        </div>
-
-        <div class="modal-footer">
-          <button @click="isStepsModalOpen = false" class="btn-primary">Aceptar</button>
-        </div>
-
-      </div>
-    </div>
   </div>
 </template>
 
@@ -367,7 +282,35 @@ import {
 import StarryBackground from './StarryBackground.vue'
 import AssignmentMatrix from './AssignmentMatrixModal.vue'
 import AssignmentWarning from './AssignmentWarning.vue'
+import HungarianCarouselStepsModal from './HungarianCarouselStepsModal.vue'
+import FloatingSummaryPanel from './FloatingSummaryPanel.vue'
+
+const showFloatingSummary = ref(false)
 import { solveAlgorithm } from '../utils/solver.js'
+
+const matrixHeaders = computed(() => {
+  const sourceIds = [...new Set(props.edges.map(e => e.sourceId))]
+  const targetIds = [...new Set(props.edges.map(e => e.targetId))]
+
+  const sourceNodes = props.nodes.filter(n => sourceIds.includes(n.id))
+  const targetNodes = props.nodes.filter(n => targetIds.includes(n.id))
+
+  const numRows = sourceNodes.length
+  const numCols = targetNodes.length
+  const N = Math.max(numRows, numCols)
+
+  const rows = sourceNodes.map(n => ({ id: n.id, label: n.label }))
+  for (let i = numRows + 1; i <= N; i++) {
+    rows.push({ id: `dummy-row-${i}`, label: `Ficticio ${i - numRows}` })
+  }
+
+  const cols = targetNodes.map(n => ({ id: n.id, label: n.label }))
+  for (let j = numCols + 1; j <= N; j++) {
+    cols.push({ id: `dummy-col-${j}`, label: `Ficticio ${j - numCols}` })
+  }
+
+  return { rows, cols }
+})
 
 const props = defineProps({
   nodes: { type: Array, required: true, default: () => [] },
@@ -486,10 +429,19 @@ const openSolverChoiceModal = () => {
 const handleSolverChoice = (mode) => {
   solverMode.value = mode
   const result = solveAlgorithm(props.nodes, props.edges, mode)
-  solverResult.value = result
-  emit('solution-found', result)
+
+  solverResult.value = {
+    ...result,
+    mode: mode,
+    modo: mode
+  }
+
+  emit('solution-found', solverResult.value)
+
   showSolverChoiceModal.value = false
+  showMatrixModal.value = false
   isStepsModalOpen.value = true
+  showFloatingSummary.value = true // Activa la tarjeta flotante inferior
 }
 
 const executeSolver = (mode) => {
