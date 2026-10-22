@@ -1,5 +1,5 @@
 <template>
-  <div class="canvas-workspace">
+  <div class="canvas-workspace" :class="{ 'outline-only-nodes': nodeFill === 'transparent' }">
 
 
     <!-- ================================= -->
@@ -93,7 +93,7 @@
 
         <div class="header-info">
           <h2 class="header-title">
-            Pizarra de {{ esJohnson ? 'Johnson' : 'Grafos' }}
+            Pizarra de {{ title || (esJohnson ? 'Johnson' : 'Grafos') }}
             <span class="status-indicator"></span>
           </h2>
 
@@ -248,7 +248,7 @@
           <g v-for="edge in processedEdges" :key="edge.id" class="edge-group">
             <!-- Arista Principal -->
             <path :d="edge.path" fill="none" :stroke="edge.customColor || edge.color" stroke-width="3" class="edge-path"
-              :class="{ 'edge-highlight': hoveredEdgeId === edge.id }" :marker-end="`url(#${edge.markerId})`"
+              :class="{ 'edge-highlight': hoveredEdgeId === edge.id, 'result-edge-highlight': highlightedEdgeIds.includes(edge.id) }" :marker-end="isUndirected ? null : `url(#${edge.markerId})`"
               @mousedown.stop="onEdgeMouseDown(edge, $event)" @touchstart.stop.prevent="onEdgeTouchStart(edge, $event)"
               @mouseenter="hoveredEdgeId = edge.id" @mouseleave="hoveredEdgeId = null" />
 
@@ -296,7 +296,7 @@
             @mouseleave="hoveredNodeId = null">
             <template v-if="!johnsonActivo">
               <!-- Círculo del Nodo -->
-              <circle r="28" class="node-circle" :style="{ '--node-color': node.color || '#94a3b8' }" />
+              <circle r="28" class="node-circle" :style="{ '--node-color': nodeStrokeColor || node.color || '#94a3b8', '--node-fill': nodeFill }" />
 
               <text dy="6" class="node-text">
                 {{ truncateLabel(node.label) }}
@@ -445,7 +445,11 @@ const props = defineProps({
   mode: {
     type: String,
     default: 'normal'
-  }
+  },
+  title: { type: String, default: '' },
+  highlightedEdgeIds: { type: Array, default: () => [] },
+  nodeFill: { type: String, default: 'var(--bg-surface)' },
+  nodeStrokeColor: { type: String, default: '' }
 })
 
 const emit = defineEmits([
@@ -529,6 +533,7 @@ const cerrarAlerta = () => {
 const esJohnson = computed(() => {
   return props.mode === 'johnson'
 })
+const isUndirected = computed(() => props.mode === 'undirected')
 
 const johnsonActivo = ref(false)
 const johnsonResult = ref(null)
@@ -833,6 +838,7 @@ const setActiveTool = (toolId) => {
 }
 
 const getModeDescription = () => {
+  if (isUndirected.value) return 'Grafo no dirigido: las conexiones solo tienen peso.'
   const tool = tools.find(t => t.id === activeTool.value)
   return tool ? tool.description : 'Selecciona una herramienta'
 }
@@ -971,7 +977,7 @@ const processedEdges = computed(() => {
     }
 
     // Verifica si hay arista en dirección contraria
-    const hasReverse = props.edges.some(e => e.sourceId === edge.targetId && e.targetId === edge.sourceId)
+    const hasReverse = !isUndirected.value && props.edges.some(e => e.sourceId === edge.targetId && e.targetId === edge.sourceId)
 
     const dx = x2 - x1
     const dy = y2 - y1
@@ -1196,6 +1202,15 @@ const handleConnectNode = (node) => {
 
   const sourceId = selectedNodeId.value
   const targetId = node.id
+
+  if (isUndirected.value && props.edges.some(edge =>
+    (edge.sourceId === sourceId && edge.targetId === targetId) ||
+    (edge.sourceId === targetId && edge.targetId === sourceId)
+  )) {
+    mostrarAlerta('Conexión existente', 'En un grafo no dirigido ya existe esta conexión.')
+    selectedNodeId.value = null
+    return
+  }
 
 
   // ==========================================
@@ -2140,6 +2155,12 @@ const confirmClear = () => {
   filter: brightness(1.2);
 }
 
+.result-edge-highlight {
+  stroke: #10b981 !important;
+  stroke-width: 5px;
+  filter: drop-shadow(0 0 5px rgba(16, 185, 129, 0.55));
+}
+
 .edge-touch-area {
   cursor: pointer;
 }
@@ -2162,7 +2183,7 @@ const confirmClear = () => {
 }
 
 .node-circle {
-  fill: var(--bg-surface);
+  fill: var(--node-fill, var(--bg-surface));
   stroke: var(--node-color, var(--text-secondary));
   stroke-width: 2.5px;
   transition: all 0.15s ease-in-out;
@@ -2171,6 +2192,10 @@ const confirmClear = () => {
   filter:
     drop-shadow(0 0 2px var(--node-color, #94a3b8))
     drop-shadow(0 0 6px rgba(148, 163, 184, 0.35));
+}
+
+.outline-only-nodes .node-circle {
+  fill: transparent !important;
 }
 
 /* ✨ GLOW — modo claro (muy sutil, sin saturar) */

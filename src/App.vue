@@ -50,6 +50,23 @@
       @delete-node="handleDeleteNodeRequest"
       @delete-edge="handleDeleteEdgeRequest"
     />
+    <KruskalCanvas
+      v-else-if="currentView === 'canvas' && selectedAlgorithm === 'kruskal'"
+      :nodes="nodes"
+      :edges="edges"
+      @back="backToWelcome"
+      @show-instructions="showInstructionsModal"
+      @show-matrix="showMatrixModal"
+      @open-load="showSavedGraphs"
+      @save="handleSaveGraph"
+      @clear="confirmClearCanvas"
+      @create-node="handleCreateNodeRequest"
+      @create-edge="handleCreateEdgeRequest"
+      @edit-node="handleEditNodeRequest"
+      @edit-edge="handleEditEdgeRequest"
+      @delete-node="handleDeleteNodeRequest"
+      @delete-edge="handleDeleteEdgeRequest"
+    />
     <!-- Módulo Aislado del Algoritmo de Asignación -->
     <AssignmentCanvas
       v-else-if="currentView === 'canvas' && selectedAlgorithm === 'asignacion'"
@@ -140,14 +157,16 @@
     <div v-if="showGraphSelector" class="graph-selector-overlay" @click.self="showGraphSelector = false">
       <div class="graph-selector-modal">
         <div class="graph-selector-header">
-          <h3>{{ selectedAlgorithm === 'johnson' ? 'Cargar Grafo Johnson' : 'Cargar Grafo Guardado' }}</h3>
+          <h3>{{ selectedAlgorithm === 'johnson' ? 'Cargar Grafo Johnson' : selectedAlgorithm === 'kruskal' ? 'Cargar Grafo Kruskal' : 'Cargar Grafo Guardado' }}</h3>
           <button @click="showGraphSelector = false" class="btn-close-selector">✕</button>
         </div>
         <div class="assignment-selector-info">
           {{
             selectedAlgorithm === 'johnson'
               ? 'En Johnson crea un grafo dirigido aciclico con pesos no negativos para calcular ruta critica, ida, regreso y holguras.'
-              : 'En este modo puedes crear grafos con aristas de ida y vuelta, auto-bucles y pesos negativos.'
+              : selectedAlgorithm === 'kruskal'
+                ? 'En Kruskal las conexiones no tienen dirección y cada una lleva un peso.'
+                : 'En este modo puedes crear grafos con aristas de ida y vuelta, auto-bucles y pesos negativos.'
           }}
         </div>
         <div class="graph-selector-list">
@@ -166,7 +185,7 @@
           <div class="graph-item graph-item-new" @click="createNewGraph">
             <div class="graph-item-info">
               <span class="graph-item-name graph-item-name-new">
-                {{ selectedAlgorithm === 'johnson' ? 'Crear Nuevo Grafo Johnson' : 'Crear Nuevo Grafo' }}
+                {{ selectedAlgorithm === 'johnson' ? 'Crear Nuevo Grafo Johnson' : selectedAlgorithm === 'kruskal' ? 'Crear Nuevo Grafo Kruskal' : 'Crear Nuevo Grafo' }}
               </span>
               <span class="graph-item-date">Empezar desde cero</span>
             </div>
@@ -274,6 +293,7 @@ import TheoryView from './components/TheoryView.vue'
 import InteractiveView from './components/InteractiveView.vue'
 import AboutView from './components/AboutView.vue'
 import GraphCanvas from './components/GraphCanvas.vue'
+import KruskalCanvas from './components/KruskalCanvas.vue'
 import CustomModal from './components/CustomModal.vue'
 import MatrixModal from './components/MatrixModal.vue'
 import Footer from './components/Footer.vue'
@@ -423,7 +443,7 @@ onMounted(() => {
     setBrowserRoute(VIEW_ROUTES[route.view] || VIEW_ROUTES.home, { replace: true })
   } else if (route?.type === 'algorithm') {
     selectedAlgorithm.value = route.algorithm
-    canvasMode.value = route.algorithm === 'johnson' ? 'johnson' : 'normal'
+    canvasMode.value = ['johnson', 'kruskal'].includes(route.algorithm) ? route.algorithm : 'normal'
     currentView.value = 'canvas'
     setBrowserRoute(getAlgorithmRoute(route.algorithm), { replace: true })
   } else {
@@ -446,7 +466,7 @@ window.addEventListener('popstate', () => {
   }
 
   selectedAlgorithm.value = route.algorithm
-  canvasMode.value = route.algorithm === 'johnson' ? 'johnson' : 'normal'
+  canvasMode.value = ['johnson', 'kruskal'].includes(route.algorithm) ? route.algorithm : 'normal'
   currentView.value = 'canvas'
 })
 
@@ -890,6 +910,16 @@ const onSelectAlgorithm = (id) => {
     return
   }
 
+  if (id === 'kruskal') {
+    canvasMode.value = 'kruskal'
+    nodes.value = []
+    edges.value = []
+    currentGraphIndex.value = -1
+    loadSavedGraphsList()
+    showGraphSelector.value = true
+    return
+  }
+
   if (id === 'northwest') {
     loadNorthwestList()
     showNorthwestSelector.value = true
@@ -938,7 +968,7 @@ const loadSavedAssignmentGraphsList = () => {
 const loadSelectedGraph = (index) => {
   const graph = savedGraphs.value[index]
   if (graph) {
-    canvasMode.value = graph.mode || (selectedAlgorithm.value === 'johnson' ? 'johnson' : 'normal')
+    canvasMode.value = graph.mode || (['johnson', 'kruskal'].includes(selectedAlgorithm.value) ? selectedAlgorithm.value : 'normal')
     nodes.value = JSON.parse(JSON.stringify(graph.nodes))
     edges.value = JSON.parse(JSON.stringify(graph.edges))
     optimalAssignmentEdges.value = []
@@ -1024,7 +1054,7 @@ const deleteSavedAssignmentGraph = (index) => {
 }
 
 const createNewGraph = () => {
-  canvasMode.value = selectedAlgorithm.value === 'johnson' ? 'johnson' : 'normal'
+  canvasMode.value = ['johnson', 'kruskal'].includes(selectedAlgorithm.value) ? selectedAlgorithm.value : 'normal'
   nodes.value = []
   edges.value = []
   optimalAssignmentEdges.value = []
