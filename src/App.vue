@@ -1201,6 +1201,7 @@ const showInstructionsModal = (manual = 'grafos') => {
   const file = {
     asignacion: '/Manual de Usuario - Graphix-3-4.pdf',
     johnson: '/Manual de Usuario - Graphix-5-6.pdf',
+    kruskal: '/Manual de Uso - Pizarra de Kruskal.pdf',
     grafos: '/Manual de Usuario - Graphix-1-2.pdf',
     northwest: '/Manual de Usuario - Graphix-7-8.pdf',
     seleccion: '/Manual de Usuario - Graphix-9-10.pdf',
