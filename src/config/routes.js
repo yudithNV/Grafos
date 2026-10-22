@@ -1,4 +1,4 @@
-import { Network, ArrowDownUp, ListOrdered, Layers, GitMerge } from '@lucide/vue'
+import { Network, ArrowDownUp, ListOrdered, Layers, GitMerge, GitFork } from '@lucide/vue'
 
 export const VIEW_ROUTES = {
   home: '/',
@@ -52,6 +52,19 @@ export const ALGORITHMS = [
     complexity: 'O(VE + V² log V) de tiempo y O(V + E) de memoria',
     comingSoon: false,
     showInTheory: true
+  },
+  {
+    id: 'arboles-binarios',
+    title: 'Árboles Binarios de Búsqueda',
+    name: 'Árboles Binarios',
+    desc: 'Construye un BST, busca y elimina valores, y visualiza sus recorridos paso a paso.',
+    icon: GitFork,
+    iconBg: 'linear-gradient(135deg, #06b6d4, #6366f1)',
+    image: '/img/arboles.png',
+    route: '/pizarra/arboles-binarios',
+    complexity: 'O(log n) promedio para búsqueda, inserción y eliminación',
+    comingSoon: false,
+    showInTheory: false
   },
   {
     id: 'northwest',

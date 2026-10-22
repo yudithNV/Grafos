@@ -80,6 +80,15 @@
       @open-load="showNorthwestProblems"
       @show-instructions="showInstructionsModal"
     />
+    <BinaryTreeCanvas
+      v-else-if="currentView === 'canvas' && selectedAlgorithm === 'arboles-binarios'"
+      :initial-data="binaryTreeData"
+      @back="backToWelcome"
+      @save="handleSaveBinaryTree"
+      @open-load="showBinaryTrees"
+      @show-instructions="showInstructionsModal"
+      @clear="showToast('Árbol limpiado', 'Se eliminaron todos los nodos del árbol.')"
+    />
     <SortingCanvas
       v-else-if="currentView === 'canvas' && isSortAlgorithm(selectedAlgorithm)"
       :key="'sort-' + sortCanvasKey"
@@ -265,6 +274,20 @@
       @delete="deleteSort"
       @close="showSortSelector = false"
     />
+    <SavedListModal
+      :show="showBinaryTreeSelector"
+      title="Cargar Árbol Binario"
+      info="Guarda tus árboles binarios de búsqueda para continuar trabajando en ellos."
+      item-label="Árbol"
+      new-label="➕ Crear Nuevo Árbol"
+      header-bg="linear-gradient(135deg, #06b6d4, #6366f1)"
+      :items="binaryTreeItems"
+      :stats="(item) => [`${item.data.values.length} nodos`, 'Árbol de búsqueda']"
+      @load="loadBinaryTree"
+      @create="createBinaryTree"
+      @delete="deleteBinaryTree"
+      @close="showBinaryTreeSelector = false"
+    />
 </template>
 
 <script setup>
@@ -280,6 +303,7 @@ import MatrixModal from './components/MatrixModal.vue'
 import Footer from './components/Footer.vue'
 import AssignmentCanvas from './components/AssignmentCanvas.vue'
 import NorthwestCanvas from './components/NorthwestCanvas.vue'
+import BinaryTreeCanvas from './components/BinaryTreeCanvas.vue'
 import SortingCanvas from './components/SortingCanvas.vue'
 import { SORT_ALGORITHMS } from './utils/sorting'
 import SavedListModal from './components/SavedListModal.vue'
@@ -308,6 +332,17 @@ const {
 const showNorthwestSelector = ref(false)
 const northwestData = ref(null)
 const northwestIndex = ref(-1)
+
+const {
+  items: binaryTreeItems,
+  load: loadBinaryTreeList,
+  add: addBinaryTree,
+  update: updateBinaryTree,
+  remove: removeBinaryTree
+} = useSavedList('savedBinarySearchTrees')
+const showBinaryTreeSelector = ref(false)
+const binaryTreeData = ref(null)
+const binaryTreeIndex = ref(-1)
 
 // Ordenamiento (Selection / Insertion Sort): una lista de guardados por algoritmo
 const sortLists = {
@@ -440,6 +475,7 @@ window.addEventListener('popstate', () => {
   showGraphSelector.value = false
   showAssignmentGraphSelector.value = false
   showNorthwestSelector.value = false
+  showBinaryTreeSelector.value = false
 
   if (route.type === 'view') {
     currentView.value = route.view
@@ -897,6 +933,12 @@ const onSelectAlgorithm = (id) => {
     return
   }
 
+  if (id === 'arboles-binarios') {
+    loadBinaryTreeList()
+    showBinaryTreeSelector.value = true
+    return
+  }
+
   // Ordenamiento: igual que las demás pizarras, primero se elige
   // crear un arreglo nuevo o abrir uno guardado.
   if (isSortAlgorithm(id)) {
@@ -1177,7 +1219,8 @@ const showInstructionsModal = (manual = 'grafos') => {
     seleccion: '/Manual de Usuario - Graphix-9-10.pdf',
     insercion: '/Manual de Usuario - Graphix-11-12.pdf',
     shell: '/Manual de Usuario - Graphix-13-14.pdf',
-    merge: '/Manual de Usuario - Graphix-15-16.pdf'
+    merge: '/Manual de Usuario - Graphix-15-16.pdf',
+    'arboles-binarios': '/Manual de Uso - Arboles Binarios.html.pdf'
   }[manual] || '/Manual de Uso - Pizarra de Grafos.pdf'
 
   window.open(file, '_blank')
@@ -1209,6 +1252,69 @@ const showSortArrays = () => {
 const showNorthwestProblems = () => {
   loadNorthwestList()
   showNorthwestSelector.value = true
+}
+
+const showBinaryTrees = () => {
+  loadBinaryTreeList()
+  showBinaryTreeSelector.value = true
+}
+
+const loadBinaryTree = (index) => {
+  const savedTree = binaryTreeItems.value[index]
+  if (!savedTree) return
+  binaryTreeData.value = JSON.parse(JSON.stringify(savedTree.data))
+  binaryTreeIndex.value = index
+  showBinaryTreeSelector.value = false
+  openCanvas()
+}
+
+const createBinaryTree = () => {
+  binaryTreeData.value = null
+  binaryTreeIndex.value = -1
+  showBinaryTreeSelector.value = false
+  openCanvas()
+}
+
+const deleteBinaryTree = (index) => {
+  const savedTree = binaryTreeItems.value[index]
+  if (!savedTree) return
+  openModal({
+    title: 'Confirmar Eliminación',
+    message: `¿Eliminar "${savedTree.name}"? Esta acción no se puede deshacer.`,
+    type: 'confirm',
+    callback: () => {
+      removeBinaryTree(index)
+      if (binaryTreeIndex.value === index) binaryTreeIndex.value = -1
+      else if (binaryTreeIndex.value > index) binaryTreeIndex.value--
+    }
+  })
+}
+
+const handleSaveBinaryTree = (data) => {
+  const current = binaryTreeItems.value[binaryTreeIndex.value]
+  openModal({
+    title: 'Guardar Árbol Binario',
+    iconName: 'save',
+    label: 'Nombre del árbol:',
+    placeholder: 'Ej. Árbol de práctica...',
+    type: 'input',
+    initialValue: current?.name || 'Árbol Binario',
+    callback: (name) => {
+      const treeName = String(name).trim() || 'Árbol Binario'
+      const entry = {
+        name: treeName,
+        date: new Date().toLocaleString(),
+        data: JSON.parse(JSON.stringify(data))
+      }
+      if (binaryTreeIndex.value >= 0) {
+        updateBinaryTree(binaryTreeIndex.value, entry)
+      } else {
+        addBinaryTree(entry)
+        binaryTreeIndex.value = binaryTreeItems.value.length - 1
+      }
+      showToast('Guardado Correctamente', `"${treeName}" guardado con ${data.values.length} nodos.`)
+    }
+  })
 }
 
 const showMatrixModal = () => {
