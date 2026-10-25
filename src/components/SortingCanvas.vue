@@ -34,6 +34,9 @@
         <filter id="ss-pin-blur" x="-50%" y="-10%" width="200%" height="120%">
           <feGaussianBlur stdDeviation="0.9" />
         </filter>
+        <symbol id="ss-mini-pin" viewBox="0 0 10 24" overflow="visible">
+          <path d="M5 0 C7 0 7.6 1.6 7.6 3 C7.6 4.6 6.4 5.4 6.2 7 C6 8.6 8.8 11 9.3 14.5 C9.8 18 8.8 21 8 24 L2 24 C1.2 21 0.2 18 0.7 14.5 C1.2 11 4 8.6 3.8 7 C3.6 5.4 2.4 4.6 2.4 3 C2.4 1.6 3 0 5 0 Z" />
+        </symbol>
         <radialGradient id="ss-pin-contact" cx="0.5" cy="0.5" r="0.5">
           <stop offset="0" stop-color="#000" stop-opacity="0.55" />
           <stop offset="1" stop-color="#000" stop-opacity="0" />
@@ -97,6 +100,36 @@
 
     <!-- Contenido principal -->
     <div class="board-container">
+      <!-- ===== Cambiar de algoritmo sin salir (mismos datos) ===== -->
+      <section class="board-card algo-switch">
+        <div class="algo-switch-head">
+          <span class="algo-switch-label">Algoritmo</span>
+          <span class="algo-switch-hint">Al cambiar se conservan los mismos números y el ordenamiento vuelve al inicio.</span>
+        </div>
+        <div class="algo-tabs" role="tablist" aria-label="Algoritmo de ordenamiento">
+          <button
+            v-for="option in algorithmOptions"
+            :key="option.id"
+            type="button"
+            role="tab"
+            class="algo-tab"
+            :class="{ active: option.id === algorithm }"
+            :aria-selected="option.id === algorithm"
+            @click="selectAlgorithm(option.id)"
+          >
+            <!-- Dibujo de la idea de cada algoritmo -->
+            <svg v-if="option.id === 'seleccion'" class="algo-icon" viewBox="0 0 58 40" aria-hidden="true"><use href="#ss-mini-pin" width="10" height="24" class="mp mp-sorted" transform="translate(4 18) scale(0.9 0.833)" /><use href="#ss-mini-pin" width="10" height="24" class="mp mp-swap" transform="translate(15 8) scale(0.9 1.250)" /><use href="#ss-mini-pin" width="10" height="24" class="mp " transform="translate(26 14) scale(0.9 1.000)" /><use href="#ss-mini-pin" width="10" height="24" class="mp mp-min" transform="translate(37 28) scale(0.9 0.417)" /><use href="#ss-mini-pin" width="10" height="24" class="mp " transform="translate(48 11) scale(0.9 1.125)" /><path class="mp-arrow" d="M41 8 C35 1 25 1 19 6" /><path class="mp-arrow" d="M19 6 l1 -3.6 M19 6 l3.4 1.2" /></svg>
+            <svg v-else-if="option.id === 'insercion'" class="algo-icon" viewBox="0 0 58 40" aria-hidden="true"><use href="#ss-mini-pin" width="10" height="24" class="mp mp-sorted" transform="translate(4 26) scale(0.9 0.500)" /><use href="#ss-mini-pin" width="10" height="24" class="mp mp-sorted" transform="translate(15 18) scale(0.9 0.833)" /><use href="#ss-mini-pin" width="10" height="24" class="mp mp-sorted" transform="translate(26 9) scale(0.9 1.208)" /><use href="#ss-mini-pin" width="10" height="24" class="mp " transform="translate(48 8) scale(0.9 1.250)" /><g transform="translate(0 -9)"><use href="#ss-mini-pin" width="10" height="24" class="mp mp-key" transform="translate(37 22) scale(0.9 0.667)" /></g><path class="mp-arrow" d="M36 8 C33 3 28 3 24 6" /><path class="mp-arrow" d="M24 6 l1.2 -3.4 M24 6 l3.5 0.9" /></svg>
+            <svg v-else-if="option.id === 'shell'" class="algo-icon" viewBox="0 0 58 40" aria-hidden="true"><use href="#ss-mini-pin" width="10" height="24" class="mp mp-group" transform="translate(4 12) scale(0.9 1.083)" /><use href="#ss-mini-pin" width="10" height="24" class="mp mp-dim" transform="translate(15 24) scale(0.9 0.583)" /><use href="#ss-mini-pin" width="10" height="24" class="mp mp-dim" transform="translate(26 8) scale(0.9 1.250)" /><use href="#ss-mini-pin" width="10" height="24" class="mp mp-group" transform="translate(37 26) scale(0.9 0.500)" /><use href="#ss-mini-pin" width="10" height="24" class="mp mp-dim" transform="translate(48 16) scale(0.9 0.917)" /><path class="mp-arrow" d="M9 9 C14 1 35 1 41 20" /><path class="mp-arrow" d="M41 20 l-3.2 -1.6 M41 20 l0.6 -3.5" /></svg>
+            <svg v-else-if="option.id === 'merge'" class="algo-icon" viewBox="0 0 58 40" aria-hidden="true"><use href="#ss-mini-pin" width="10" height="24" class="mp mp-left" transform="translate(2 24) scale(0.75 0.583)" /><use href="#ss-mini-pin" width="10" height="24" class="mp mp-left" transform="translate(11 14) scale(0.75 1.000)" /><use href="#ss-mini-pin" width="10" height="24" class="mp mp-right" transform="translate(40 28) scale(0.75 0.417)" /><use href="#ss-mini-pin" width="10" height="24" class="mp mp-right" transform="translate(49 18) scale(0.75 0.833)" /><path class="mp-arrow" d="M17 20 C22 20 24 24 27 27" /><path class="mp-arrow" d="M40 20 C35 20 33 24 30 27" /><path class="mp-arrow" d="M28.5 28 l0 6" /><path class="mp-arrow" d="M28.5 34 l-2 -2 M28.5 34 l2 -2" /></svg>
+            <span class="algo-tab-text">
+              <strong>{{ option.name }}</strong>
+              <small>{{ option.complexity }}</small>
+            </span>
+          </button>
+        </div>
+      </section>
+
       <!-- ===== Datos de entrada ===== -->
       <section class="board-card">
         <div class="data-row">
@@ -322,6 +355,45 @@
           El tiempo de ejecución es lo que tarda {{ meta.name }} en ordenar este arreglo en tu navegador
           (promedio de varias ejecuciones, sin contar la animación).
         </p>
+
+        <!-- Comparación de los 4 algoritmos con estos mismos datos -->
+        <div v-if="finished" class="compare">
+          <div class="compare-head">
+            <span class="results-label">Comparación con los mismos datos</span>
+            <span class="compare-hint">Elige otro algoritmo para verlo ordenar este mismo arreglo.</span>
+          </div>
+          <div class="compare-scroll">
+            <table class="compare-table">
+              <thead>
+                <tr>
+                  <th>Algoritmo</th>
+                  <th>Comparaciones</th>
+                  <th>Movimientos</th>
+                  <th>Pasos</th>
+                  <th>Tiempo</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in comparison" :key="row.id" :class="{ current: row.id === algorithm }">
+                  <td>
+                    <strong>{{ row.name }}</strong>
+                    <em v-if="row.fewestSteps" class="compare-badge">menos pasos</em>
+                    <em v-if="row.fastest" class="compare-badge fast">más rápido</em>
+                  </td>
+                  <td>{{ row.comparisons }}</td>
+                  <td>{{ row.moves }} <small>{{ row.movesLabel.toLowerCase() }}</small></td>
+                  <td><strong>{{ row.steps }}</strong></td>
+                  <td>{{ row.time }}</td>
+                  <td class="compare-action">
+                    <span v-if="row.id === algorithm" class="compare-current">Actual</span>
+                    <button v-else type="button" class="compare-btn" @click="selectAlgorithm(row.id)">Ver</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </section>
 
       <!-- ===== Contador de pasos / Big O ===== -->
@@ -507,9 +579,9 @@ import {
 } from '@lucide/vue'
 import StarryBackground from './StarryBackground.vue'
 import AssignmentWarning from './AssignmentWarning.vue'
-import { SORT_ALGORITHMS, measureExecutionTime, formatExecutionTime } from '../utils/sorting'
+import { SORT_ALGORITHMS, measureExecutionTime, formatExecutionTime, countOperations } from '../utils/sorting'
 
-const emit = defineEmits(['back', 'save', 'open-load', 'show-instructions', 'clear'])
+const emit = defineEmits(['back', 'save', 'open-load', 'show-instructions', 'clear', 'change-algorithm'])
 
 const props = defineProps({
   // Id del algoritmo en src/utils/sorting.js: 'seleccion' | 'insercion'
@@ -518,6 +590,21 @@ const props = defineProps({
 })
 
 const meta = computed(() => SORT_ALGORITHMS[props.algorithm] || SORT_ALGORITHMS.seleccion)
+
+/* ---------- Cambiar de algoritmo sin salir de la pizarra ---------- */
+const COMPLEXITY_LABEL = { seleccion: 'O(n²)', insercion: 'O(n) – O(n²)', shell: '≈ O(n^1.5)', merge: 'O(n log n)' }
+const algorithmOptions = Object.values(SORT_ALGORITHMS).map((item) => ({
+  id: item.id,
+  name: item.name,
+  complexity: COMPLEXITY_LABEL[item.id] || ''
+}))
+
+// La pizarra no se recrea: los números y el orden se mantienen.
+// App.vue actualiza el algoritmo seleccionado y la URL.
+function selectAlgorithm(id) {
+  if (id === props.algorithm) return
+  emit('change-algorithm', id)
+}
 
 /* ---------- Configuración ---------- */
 const N_DEFAULT = 10
@@ -665,6 +752,28 @@ const passSummary = computed(() =>
 
 // Cualquier cambio en los números o en el orden reinicia el recorrido
 watch([cells, order], () => resetSteps(), { deep: true })
+// Al cambiar de algoritmo, el mismo arreglo vuelve a su estado inicial
+watch(() => props.algorithm, () => {
+  resetSteps()
+  showStepsModal.value = false
+})
+
+// Tabla comparativa: los 4 algoritmos con exactamente los mismos datos.
+// Solo se calcula cuando se muestra (al terminar el ordenamiento).
+const comparison = computed(() => {
+  if (!canSort.value) return []
+  const values = validItems.value.map((item) => item.value)
+  const rows = Object.values(SORT_ALGORITHMS).map((item) => {
+    const ops = countOperations(item.id, values, order.value)
+    const ms = item.id === props.algorithm
+      ? executionTime.value
+      : measureExecutionTime(item.id, values, order.value, 6)
+    return { id: item.id, name: item.name, movesLabel: item.movesLabel, ...ops, ms, time: formatExecutionTime(ms) }
+  })
+  const minSteps = Math.min(...rows.map((row) => row.steps))
+  const minMs = Math.min(...rows.map((row) => row.ms))
+  return rows.map((row) => ({ ...row, fewestSteps: row.steps === minSteps, fastest: row.ms === minMs }))
+})
 
 /* ---------- Pinos: tamaño según el valor ---------- */
 const densityClass = computed(() => ({
@@ -1821,4 +1930,115 @@ if (saved && Array.isArray(saved.values) && saved.values.length >= N_MIN) {
 .very-dense .st-key .pin-value, .very-dense .st-j .pin-value, .very-dense .st-min .pin-value,
 .very-dense .st-swap .pin-value, .very-dense .st-i .pin-value { visibility: visible; }
 .very-dense .pin-label > span:first-child { font-size: 0.5rem; }
+
+/* ----- Selector de algoritmo ----- */
+.algo-switch { padding-top: 0.85rem; padding-bottom: 0.85rem; }
+.algo-switch-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.25rem 1rem; margin-bottom: 0.6rem; }
+.algo-switch-label { font-size: 0.8rem; font-weight: 600; color: var(--text-primary); }
+.algo-switch-hint { font-size: 0.72rem; color: var(--text-secondary); }
+.algo-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.5rem; }
+.algo-tab {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.1s ease;
+}
+.algo-tab strong { font-size: 0.85rem; font-weight: 600; }
+.algo-tab small { font-size: 0.7rem; color: var(--text-secondary); }
+.algo-tab:hover { border-color: #8b5cf6; }
+.algo-tab:active { transform: scale(0.98); }
+.algo-tab.active {
+  border-color: #8b5cf6;
+  background: rgba(139, 92, 246, 0.14);
+  box-shadow: inset 0 0 0 1px #8b5cf6;
+}
+.algo-tab.active small { color: #a78bfa; }
+@media (max-width: 640px) { .algo-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ----- Tabla comparativa ----- */
+.compare { margin-top: 1rem; padding-top: 0.9rem; border-top: 1px solid var(--border-color); }
+.compare-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.25rem 1rem; }
+.compare-hint { font-size: 0.72rem; color: var(--text-secondary); }
+.compare-scroll { overflow-x: auto; }
+.compare-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-top: 0.4rem; min-width: 560px; }
+.compare-table th, .compare-table td { text-align: left; padding: 0.45rem 0.55rem; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
+.compare-table th { font-size: 0.72rem; font-weight: 500; color: var(--text-secondary); }
+.compare-table td { color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.compare-table td small { color: var(--text-secondary); font-size: 0.7rem; }
+.compare-table tr.current td { background: rgba(139, 92, 246, 0.1); }
+.compare-table tr.current td:first-child { box-shadow: inset 3px 0 0 #8b5cf6; }
+.compare-badge {
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  font-style: normal;
+  font-size: 0.65rem;
+  font-weight: 600;
+  background: rgba(34, 197, 94, 0.15);
+  color: #16a34a;
+}
+.compare-badge.fast { background: rgba(6, 182, 212, 0.15); color: #0891b2; }
+[data-theme='dark'] .compare-badge { color: #86efac; }
+[data-theme='dark'] .compare-badge.fast { color: #67e8f9; }
+.compare-action { text-align: right; }
+.compare-current { font-size: 0.72rem; color: #8b5cf6; font-weight: 600; }
+.compare-btn {
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #8b5cf6;
+  background: transparent;
+  color: #8b5cf6;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.compare-btn:hover { background: rgba(139, 92, 246, 0.12); }
+
+/* ----- Mini dibujos de cada algoritmo ----- */
+.algo-tab-text { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
+.algo-icon {
+  flex: none;
+  width: 58px;
+  height: 40px;
+  padding: 2px 3px;
+  border-radius: 8px;
+  background: rgba(139, 92, 246, 0.07);
+  overflow: visible;
+}
+.algo-tab.active .algo-icon { background: rgba(139, 92, 246, 0.16); }
+.mp { fill: #e9e5dc; stroke: rgba(60, 35, 10, 0.35); stroke-width: 0.6; vector-effect: non-scaling-stroke; }
+[data-theme='dark'] .mp { fill: #d6d3cc; stroke: rgba(0, 0, 0, 0.4); }
+.mp-sorted { fill: #22c55e; }
+.mp-min { fill: #f59e0b; }
+.mp-swap { fill: #ec4899; }
+.mp-key { fill: #8b5cf6; }
+.mp-group { fill: #06b6d4; }
+.mp-left { fill: #3b82f6; }
+.mp-right { fill: #f59e0b; }
+.mp-dim { opacity: 0.35; }
+[data-theme='dark'] .mp-sorted { fill: #22c55e; }
+[data-theme='dark'] .mp-min, [data-theme='dark'] .mp-right { fill: #f59e0b; }
+[data-theme='dark'] .mp-swap { fill: #ec4899; }
+[data-theme='dark'] .mp-key { fill: #8b5cf6; }
+[data-theme='dark'] .mp-group { fill: #06b6d4; }
+[data-theme='dark'] .mp-left { fill: #3b82f6; }
+.mp-arrow {
+  fill: none;
+  stroke: #a78bfa;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.algo-tab:not(.active) .mp-arrow { stroke: var(--text-secondary); }
+@media (max-width: 900px) { .algo-icon { width: 46px; height: 32px; } }
 </style>
