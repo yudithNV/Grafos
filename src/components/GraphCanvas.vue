@@ -246,11 +246,36 @@
 
           <!-- Dibujo de las Aristas -->
           <g v-for="edge in processedEdges" :key="edge.id" class="edge-group">
-            <!-- Arista Principal -->
-            <path :d="edge.path" fill="none" :stroke="edge.customColor || edge.color" stroke-width="3" class="edge-path"
-              :class="{ 'edge-highlight': hoveredEdgeId === edge.id, 'result-edge-highlight': highlightedEdgeIds.includes(edge.id) }" :marker-end="isUndirected ? null : `url(#${edge.markerId})`"
-              @mousedown.stop="onEdgeMouseDown(edge, $event)" @touchstart.stop.prevent="onEdgeTouchStart(edge, $event)"
-              @mouseenter="hoveredEdgeId = edge.id" @mouseleave="hoveredEdgeId = null" />
+            <!-- Máscara que revela el recorrido poco a poco -->
+<mask
+  v-if="highlightedEdgeIds.includes(edge.id)"
+  :id="maskId(edge.id)"
+  maskUnits="userSpaceOnUse"
+  x="-5000" y="-5000" width="10000" height="10000"
+>
+  <path :d="edge.path" fill="none" stroke="#fff" stroke-width="14" pathLength="1" class="reveal-path" />
+</mask>
+
+<!-- Arista base (se oculta si está resaltada) -->
+<path :d="edge.path" fill="none" :stroke="edge.customColor || edge.color" stroke-width="3" class="edge-path"
+  :class="{ 'edge-highlight': hoveredEdgeId === edge.id, 'result-edge-highlight': highlightedEdgeIds.includes(edge.id) }"
+  :marker-end="isUndirected ? null : `url(#${edge.markerId})`"
+  @mousedown.stop="onEdgeMouseDown(edge, $event)" @touchstart.stop.prevent="onEdgeTouchStart(edge, $event)"
+  @mouseenter="hoveredEdgeId = edge.id" @mouseleave="hoveredEdgeId = null" />
+
+<!-- Recorrido punteado rosa que se dibuja progresivamente -->
+<path
+  v-if="highlightedEdgeIds.includes(edge.id)"
+  :d="edge.path"
+  fill="none"
+  stroke="#ec4899"
+  stroke-width="5"
+  stroke-dasharray="8 6"
+  stroke-linecap="round"
+  class="result-edge-dash"
+  pointer-events="none"
+  :mask="`url(#${maskId(edge.id)})`"
+/>
 
             <!-- Área sensible táctil más ancha para facilitar clicks -->
             <path :d="edge.path" fill="none" stroke="transparent" stroke-width="40" class="edge-touch-area"
@@ -286,12 +311,13 @@
 
           <!-- Dibujo de los Nodos (Círculos Planos) -->
           <g v-for="node in nodes" :key="node.id" :transform="`translate(${node.x}, ${node.y})`" class="node-group"
-            :class="{
-              'node-active': selectedNodeId === node.id,
-              'node-dragging': draggedNodeId === node.id,
-              'node-hover': hoveredNodeId === node.id,
-              'node-delete-mode': activeTool === 'delete'
-            }" @mousedown.stop="onNodeMouseDown(node, $event)"
+  :class="{
+    'node-active': selectedNodeId === node.id,
+    'node-dragging': draggedNodeId === node.id,
+    'node-hover': hoveredNodeId === node.id,
+    'node-delete-mode': activeTool === 'delete',
+    'node-result': highlightedNodeIds.has(node.id)
+  }" @mousedown.stop="onNodeMouseDown(node, $event)"
             @touchstart.stop.prevent="onNodeTouchStart(node, $event)" @mouseenter="hoveredNodeId = node.id"
             @mouseleave="hoveredNodeId = null">
             <template v-if="!johnsonActivo">
@@ -534,6 +560,21 @@ const esJohnson = computed(() => {
   return props.mode === 'johnson'
 })
 const isUndirected = computed(() => props.mode === 'undirected')
+
+// Nodos que son extremo de alguna arista ya resaltada
+const highlightedNodeIds = computed(() => {
+  const ids = new Set()
+  props.edges.forEach(edge => {
+    if (props.highlightedEdgeIds.includes(edge.id)) {
+      ids.add(edge.sourceId)
+      ids.add(edge.targetId)
+    }
+  })
+  return ids
+})
+
+// ID válido para la máscara de cada arista
+const maskId = (edgeId) => `reveal-${String(edgeId).replace(/[^a-zA-Z0-9_-]/g, '_')}`
 
 const johnsonActivo = ref(false)
 const johnsonResult = ref(null)
@@ -2156,9 +2197,40 @@ const confirmClear = () => {
 }
 
 .result-edge-highlight {
-  stroke: #10b981 !important;
-  stroke-width: 5px;
-  filter: drop-shadow(0 0 5px rgba(16, 185, 129, 0.55));
+  stroke: transparent !important;
+  filter: none;
+}
+
+.result-edge-dash {
+  filter:
+    drop-shadow(0 0 3px #FF2D95)
+    drop-shadow(0 0 8px rgba(255, 45, 149, 0.85));
+}
+
+/* Animación de revelado: la línea se dibuja de un nodo al otro */
+.reveal-path {
+  stroke-dasharray: 1 1;
+  stroke-dashoffset: 1;
+  animation: reveal-draw 0.7s linear forwards;
+}
+
+@keyframes reveal-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Nodos alcanzados por el recorrido: rosados */
+.node-group.node-result .node-circle {
+  stroke: #ec4899 !important;
+  fill: rgba(236, 72, 153, 0.15) !important;
+  filter:
+    drop-shadow(0 0 3px #ec4899)
+    drop-shadow(0 0 8px rgba(236, 72, 153, 0.6));
+  transition:
+    stroke 0.3s ease 0.7s,
+    fill 0.3s ease 0.7s,
+    filter 0.3s ease 0.7s;
 }
 
 .edge-touch-area {

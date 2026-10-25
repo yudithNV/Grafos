@@ -613,7 +613,7 @@ import { requestedTheoryTab } from '../composables/theoryNavigation'
 import {
   Compass, Route, Network, Link2, Grid3x3, ListOrdered, Boxes,
   Map as MapIcon, Users, Truck, Target, CalendarCheck, Server,
-  ArrowRight, Image as ImageIcon,  ArrowDownUp
+  ArrowRight, Image as ImageIcon, ArrowDownUp, GitBranch
 } from 'lucide-vue-next'
 import { ALGORITHMS, VIEW_ROUTES, getAlgorithmRoute } from '../config/routes'
 
@@ -670,12 +670,26 @@ const algorithmTypes = [
   { id: 'recorrido', icon: Compass, name: 'Recorrido',
     desc: 'Exploran todos los vértices de forma sistemática.',
     algos: [{ name: 'BFS' }, { name: 'DFS' }] },
+  { id: 'arboles', icon: GitBranch, name: 'Recorridos en árboles',
+    desc: 'Visitan los nodos de un árbol binario en un orden fijo.',
+    algos: [
+      { name: 'Inorden', url: getAlgorithmRoute('inorden') },
+      { name: 'Preorden', url: getAlgorithmRoute('preorden') },
+      { name: 'Postorden', url: getAlgorithmRoute('postorden') }
+    ] },
   { id: 'caminos', icon: Route, name: 'Caminos mínimos',
     desc: 'Encuentran la ruta más barata entre nodos.',
-    algos: [{ name: 'Dijkstra' }, { name: 'Bellman-Ford' }, { name: 'Floyd-Warshall' }] },
+    algos: [
+      { name: 'Dijkstra', url: getAlgorithmRoute('dijkstra') },
+      { name: 'Bellman-Ford' },
+      { name: 'Floyd-Warshall' }
+    ] },
   { id: 'expansion', icon: Network, name: 'Árboles de expansión',
     desc: 'Conectan todos los vértices con el mínimo costo.',
-    algos: [{ name: 'Kruskal' }, { name: 'Prim' }] },
+    algos: [
+      { name: 'Kruskal', url: getAlgorithmRoute('kruskal') },
+      { name: 'Prim' }
+    ] },
   { id: 'asignacion', icon: Link2, name: 'Asignación y matching',
     desc: 'Emparejan elementos minimizando o maximizando costos.',
     algos: [
@@ -695,8 +709,7 @@ const algorithmTypes = [
       { name: 'Floyd-Warshall' },
       { name: 'Johnson', url: getAlgorithmRoute('johnson') }
     ] },
-
-    { id: 'orden', icon: ListOrdered, name: 'Ordenamiento',
+  { id: 'orden', icon: ListOrdered, name: 'Ordenamiento',
     desc: 'Ordenan vértices respetando dependencias (DAG).',
     algos: [{ name: 'Kahn' }, { name: 'DFS topológico' }] },
   { id: 'sort', icon: ArrowDownUp, name: 'Ordenamiento de listas (sort)',

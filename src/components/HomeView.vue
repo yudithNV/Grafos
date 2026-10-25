@@ -186,6 +186,9 @@
               <tr><td>Johnson</td><td>Analizar rutas y actividades</td><td>Conexiones, duraciones y holguras</td></tr>
               <tr><td>Northwest</td><td>Resolver problemas de transporte</td><td>Oferta, demanda y costos</td></tr>
               <tr><td>Sort</td><td>Ordenar listas de valores</td><td>Listas y comparaciones</td></tr>
+              <tr><td>Dijkstra</td><td>Encontrar la ruta más corta</td><td>Nodos, pesos positivos y origen</td></tr>
+              <tr><td>Kruskal</td><td>Construir un árbol de expansión</td><td>Aristas ordenadas por peso</td></tr>
+              <tr><td>Árboles</td><td>Recorrer un árbol binario</td><td>Inorden, preorden y postorden</td></tr>
             </tbody>
           </table>
         </div>
@@ -198,7 +201,7 @@
         <div class="faq-list">
           <details>
             <summary>¿Qué pizarra debo elegir?</summary>
-            <p>Grafos sirve para construir estructuras libres; Asignación para relacionar orígenes y destinos; Johnson para analizar rutas y actividades; Northwest para problemas de transporte; y Sort para ver paso a paso cómo se ordena una lista (Selection, Insertion, Shell y Merge).</p>
+            <p>Grafos sirve para construir estructuras libres, Dijkstra para rutas más cortas y Kruskal para árboles de expansión. Asignación relaciona orígenes y destinos, Johnson analiza rutas y actividades, Northwest resuelve problemas de transporte, Árboles recorre estructuras jerárquicas y Sort muestra cómo se ordena una lista paso a paso.</p>
           </details>
           <details>
             <summary>¿Puedo guardar mis ejercicios?</summary>
