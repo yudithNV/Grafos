@@ -1,4 +1,4 @@
-import { Network, ArrowDownUp, ListOrdered, Layers, GitMerge, GitFork } from '@lucide/vue'
+import { Network, ArrowDownUp, ListOrdered, Layers, GitMerge, GitFork, Share2 } from '@lucide/vue'
 
 export const VIEW_ROUTES = {
   home: '/',
@@ -53,6 +53,21 @@ export const ALGORITHMS = [
     comingSoon: false,
     showInTheory: true
   },
+
+  {
+  id: 'dijkstra',
+  title: 'Algoritmo de Dijkstra',
+  name: 'Dijkstra',
+  desc: 'Encuentra el camino de menor costo entre un nodo de origen y un nodo de destino en un grafo con pesos no negativos.',
+  icon: Network,
+  iconBg: 'linear-gradient(135deg, #10b981, #059669)',
+  image: '/img/dijkstra.png',
+  route: '/pizarra/dijkstra',
+  complexity: 'O(V² + E) de tiempo y O(V + E) de memoria',
+  comingSoon: false,
+  showInTheory: false
+},
+
   {
     id: 'arboles-binarios',
     title: 'Árboles Binarios de Búsqueda',
@@ -63,6 +78,19 @@ export const ALGORITHMS = [
     image: '/img/arboles.png',
     route: '/pizarra/arboles-binarios',
     complexity: 'O(log n) promedio para búsqueda, inserción y eliminación',
+    comingSoon: false,
+    showInTheory: false
+  },
+  {
+    id: 'kruskal',
+    title: 'Algoritmo de Kruskal',
+    name: 'Kruskal',
+    desc: 'Encuentra un árbol de expansión mínimo o máximo en un grafo no dirigido con pesos.',
+    icon: Share2,
+    iconBg: 'linear-gradient(135deg, #10b981, #06b6d4)',
+    image: '/img/kruskal.png',
+    route: '/pizarra/kruskal',
+    complexity: 'O(E log E) de tiempo y O(V) de memoria',
     comingSoon: false,
     showInTheory: false
   },

@@ -13,122 +13,75 @@
 
     <AboutView v-else-if="currentView === 'about'" />
 
-    <GraphCanvas
-      v-if="currentView === 'canvas' && selectedAlgorithm === 'grafos'"
-      :nodes="nodes"
-      :edges="edges"
-      :mode="canvasMode"
-      algorithm-type="grafos"
-      @back="backToWelcome"
-      @show-instructions="showInstructionsModal"
-      @show-matrix="showMatrixModal"
-      @open-load="showSavedGraphs"
-      @save="handleSaveGraph"
-      @clear="confirmClearCanvas"
-      @create-node="handleCreateNodeRequest"
-      @create-edge="handleCreateEdgeRequest"
-      @edit-node="handleEditNodeRequest"
-      @edit-edge="handleEditEdgeRequest"
-      @delete-node="handleDeleteNodeRequest"
-      @delete-edge="handleDeleteEdgeRequest"
-    />
-    <GraphCanvas
-      v-else-if="currentView === 'canvas' && selectedAlgorithm === 'johnson'"
-      :nodes="nodes"
-      :edges="edges"
-      :mode="canvasMode"
-      @back="backToWelcome"
-      @show-instructions="showInstructionsModal"
-      @show-matrix="showMatrixModal"
-      @open-load="showSavedGraphs"
-      @save="handleSaveGraph"
-      @clear="confirmClearCanvas"
-      @create-node="handleCreateNodeRequest"
-      @create-edge="handleCreateEdgeRequest"
-      @edit-node="handleEditNodeRequest"
-      @edit-edge="handleEditEdgeRequest"
-      @delete-node="handleDeleteNodeRequest"
-      @delete-edge="handleDeleteEdgeRequest"
-    />
+    <GraphCanvas v-if="currentView === 'canvas' && selectedAlgorithm === 'grafos'" :nodes="nodes" :edges="edges"
+      :mode="canvasMode" algorithm-type="grafos" @back="backToWelcome" @show-instructions="showInstructionsModal"
+      @show-matrix="showMatrixModal" @open-load="showSavedGraphs" @save="handleSaveGraph" @clear="confirmClearCanvas"
+      @create-node="handleCreateNodeRequest" @create-edge="handleCreateEdgeRequest" @edit-node="handleEditNodeRequest"
+      @edit-edge="handleEditEdgeRequest" @delete-node="handleDeleteNodeRequest"
+      @delete-edge="handleDeleteEdgeRequest" />
+    <GraphCanvas v-else-if="currentView === 'canvas' && selectedAlgorithm === 'johnson'" :nodes="nodes" :edges="edges"
+      :mode="canvasMode" @back="backToWelcome" @show-instructions="showInstructionsModal" @show-matrix="showMatrixModal"
+      @open-load="showSavedGraphs" @save="handleSaveGraph" @clear="confirmClearCanvas"
+      @create-node="handleCreateNodeRequest" @create-edge="handleCreateEdgeRequest" @edit-node="handleEditNodeRequest"
+      @edit-edge="handleEditEdgeRequest" @delete-node="handleDeleteNodeRequest"
+      @delete-edge="handleDeleteEdgeRequest" />
+
+    <!-- Algoritmo de Dijkstra -->
+    <GraphCanvas v-else-if="currentView === 'canvas' && selectedAlgorithm === 'dijkstra'" :nodes="nodes" :edges="edges"
+      :mode="canvasMode" algorithm-type="dijkstra" @back="backToWelcome" @show-instructions="showInstructionsModal"
+      @show-matrix="showMatrixModal" @open-load="showSavedGraphs" @save="handleSaveGraph" @clear="confirmClearCanvas"
+      @create-node="handleCreateNodeRequest" @create-edge="handleCreateEdgeRequest" @edit-node="handleEditNodeRequest"
+      @edit-edge="handleEditEdgeRequest" @delete-node="handleDeleteNodeRequest"
+      @delete-edge="handleDeleteEdgeRequest" />
+
+    <!-- Algoritmo de Kruskal -->
+     <KruskalCanvas
+  v-else-if="currentView === 'canvas' && selectedAlgorithm === 'kruskal'"
+  :nodes="nodes"
+  :edges="edges"
+  @back="backToWelcome"
+  @show-instructions="showInstructionsModal"
+  @show-matrix="showMatrixModal"
+  @open-load="showSavedGraphs"
+  @save="handleSaveGraph"
+  @clear="confirmClearCanvas"
+  @create-node="handleCreateNodeRequest"
+  @create-edge="handleCreateEdgeRequest"
+  @edit-node="handleEditNodeRequest"
+  @edit-edge="handleEditEdgeRequest"
+  @delete-node="handleDeleteNodeRequest"
+  @delete-edge="handleDeleteEdgeRequest"
+/>
     <!-- Módulo Aislado del Algoritmo de Asignación -->
-    <AssignmentCanvas
-      v-else-if="currentView === 'canvas' && selectedAlgorithm === 'asignacion'"
-      :nodes="nodes"
-      :edges="edges"
-      :optimal-edge-ids="optimalAssignmentEdges"
-      algorithm-type="asignacion"
-      @back="backToWelcome"
+    <AssignmentCanvas v-else-if="currentView === 'canvas' && selectedAlgorithm === 'asignacion'" :nodes="nodes"
+      :edges="edges" :optimal-edge-ids="optimalAssignmentEdges" algorithm-type="asignacion" @back="backToWelcome"
+      @show-instructions="showInstructionsModal" @show-matrix="showMatrixModal" @open-load="showAssignmentGraphs"
+      @save="handleSaveGraph" @clear="confirmClearCanvas" @create-node="handleCreateNodeRequest"
+      @create-edge="handleCreateEdgeRequest" @edit-node="handleEditNodeRequest" @edit-edge="handleEditEdgeRequest"
+      @delete-node="handleDeleteNodeRequest" @delete-edge="handleDeleteEdgeRequest"
+      @clear-optimal="optimalAssignmentEdges = []" @solution-found="handleSolutionFound" />
+    <NorthwestCanvas v-else-if="currentView === 'canvas' && selectedAlgorithm === 'northwest'"
+      :initial-data="northwestData" @back="backToWelcome" @save="handleSaveNorthwest" @open-load="showNorthwestProblems"
+      @show-instructions="showInstructionsModal" />
+    <BinaryTreeCanvas v-else-if="currentView === 'canvas' && selectedAlgorithm === 'arboles-binarios'"
+      :initial-data="binaryTreeData" @back="backToWelcome" @save="handleSaveBinaryTree" @open-load="showBinaryTrees"
       @show-instructions="showInstructionsModal"
-      @show-matrix="showMatrixModal"
-      @open-load="showAssignmentGraphs"
-      @save="handleSaveGraph"
-      @clear="confirmClearCanvas"
-      @create-node="handleCreateNodeRequest"
-      @create-edge="handleCreateEdgeRequest"
-      @edit-node="handleEditNodeRequest"
-      @edit-edge="handleEditEdgeRequest"
-      @delete-node="handleDeleteNodeRequest"
-      @delete-edge="handleDeleteEdgeRequest"
-      @clear-optimal="optimalAssignmentEdges = []"
-      @solution-found="handleSolutionFound"
-    />
-    <NorthwestCanvas
-      v-else-if="currentView === 'canvas' && selectedAlgorithm === 'northwest'"
-      :initial-data="northwestData"
-      @back="backToWelcome"
-      @save="handleSaveNorthwest"
-      @open-load="showNorthwestProblems"
-      @show-instructions="showInstructionsModal"
-    />
-    <BinaryTreeCanvas
-      v-else-if="currentView === 'canvas' && selectedAlgorithm === 'arboles-binarios'"
-      :initial-data="binaryTreeData"
-      @back="backToWelcome"
-      @save="handleSaveBinaryTree"
-      @open-load="showBinaryTrees"
-      @show-instructions="showInstructionsModal"
-      @clear="showToast('Árbol limpiado', 'Se eliminaron todos los nodos del árbol.')"
-    />
-    <SortingCanvas
-      v-else-if="currentView === 'canvas' && isSortAlgorithm(selectedAlgorithm)"
-      :key="'sort-' + sortCanvasKey"
-      :algorithm="selectedAlgorithm"
-      :initial-data="sortData"
-      @back="backToWelcome"
-      @save="handleSaveSort"
-      @open-load="showSortArrays"
-      @show-instructions="showInstructionsModal"
-      @change-algorithm="changeSortAlgorithm"
-    />
+      @clear="showToast('Árbol limpiado', 'Se eliminaron todos los nodos del árbol.')" />
+    <SortingCanvas v-else-if="currentView === 'canvas' && isSortAlgorithm(selectedAlgorithm)"
+      :key="'sort-' + sortCanvasKey" :algorithm="selectedAlgorithm" :initial-data="sortData" @back="backToWelcome"
+      @save="handleSaveSort" @open-load="showSortArrays" @show-instructions="showInstructionsModal"
+      @change-algorithm="changeSortAlgorithm" />
 
     <!-- Custom Modal -->
-    <CustomModal
-      v-model="showModal"
-      :icon-name="modalIconName" 
-      :title="modalTitle"
-      :label="modalLabel"
-      :placeholder="modalPlaceholder"
-      :type="modalType"
-      :message="modalMessage"
-      :initial-value="modalInitialValue"
-      :quick-fill="modalQuickFill"
-      :quick-fill-value="modalQuickFillValue"
-      :show-color-picker="modalShowColorPicker"
-      :initial-color="modalInitialColor"
-      @submit="handleModalSubmit"
-    />
+    <CustomModal v-model="showModal" :icon-name="modalIconName" :title="modalTitle" :label="modalLabel"
+      :placeholder="modalPlaceholder" :type="modalType" :message="modalMessage" :initial-value="modalInitialValue"
+      :quick-fill="modalQuickFill" :quick-fill-value="modalQuickFillValue" :show-color-picker="modalShowColorPicker"
+      :initial-color="modalInitialColor" @submit="handleModalSubmit" />
 
     <!-- Matrix Modal -->
-    <MatrixModal
-      :show="showMatrix"
-      :nodes="nodes"
-      :edges="edges"
-      :show-solver="selectedAlgorithm === 'asignacion'"
-      :algorithm-type="selectedAlgorithm"
-      :mode="canvasMode"
-      @close="showMatrix = false"
-      @solution-found="handleSolutionFound"
-    />
+    <MatrixModal :show="showMatrix" :nodes="nodes" :edges="edges" :show-solver="selectedAlgorithm === 'asignacion'"
+      :algorithm-type="selectedAlgorithm" :mode="canvasMode" @close="showMatrix = false"
+      @solution-found="handleSolutionFound" />
 
     <Footer v-if="currentView !== 'canvas'" />
 
@@ -150,16 +103,26 @@
     <div v-if="showGraphSelector" class="graph-selector-overlay" @click.self="showGraphSelector = false">
       <div class="graph-selector-modal">
         <div class="graph-selector-header">
-          <h3>{{ selectedAlgorithm === 'johnson' ? 'Cargar Grafo Johnson' : 'Cargar Grafo Guardado' }}</h3>
+          <h3>
+            {{
+              selectedAlgorithm === 'johnson'
+                ? 'Cargar Grafo Johnson'
+                : selectedAlgorithm === 'dijkstra'
+                  ? 'Cargar Grafo Dijkstra'
+                  : 'Cargar Grafo Guardado'
+            }}
+          </h3>
           <button @click="showGraphSelector = false" class="btn-close-selector">✕</button>
         </div>
         <div class="assignment-selector-info">
-          {{
-            selectedAlgorithm === 'johnson'
-              ? 'En Johnson crea un grafo dirigido aciclico con pesos no negativos para calcular ruta critica, ida, regreso y holguras.'
-              : 'En este modo puedes crear grafos con aristas de ida y vuelta, auto-bucles y pesos negativos.'
-          }}
-        </div>
+  {{
+    selectedAlgorithm === 'johnson'
+      ? 'En Johnson crea un grafo dirigido acíclico con pesos no negativos para calcular la ruta crítica y las holguras.'
+      : selectedAlgorithm === 'dijkstra'
+        ? 'En Dijkstra crea un grafo dirigido con pesos mayores o iguales a cero para encontrar el camino mínimo entre dos nodos.'
+        : 'En este modo puedes crear grafos con aristas de ida y vuelta, auto-bucles y pesos negativos.'
+  }}
+</div>
         <div class="graph-selector-list">
           <div v-for="(graph, index) in savedGraphs" :key="index" class="graph-item" @click="loadSelectedGraph(index)">
             <div class="graph-item-info">
@@ -176,7 +139,13 @@
           <div class="graph-item graph-item-new" @click="createNewGraph">
             <div class="graph-item-info">
               <span class="graph-item-name graph-item-name-new">
-                {{ selectedAlgorithm === 'johnson' ? 'Crear Nuevo Grafo Johnson' : 'Crear Nuevo Grafo' }}
+                {{
+                  selectedAlgorithm === 'johnson'
+                    ? 'Crear Nuevo Grafo Johnson'
+                    : selectedAlgorithm === 'dijkstra'
+                      ? 'Crear Nuevo Grafo Dijkstra'
+                      : 'Crear Nuevo Grafo'
+                }}
               </span>
               <span class="graph-item-date">Empezar desde cero</span>
             </div>
@@ -194,7 +163,8 @@
     </div>
 
     <!-- Graph Selector para Algoritmo de Asignación (Unidireccional) -->
-    <div v-if="showAssignmentGraphSelector" class="graph-selector-overlay" @click.self="showAssignmentGraphSelector = false">
+    <div v-if="showAssignmentGraphSelector" class="graph-selector-overlay"
+      @click.self="showAssignmentGraphSelector = false">
       <div class="graph-selector-modal">
         <div class="graph-selector-header header-assignment-selector">
           <div class="selector-title-group">
@@ -207,12 +177,8 @@
           En este modo todas las aristas son estrictamente de ida (sin retornos ni auto-bucles).
         </div>
         <div class="graph-selector-list">
-          <div 
-            v-for="(graph, index) in savedAssignmentGraphs" 
-            :key="'asig_' + index"
-            class="graph-item"
-            @click="loadSelectedAssignmentGraph(index)"
-          >
+          <div v-for="(graph, index) in savedAssignmentGraphs" :key="'asig_' + index" class="graph-item"
+            @click="loadSelectedAssignmentGraph(index)">
             <div class="graph-item-info">
               <span class="graph-item-name">{{ graph.name || `Grafo Asignación ${index + 1}` }}</span>
               <span class="graph-item-date">{{ graph.date }}</span>
@@ -223,7 +189,7 @@
             </div>
             <button @click.stop="deleteSavedAssignmentGraph(index)" class="btn-delete-graph">🗑️</button>
           </div>
-          
+
           <div class="graph-item graph-item-new" @click="createNewAssignmentGraph">
             <div class="graph-item-info">
               <span class="graph-item-name graph-item-name-new">
@@ -232,7 +198,7 @@
               <span class="graph-item-date">Empezar desde cero en flujo unidireccional</span>
             </div>
           </div>
-          
+
           <div v-if="savedAssignmentGraphs.length === 0" class="empty-graphs">
             <p>No hay grafos de asignación guardados</p>
             <p class="empty-graphs-hint">Haz clic en "Crear Nuevo Grafo de Asignación" para empezar</p>
@@ -244,50 +210,24 @@
       </div>
     </div>
   </div>
-      <!-- Selector de problemas Northwest -->
-    <SavedListModal
-      :show="showNorthwestSelector"
-      title="Cargar Problema Northwest"
-      info="Guarda tus tablas de disponibilidad, demanda y costos para retomarlas después."
-      item-label="Problema"
-      new-label="➕ Crear Nuevo Problema"
-      header-bg="linear-gradient(135deg, #8b5cf6, #ec4899)"
-      :items="northwestItems"
-      :stats="(p) => [`${p.data.originCount} orígenes`, `${p.data.destinationCount} destinos`]"
-      @load="loadNorthwest"
-      @create="createNorthwest"
-      @delete="deleteNorthwest"
-      @close="showNorthwestSelector = false"
-    />
-      <!-- Selector de arreglos de ordenamiento (Selection / Insertion / Shell / Merge) -->
-    <SavedListModal
-      :show="showSortSelector"
-      :title="`Cargar Arreglo (${sortAlgorithmName})`"
-      info="Guarda tus listas de números para volver a ordenarlas después."
-      item-label="Arreglo"
-      new-label="➕ Crear Nuevo Arreglo"
-      :header-bg="SORT_HEADER_BG[selectedAlgorithm] || SORT_HEADER_BG.seleccion"
-      :items="sortItems"
-      :stats="(p) => [`${p.data.values.length} elementos`, p.data.order === 'desc' ? 'Descendente' : 'Ascendente']"
-      @load="loadSort"
-      @create="createSort"
-      @delete="deleteSort"
-      @close="showSortSelector = false"
-    />
-    <SavedListModal
-      :show="showBinaryTreeSelector"
-      title="Cargar Árbol Binario"
-      info="Guarda tus árboles binarios de búsqueda para continuar trabajando en ellos."
-      item-label="Árbol"
-      new-label="➕ Crear Nuevo Árbol"
-      header-bg="linear-gradient(135deg, #06b6d4, #6366f1)"
-      :items="binaryTreeItems"
-      :stats="(item) => [`${item.data.values.length} nodos`, 'Árbol de búsqueda']"
-      @load="loadBinaryTree"
-      @create="createBinaryTree"
-      @delete="deleteBinaryTree"
-      @close="showBinaryTreeSelector = false"
-    />
+  <!-- Selector de problemas Northwest -->
+  <SavedListModal :show="showNorthwestSelector" title="Cargar Problema Northwest"
+    info="Guarda tus tablas de disponibilidad, demanda y costos para retomarlas después." item-label="Problema"
+    new-label="➕ Crear Nuevo Problema" header-bg="linear-gradient(135deg, #8b5cf6, #ec4899)" :items="northwestItems"
+    :stats="(p) => [`${p.data.originCount} orígenes`, `${p.data.destinationCount} destinos`]" @load="loadNorthwest"
+    @create="createNorthwest" @delete="deleteNorthwest" @close="showNorthwestSelector = false" />
+  <!-- Selector de arreglos de ordenamiento (Selection / Insertion / Shell / Merge) -->
+  <SavedListModal :show="showSortSelector" :title="`Cargar Arreglo (${sortAlgorithmName})`"
+    info="Guarda tus listas de números para volver a ordenarlas después." item-label="Arreglo"
+    new-label="➕ Crear Nuevo Arreglo" :header-bg="SORT_HEADER_BG[selectedAlgorithm] || SORT_HEADER_BG.seleccion"
+    :items="sortItems"
+    :stats="(p) => [`${p.data.values.length} elementos`, p.data.order === 'desc' ? 'Descendente' : 'Ascendente']"
+    @load="loadSort" @create="createSort" @delete="deleteSort" @close="showSortSelector = false" />
+  <SavedListModal :show="showBinaryTreeSelector" title="Cargar Árbol Binario"
+    info="Guarda tus árboles binarios de búsqueda para continuar trabajando en ellos." item-label="Árbol"
+    new-label="➕ Crear Nuevo Árbol" header-bg="linear-gradient(135deg, #06b6d4, #6366f1)" :items="binaryTreeItems"
+    :stats="(item) => [`${item.data.values.length} nodos`, 'Árbol de búsqueda']" @load="loadBinaryTree"
+    @create="createBinaryTree" @delete="deleteBinaryTree" @close="showBinaryTreeSelector = false" />
 </template>
 
 <script setup>
@@ -298,6 +238,7 @@ import TheoryView from './components/TheoryView.vue'
 import InteractiveView from './components/InteractiveView.vue'
 import AboutView from './components/AboutView.vue'
 import GraphCanvas from './components/GraphCanvas.vue'
+import KruskalCanvas from './components/KruskalCanvas.vue'
 import CustomModal from './components/CustomModal.vue'
 import MatrixModal from './components/MatrixModal.vue'
 import Footer from './components/Footer.vue'
@@ -459,7 +400,10 @@ onMounted(() => {
     setBrowserRoute(VIEW_ROUTES[route.view] || VIEW_ROUTES.home, { replace: true })
   } else if (route?.type === 'algorithm') {
     selectedAlgorithm.value = route.algorithm
-    canvasMode.value = route.algorithm === 'johnson' ? 'johnson' : 'normal'
+    canvasMode.value =
+      ['johnson', 'dijkstra', 'kruskal'].includes(route.algorithm)
+        ? route.algorithm
+        : 'normal'
     currentView.value = 'canvas'
     setBrowserRoute(getAlgorithmRoute(route.algorithm), { replace: true })
   } else {
@@ -483,7 +427,10 @@ window.addEventListener('popstate', () => {
   }
 
   selectedAlgorithm.value = route.algorithm
-  canvasMode.value = route.algorithm === 'johnson' ? 'johnson' : 'normal'
+  canvasMode.value =
+    ['johnson', 'dijkstra', 'kruskal'].includes(route.algorithm)
+      ? route.algorithm
+      : 'normal'
   currentView.value = 'canvas'
 })
 
@@ -654,12 +601,16 @@ const handleCreateEdgeRequest = ({ sourceId, targetId }) => {
       if (isNaN(weight)) return
 
       // En Johnson no permitir pesos negativos
-      if (canvasMode.value === 'johnson' && weight < 0) {
+      if (
+        (canvasMode.value === 'johnson' ||
+          canvasMode.value === 'dijkstra') &&
+        weight < 0
+      ) {
 
         setTimeout(() => {
           openModal({
             title: '⚠️ Peso no permitido',
-            message: 'En Johnson no se permiten valores negativos. Ingresa un valor mayor o igual a 0.',
+            message: 'Este algoritmo no permite pesos negativos. Ingresa un valor mayor o igual a 0.',
             type: 'confirm'
           })
         }, 150)
@@ -698,8 +649,8 @@ const handleEditNodeRequest = (node) => {
 
       const index = nodes.value.findIndex(n => n.id === node.id)
       if (index !== -1) {
-        nodes.value[index] = { 
-          ...nodes.value[index], 
+        nodes.value[index] = {
+          ...nodes.value[index],
           label,
           color: color || '#64748b'
         }
@@ -724,7 +675,11 @@ const handleEditEdgeRequest = (edge) => {
 
       // En Johnson no permitir pesos negativos
       // En Johnson no permitir pesos negativos
-      if (canvasMode.value === 'johnson' && weight < 0) {
+      if (
+        (canvasMode.value === 'johnson' ||
+          canvasMode.value === 'dijkstra') &&
+        weight < 0
+      ) {
 
         setTimeout(() => {
           openModal({
@@ -740,8 +695,8 @@ const handleEditEdgeRequest = (edge) => {
       const index = edges.value.findIndex(e => e.id === edge.id)
 
       if (index !== -1) {
-        edges.value[index] = { 
-          ...edges.value[index], 
+        edges.value[index] = {
+          ...edges.value[index],
           weight,
           color: color || '#64748b'
         }
@@ -870,7 +825,7 @@ const handleSaveGraph = () => {
 
   openModal({
     title: 'Guardar Grafo',
-    iconName: 'save',  
+    iconName: 'save',
     label: 'Nombre del grafo:',
     placeholder: 'Ej. Grafo Clase, Red Social...',
     type: 'input',
@@ -878,7 +833,7 @@ const handleSaveGraph = () => {
     callback: (name) => {
       const graphName = String(name).trim() || currentName
       saveGraph(graphName)
-      
+
       showToast(
         'Guardado Correctamente',
         `"${graphName}" guardado con ${nodes.value.length} nodos y ${edges.value.length} aristas.`
@@ -926,7 +881,34 @@ const onSelectAlgorithm = (id) => {
 
     return
   }
+  // ========================================
+  // ALGORITMO DE DIJKSTRA
+  // ========================================
+  if (id === 'dijkstra') {
+    canvasMode.value = 'dijkstra'
 
+    nodes.value = []
+    edges.value = []
+    currentGraphIndex.value = -1
+
+    // Cargar solamente grafos Dijkstra
+    loadSavedGraphsList()
+
+    // Mostrar selector de grafos
+    showGraphSelector.value = true
+
+    return
+  }
+
+  if (id === 'kruskal') {
+  canvasMode.value = 'kruskal'
+  nodes.value = []
+  edges.value = []
+  currentGraphIndex.value = -1
+  loadSavedGraphsList()
+  showGraphSelector.value = true
+  return
+}
   if (id === 'northwest') {
     loadNorthwestList()
     showNorthwestSelector.value = true
@@ -1049,7 +1031,7 @@ const deleteSavedGraph = (index) => {
 const deleteSavedAssignmentGraph = (index) => {
   const graph = savedAssignmentGraphs.value[index]
   if (!graph) return
-  
+
   openModal({
     title: 'Confirmar Eliminación',
     message: `¿Eliminar el grafo de asignación "${graph.name || `Grafo ${index + 1}`}"? Esta acción no se puede deshacer.`,
@@ -1067,7 +1049,12 @@ const deleteSavedAssignmentGraph = (index) => {
 }
 
 const createNewGraph = () => {
-  canvasMode.value = selectedAlgorithm.value === 'johnson' ? 'johnson' : 'normal'
+  canvasMode.value =
+    selectedAlgorithm.value === 'johnson'
+      ? 'johnson'
+      : selectedAlgorithm.value === 'dijkstra'
+        ? 'dijkstra'
+        : 'normal'
   nodes.value = []
   edges.value = []
   optimalAssignmentEdges.value = []
@@ -1220,7 +1207,8 @@ const showInstructionsModal = (manual = 'grafos') => {
     insercion: '/Manual de Usuario - Graphix-11-12.pdf',
     shell: '/Manual de Usuario - Graphix-13-14.pdf',
     merge: '/Manual de Usuario - Graphix-15-16.pdf',
-    'arboles-binarios': '/Manual de Uso - Arboles Binarios.html.pdf'
+    'arboles-binarios': '/Manual de Uso - Arboles Binarios.html.pdf',
+    kruskal: '/Manual de Uso - Pizarra de Kruskal.pdf'
   }[manual] || '/Manual de Uso - Pizarra de Grafos.pdf'
 
   window.open(file, '_blank')
@@ -1447,7 +1435,8 @@ const showMatrixModal = () => {
   background-color: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
-   pointer-events: auto; /* 🔥 asegura que capture clicks */
+  pointer-events: auto;
+  /* 🔥 asegura que capture clicks */
 }
 
 .graph-selector-modal {
