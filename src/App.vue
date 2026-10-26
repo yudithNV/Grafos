@@ -1208,7 +1208,8 @@ const showInstructionsModal = (manual = 'grafos') => {
     shell: '/Manual de Usuario - Graphix-13-14.pdf',
     merge: '/Manual de Usuario - Graphix-15-16.pdf',
     'arboles-binarios': '/Manual de Uso - Arboles Binarios.html.pdf',
-    kruskal: '/Manual de Uso - Pizarra de Kruskal.pdf'
+    kruskal: '/Manual de Uso - Pizarra de Kruskal.pdf',
+    dijkstra: '/Manual de Uso - Pizarra de Dijkstra.pdf'
   }[manual] || '/Manual de Uso - Pizarra de Grafos.pdf'
 
   window.open(file, '_blank')

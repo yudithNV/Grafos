@@ -300,7 +300,7 @@
         <span>Matriz</span>
       </button>
 
-      <button @click="$emit('show-instructions', esJohnson ? 'johnson' : 'grafos')" class="btn-text">
+      <button @click="$emit('show-instructions', esJohnson ? 'johnson' : esDijkstra ? 'dijkstra' : 'grafos')" class="btn-text">
         <BookOpen class="btn-icon" />
         <span>Manual</span>
       </button>
