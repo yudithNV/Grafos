@@ -181,6 +181,13 @@ export const calcularDijkstra = (
         ? distancias[destinoId]
         : null,
 
+    // La pizarra muestra "Distancia mínima" con este campo
+    // (el camino máximo también lo devuelve con este nombre)
+    distancia:
+      destinoId !== null
+        ? distancias[destinoId]
+        : null,
+
     alcanzable:
       destinoId !== null
         ? distancias[destinoId] !== Infinity
