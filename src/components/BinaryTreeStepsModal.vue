@@ -4,7 +4,7 @@
       <section class="steps-modal" role="dialog" aria-modal="true" aria-labelledby="steps-title">
         <header class="steps-header">
           <div>
-            <span class="steps-eyebrow">RECORRIDO BST</span>
+            <span class="steps-eyebrow">RECORRIDO DE ÁRBOL</span>
             <h2 id="steps-title">{{ result.traversal }}</h2>
           </div>
           <button class="icon-button" aria-label="Cerrar" @click="close"><X :size="20" /></button>
@@ -60,7 +60,7 @@ const props = defineProps({
   show: Boolean,
   result: { type: Object, default: () => ({ traversal: '', order: '', steps: [] }) }
 })
-const emit = defineEmits(['close', 'step-change'])
+const emit = defineEmits(['close', 'step-change', 'path-change'])
 const currentStep = ref(0)
 const activeStep = computed(() => props.result.steps?.[currentStep.value] || null)
 const progress = computed(() => props.result.steps?.length

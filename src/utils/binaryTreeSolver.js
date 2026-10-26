@@ -1,11 +1,26 @@
 const cloneNode = (node) => {
   if (!node) return null
-  return {
+  const root = {
     id: node.id,
     value: node.value,
-    left: cloneNode(node.left),
-    right: cloneNode(node.right)
+    left: null,
+    right: null
   }
+  const pending = [{ source: node, target: root }]
+  while (pending.length) {
+    const { source, target } = pending.pop()
+    for (const side of ['left', 'right']) {
+      if (!source[side]) continue
+      target[side] = {
+        id: source[side].id,
+        value: source[side].value,
+        left: null,
+        right: null
+      }
+      pending.push({ source: source[side], target: target[side] })
+    }
+  }
+  return root
 }
 
 const normalizeValue = (value) => {
@@ -23,9 +38,15 @@ export class BinarySearchTree {
   }
 
   findNextId(node) {
-    if (!node) return 0
-    const current = Number(String(node.id).replace(/^bst-/, '')) || 0
-    return Math.max(current, this.findNextId(node.left), this.findNextId(node.right))
+    let maximum = 0
+    const pending = node ? [node] : []
+    while (pending.length) {
+      const current = pending.pop()
+      maximum = Math.max(maximum, Number(String(current.id).replace(/^bst-/, '')) || 0)
+      if (current.left) pending.push(current.left)
+      if (current.right) pending.push(current.right)
+    }
+    return maximum
   }
 
   getStructure() {
@@ -77,44 +98,47 @@ export class BinarySearchTree {
   delete(value) {
     const numericValue = normalizeValue(value)
     const steps = []
-    const remove = (node) => {
-      if (!node) return null
-      const direction = numericValue < node.value ? 'left' : numericValue > node.value ? 'right' : null
-      steps.push({ nodeId: node.id, value: node.value, action: direction ? 'compare' : 'remove', direction })
-      if (direction) {
-        node[direction] = remove(node[direction])
-        return node
-      }
-      if (!node.left) return node.right
-      if (!node.right) return node.left
+    let parent = null
+    let side = null
+    let current = this.root
+    while (current && current.value !== numericValue) {
+      side = numericValue < current.value ? 'left' : 'right'
+      steps.push({ nodeId: current.id, value: current.value, action: 'compare', direction: side })
+      parent = current
+      current = current[side]
+    }
+    if (!current) return { tree: this.getStructure(), removed: false, steps }
+    steps.push({ nodeId: current.id, value: current.value, action: 'remove', direction: null })
 
-      let successor = node.right
+    if (current.left && current.right) {
+      let successorParent = current
+      let successor = current.right
       while (successor.left) {
+        successorParent = successor
         successor = successor.left
         steps.push({ nodeId: successor.id, value: successor.value, action: 'find-successor', direction: 'left' })
       }
-      node.value = successor.value
-      node.right = this.removeMinimum(node.right)
-      return node
+      current.value = successor.value
+      if (successorParent === current) successorParent.right = successor.right
+      else successorParent.left = successor.right
+    } else {
+      const replacement = current.left || current.right
+      if (!parent) this.root = replacement
+      else parent[side] = replacement
     }
-
-    const before = this.countNodes(this.root)
-    this.root = remove(this.root)
-    return {
-      tree: this.getStructure(),
-      removed: this.countNodes(this.root) < before,
-      steps
-    }
-  }
-
-  removeMinimum(node) {
-    if (!node.left) return node.right
-    node.left = this.removeMinimum(node.left)
-    return node
+    return { tree: this.getStructure(), removed: true, steps }
   }
 
   countNodes(node) {
-    return node ? 1 + this.countNodes(node.left) + this.countNodes(node.right) : 0
+    let count = 0
+    const pending = node ? [node] : []
+    while (pending.length) {
+      const current = pending.pop()
+      count += 1
+      if (current.left) pending.push(current.left)
+      if (current.right) pending.push(current.right)
+    }
+    return count
   }
 
   traverse(order = 'inorder') {
@@ -136,16 +160,22 @@ export class BinarySearchTree {
     if (!validOrders.includes(normalizedOrder)) {
       throw new RangeError(`Recorrido no válido: ${order}`)
     }
-    const walk = (node, path = []) => {
-      if (!node) return
-      const nextPath = [...path, node.value]
-      if (normalizedOrder === 'preorder') visit(node, nextPath)
-      walk(node.left, nextPath)
-      if (normalizedOrder === 'inorder') visit(node, nextPath)
-      walk(node.right, nextPath)
-      if (normalizedOrder === 'postorder') visit(node, nextPath)
+    const pending = this.root ? [{ node: this.root, stage: 0, path: [] }] : []
+    while (pending.length) {
+      const frame = pending.pop()
+      if (frame.stage === 0) {
+        const path = [...frame.path, frame.node.value]
+        if (normalizedOrder === 'preorder') visit(frame.node, path)
+        pending.push({ node: frame.node, stage: 1, path })
+        if (frame.node.left) pending.push({ node: frame.node.left, stage: 0, path })
+      } else if (frame.stage === 1) {
+        if (normalizedOrder === 'inorder') visit(frame.node, frame.path)
+        pending.push({ node: frame.node, stage: 2, path: frame.path })
+        if (frame.node.right) pending.push({ node: frame.node.right, stage: 0, path: frame.path })
+      } else if (normalizedOrder === 'postorder') {
+        visit(frame.node, frame.path)
+      }
     }
-    walk(this.root)
 
     const labels = {
       inorder: 'Inorden',
@@ -169,3 +199,83 @@ export const createBinarySearchTree = (values = []) => {
 }
 
 export const traverseBinaryTree = (root, order) => new BinarySearchTree(root).traverse(order)
+
+const validateReconstructionTraversals = (traversal, inorder) => {
+  if (!Array.isArray(traversal) || !Array.isArray(inorder)) {
+    throw new TypeError('Los recorridos deben ser arreglos.')
+  }
+  if (traversal.length === 0 || traversal.length > 3000 || traversal.length !== inorder.length) {
+    throw new RangeError('Los recorridos deben tener la misma longitud entre 1 y 3000.')
+  }
+
+  const inorderIndexes = new Map()
+  inorder.forEach((value, index) => {
+    if (!Number.isInteger(value)) throw new TypeError('Los recorridos solo pueden contener números enteros.')
+    if (inorderIndexes.has(value)) throw new RangeError('Los recorridos no pueden contener valores duplicados.')
+    inorderIndexes.set(value, index)
+  })
+  const traversalValues = new Set()
+  traversal.forEach((value) => {
+    if (!Number.isInteger(value)) throw new TypeError('Los recorridos solo pueden contener números enteros.')
+    if (traversalValues.has(value)) throw new RangeError('Los recorridos no pueden contener valores duplicados.')
+    if (!inorderIndexes.has(value)) throw new RangeError('Los dos recorridos deben contener los mismos valores.')
+    traversalValues.add(value)
+  })
+  return inorderIndexes
+}
+
+export function construirDesdePreIn(preorder, inorder) {
+  const indexes = validateReconstructionTraversals(preorder, inorder)
+  let traversalIndex = 0
+  let root = null
+  const pending = [{ start: 0, end: inorder.length - 1, parent: null, side: null }]
+  while (pending.length) {
+    const frame = pending.pop()
+    if (frame.start > frame.end) continue
+    if (traversalIndex >= preorder.length) {
+      throw new RangeError('Los recorridos no representan un árbol binario válido.')
+    }
+    const value = preorder[traversalIndex++]
+    const rootIndex = indexes.get(value)
+    if (rootIndex < frame.start || rootIndex > frame.end) {
+      throw new RangeError('Los recorridos no representan un árbol binario válido.')
+    }
+    const node = { valor: value, izquierda: null, derecha: null }
+    if (frame.parent) frame.parent[frame.side] = node
+    else root = node
+    pending.push({ start: rootIndex + 1, end: frame.end, parent: node, side: 'derecha' })
+    pending.push({ start: frame.start, end: rootIndex - 1, parent: node, side: 'izquierda' })
+  }
+  if (traversalIndex !== preorder.length) {
+    throw new RangeError('Los recorridos no representan un árbol binario válido.')
+  }
+  return root
+}
+
+export function construirDesdePostIn(postorder, inorder) {
+  const indexes = validateReconstructionTraversals(postorder, inorder)
+  let traversalIndex = postorder.length - 1
+  let root = null
+  const pending = [{ start: 0, end: inorder.length - 1, parent: null, side: null }]
+  while (pending.length) {
+    const frame = pending.pop()
+    if (frame.start > frame.end) continue
+    if (traversalIndex < 0) {
+      throw new RangeError('Los recorridos no representan un árbol binario válido.')
+    }
+    const value = postorder[traversalIndex--]
+    const rootIndex = indexes.get(value)
+    if (rootIndex < frame.start || rootIndex > frame.end) {
+      throw new RangeError('Los recorridos no representan un árbol binario válido.')
+    }
+    const node = { valor: value, izquierda: null, derecha: null }
+    if (frame.parent) frame.parent[frame.side] = node
+    else root = node
+    pending.push({ start: frame.start, end: rootIndex - 1, parent: node, side: 'izquierda' })
+    pending.push({ start: rootIndex + 1, end: frame.end, parent: node, side: 'derecha' })
+  }
+  if (traversalIndex !== -1) {
+    throw new RangeError('Los recorridos no representan un árbol binario válido.')
+  }
+  return root
+}
