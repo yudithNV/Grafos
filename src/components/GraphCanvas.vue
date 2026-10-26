@@ -1,6 +1,57 @@
 <template>
   <div class="canvas-workspace">
 
+    <!-- ================================= -->
+    <!-- DIJKSTRA - MAXIMIZAR / MINIMIZAR -->
+    <!-- ================================= -->
+
+    <Transition name="johnson-modal">
+      <div v-if="mostrarTipoDijkstra" class="johnson-selector-overlay" @click.self="mostrarTipoDijkstra = false">
+        <div class="johnson-selector-card">
+
+          <button class="johnson-selector-close" @click="mostrarTipoDijkstra = false">
+            ×
+          </button>
+
+          <div class="johnson-selector-header">
+            <div class="johnson-selector-icon">
+              <Play />
+            </div>
+
+            <h3>Ejecutar algoritmo</h3>
+
+            <p>Selecciona el tipo de cálculo</p>
+          </div>
+
+          <div class="johnson-selector-options">
+
+            <!-- MAXIMIZAR -->
+            <button class="johnson-option johnson-option-max" @click="seleccionarTipoDijkstra('maximizar')">
+              <div class="johnson-option-symbol">
+                ↗
+              </div>
+
+              <strong>Maximizar</strong>
+
+              <span>Encontrar el camino más largo</span>
+            </button>
+
+            <!-- MINIMIZAR -->
+            <button class="johnson-option johnson-option-min" @click="seleccionarTipoDijkstra('minimizar')">
+              <div class="johnson-option-symbol">
+                ↘
+              </div>
+
+              <strong>Minimizar</strong>
+
+              <span>Encontrar el camino más corto</span>
+            </button>
+
+          </div>
+        </div>
+      </div>
+    </Transition>
+
 
     <!-- ================================= -->
     <!-- ALERTA DEL LIENZO -->
@@ -82,6 +133,72 @@
       </div>
     </Transition>
 
+    <!-- ================================= -->
+    <!-- SELECTOR DE DIJKSTRA -->
+    <!-- ================================= -->
+
+    <Transition name="johnson-modal">
+      <div v-if="mostrarSelectorDijkstra" class="johnson-selector-overlay"
+        @click.self="mostrarSelectorDijkstra = false">
+        <div class="johnson-selector-card">
+
+          <button class="johnson-selector-close" @click="mostrarSelectorDijkstra = false">
+            ×
+          </button>
+
+          <div class="johnson-selector-header">
+
+            <div class="johnson-selector-icon">
+              <Play />
+            </div>
+
+            <h3>Ejecutar Dijkstra</h3>
+
+            <p>
+              Selecciona el nodo de origen y el nodo de destino.
+            </p>
+
+          </div>
+
+          <!-- ORIGEN -->
+          <div class="dijkstra-field">
+
+            <label for="dijkstra-origen">
+              Nodo de origen
+            </label>
+
+            <select id="dijkstra-origen" v-model="dijkstraOrigen" class="dijkstra-select">
+              <option v-for="node in nodes" :key="node.id" :value="node.id">
+                {{ node.label }}
+              </option>
+            </select>
+
+          </div>
+
+          <!-- DESTINO -->
+          <div class="dijkstra-field">
+
+            <label for="dijkstra-destino">
+              Nodo de destino
+            </label>
+
+            <select id="dijkstra-destino" v-model="dijkstraDestino" class="dijkstra-select">
+              <option v-for="node in nodes" :key="node.id" :value="node.id">
+                {{ node.label }}
+              </option>
+            </select>
+
+          </div>
+
+          <button class="dijkstra-run-btn" @click="ejecutarDijkstra">
+            <Play class="btn-icon" />
+            Calcular camino mínimo
+          </button>
+
+        </div>
+      </div>
+    </Transition>
+
 
 
     <!-- Barra de Herramientas Superior (simplificada) -->
@@ -92,14 +209,21 @@
         </button>
 
         <div class="header-info">
-          <h2 class="header-title">
-            Pizarra de {{ esJohnson ? 'Johnson' : 'Grafos' }}
-            <span class="status-indicator"></span>
-          </h2>
+          <<h2 class="header-title">
+            {{
+              esJohnson
+                ? 'Pizarra de Johnson'
+                : esDijkstra
+                  ? 'Algoritmo de Dijkstra'
+                  : 'Pizarra de Grafos'
+            }}
 
-          <p class="header-subtitle">
-            {{ getModeDescription() }}
-          </p>
+            <span class="status-indicator"></span>
+            </h2>
+
+            <p class="header-subtitle">
+              {{ getModeDescription() }}
+            </p>
         </div>
 
       </div>
@@ -121,284 +245,344 @@
           </strong>
         </div>
 
-        <!-- SOLO JOHNSON -->
-        <div v-if="esJohnson && johnsonActivo" class="stat-badge stat-critical">
+        <!-- ================================= -->
+        <!-- RESULTADO DIJKSTRA -->
+        <!-- ================================= -->
 
-          {{ tipoJohnson === 'minimizar'
-            ? 'Ruta mínima:'
-            : 'Ruta crítica:' }}
+        <<div v-if="esDijkstra && dijkstraActivo && dijkstraResult" class="stat-badge stat-dijkstra">
+          {{ tipoDijkstra === 'maximizar'
+            ? 'Distancia máxima:'
+            : 'Distancia mínima:'
+          }}
 
-          <strong class="stat-critical-number">
-            {{ johnsonResult?.duracionProyecto }}
+          <strong class="stat-dijkstra-number">
+            {{ dijkstraResult.distancia }}
           </strong>
+      </div>
+      <div v-if="esDijkstra && dijkstraActivo && dijkstraResult" class="stat-badge stat-dijkstra">
+        Camino:
 
-        </div>
+        <strong class="stat-dijkstra-number">
+          {{
+            (dijkstraResult.camino || [])
+              .map(id => nodes.find(n => n.id === id)?.label ?? id)
+              .join(' → ')
+          }}
+        </strong>
+      </div>
+      <!-- SOLO JOHNSON -->
+      <div v-if="esJohnson && johnsonActivo" class="stat-badge stat-critical">
+
+        {{ tipoJohnson === 'minimizar'
+          ? 'Ruta mínima:'
+          : 'Ruta crítica:' }}
+
+        <strong class="stat-critical-number">
+          {{ johnsonResult?.duracionProyecto }}
+        </strong>
 
       </div>
 
-      <!-- Acciones de Cabecera -->
-      <div class="header-actions">
-        <button @click="$emit('save')" class="btn-text btn-save-graph">
-          <Save class="btn-icon" />
-          <span>Guardar</span>
-        </button>
-        <button @click="$emit('open-load')" class="btn-text btn-load-graph" title="Abrir un grafo ya guardado">
-          <FolderOpen class="btn-icon" />
-          <span>Cargar</span>
-        </button>
-        <button @click="$emit('show-matrix')" class="btn-text btn-matrix">
-          <Grid3x3 class="btn-icon" />
-          <span>Matriz</span>
-        </button>
-
-        <button @click="$emit('show-instructions', esJohnson ? 'johnson' : 'grafos')" class="btn-text">
-          <BookOpen class="btn-icon" />
-          <span>Manual</span>
-        </button>
-        <button v-if="esJohnson" @click="abrirSelectorJohnson" class="btn-text">
-          <Play class="btn-icon" />
-          Ejecutar Johnson
-        </button>
-
-        <button v-if="esJohnson && johnsonActivo" @click="detenerJohnson" class="btn-text btn-stop">
-          <Square class="btn-icon" />
-          STOP
-        </button>
-
-
-
-
-        <button @click="confirmClear" class="btn-text btn-danger">
-          <Trash2 class="btn-icon" />
-          <span>Limpiar</span>
-        </button>
-      </div>
     </div>
 
-    <!-- Panel Lateral Izquierdo -->
-    <div class="side-panel">
-      <button v-for="tool in tools" :key="tool.id" class="tool-btn" :class="{ 'tool-active': activeTool === tool.id }"
-        @click="setActiveTool(tool.id)" :title="tool.description">
-        <component :is="tool.icon" class="tool-icon" />
-        <span class="tool-label">{{ tool.label }}</span>
+    <!-- Acciones de Cabecera -->
+    <div class="header-actions">
+      <button @click="$emit('save')" class="btn-text btn-save-graph">
+        <Save class="btn-icon" />
+        <span>Guardar</span>
+      </button>
+      <button @click="$emit('open-load')" class="btn-text btn-load-graph" title="Abrir un grafo ya guardado">
+        <FolderOpen class="btn-icon" />
+        <span>Cargar</span>
+      </button>
+      <button @click="$emit('show-matrix')" class="btn-text btn-matrix">
+        <Grid3x3 class="btn-icon" />
+        <span>Matriz</span>
+      </button>
+
+      <button @click="$emit('show-instructions', esJohnson ? 'johnson' : 'grafos')" class="btn-text">
+        <BookOpen class="btn-icon" />
+        <span>Manual</span>
+      </button>
+      <button v-if="esJohnson" @click="abrirSelectorJohnson" class="btn-text">
+        <Play class="btn-icon" />
+        Ejecutar Johnson
+      </button>
+
+      <button v-if="esJohnson && johnsonActivo" @click="detenerJohnson" class="btn-text btn-stop">
+        <Square class="btn-icon" />
+        STOP
+      </button>
+
+      <!-- ================================= -->
+      <!-- BOTONES DIJKSTRA -->
+      <!-- ================================= -->
+
+      <button v-if="esDijkstra" @click="abrirTipoDijkstra" class="btn-text">
+        <Play class="btn-icon" />
+        Ejecutar Dijkstra
+      </button>
+
+      <button v-if="esDijkstra && dijkstraActivo" @click="detenerDijkstra" class="btn-text btn-stop">
+        <Square class="btn-icon" />
+        STOP
+      </button>
+
+
+
+
+      <button @click="confirmClear" class="btn-text btn-danger">
+        <Trash2 class="btn-icon" />
+        <span>Limpiar</span>
       </button>
     </div>
+  </div>
 
-    <!-- Indicador de Lienzo Vacío -->
-    <div v-if="nodes.length === 0 && activeTool !== 'delete'" class="empty-indicator">
-      <div class="empty-icon-wrapper">
-        <MousePointerClick class="empty-icon" />
-      </div>
-      <h3 class="empty-title">Lienzo Vacío</h3>
-      <p class="empty-desc">
-        Selecciona <strong>Nodo</strong> en el panel izquierdo y toca el lienzo para crear uno.
-      </p>
+  <!-- Panel Lateral Izquierdo -->
+  <div class="side-panel">
+    <button v-for="tool in tools" :key="tool.id" class="tool-btn" :class="{ 'tool-active': activeTool === tool.id }"
+      @click="setActiveTool(tool.id)" :title="tool.description">
+      <component :is="tool.icon" class="tool-icon" />
+      <span class="tool-label">{{ tool.label }}</span>
+    </button>
+  </div>
+
+  <!-- Indicador de Lienzo Vacío -->
+  <div v-if="nodes.length === 0 && activeTool !== 'delete'" class="empty-indicator">
+    <div class="empty-icon-wrapper">
+      <MousePointerClick class="empty-icon" />
     </div>
+    <h3 class="empty-title">Lienzo Vacío</h3>
+    <p class="empty-desc">
+      Selecciona <strong>Nodo</strong> en el panel izquierdo y toca el lienzo para crear uno.
+    </p>
+  </div>
 
-    <!-- Mensaje de ayuda según modo activo -->
-    <div v-if="activeTool === 'connect' && selectedNodeId" class="connection-tip">
-      <span class="pulse-dot"></span>
-      <span>Nodo origen seleccionado. Toca un nodo destino para conectar o el fondo para cancelar.</span>
-    </div>
+  <!-- Mensaje de ayuda según modo activo -->
+  <div v-if="activeTool === 'connect' && selectedNodeId" class="connection-tip">
+    <span class="pulse-dot"></span>
+    <span>Nodo origen seleccionado. Toca un nodo destino para conectar o el fondo para cancelar.</span>
+  </div>
 
-    <div v-if="activeTool === 'delete'" class="connection-tip delete-tip">
-      <span class="pulse-dot"></span>
-      <span>Modo Eliminar: Toca un nodo o arista para eliminarlo (confirmación requerida).</span>
-    </div>
+  <div v-if="activeTool === 'delete'" class="connection-tip delete-tip">
+    <span class="pulse-dot"></span>
+    <span>Modo Eliminar: Toca un nodo o arista para eliminarlo (confirmación requerida).</span>
+  </div>
 
-    <div v-if="activeTool === 'edit'" class="connection-tip edit-tip">
-      <span class="pulse-dot"></span>
-      <span>Modo Editar: Toca un nodo o arista para editar sus propiedades.</span>
-    </div>
+  <div v-if="activeTool === 'edit'" class="connection-tip edit-tip">
+    <span class="pulse-dot"></span>
+    <span>Modo Editar: Toca un nodo o arista para editar sus propiedades.</span>
+  </div>
 
-    <!-- Contenedor del Lienzo SVG -->
-    <div class="canvas-container" ref="canvasContainerRef" @mousedown="onCanvasMouseDown"
-      @touchstart="onCanvasTouchStart">
-      <StarryBackground />
-      <svg ref="svgRef" class="svg-canvas" @mousemove="onMouseMove" @touchmove="onTouchMove" @mouseup="onMouseUp"
-        @touchend="onTouchEnd">
-        <!-- Grupo que contiene TODO (nodos + aristas + background) con transform para pan -->
-        <g :transform="`translate(${panOffset.x}, ${panOffset.y})`">
-          <!-- Marcadores de Flechas para las Aristas -->
-          <defs>
-            <marker id="arrow-slate" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5"
-              orient="auto-start-reverse">
-              <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#94a3b8" />
-            </marker>
-            <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5"
-              orient="auto-start-reverse">
-              <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#6366f1" />
-            </marker>
-            <marker id="arrow-rose" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5"
-              orient="auto-start-reverse">
-              <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#ec4899" />
-            </marker>
-            <marker id="arrow-purple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5"
-              orient="auto-start-reverse">
-              <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#9333ea" />
-            </marker>
+  <!-- Contenedor del Lienzo SVG -->
+  <div class="canvas-container" ref="canvasContainerRef" @mousedown="onCanvasMouseDown"
+    @touchstart="onCanvasTouchStart">
+    <StarryBackground />
+    <svg ref="svgRef" class="svg-canvas" @mousemove="onMouseMove" @touchmove="onTouchMove" @mouseup="onMouseUp"
+      @touchend="onTouchEnd">
+      <!-- Grupo que contiene TODO (nodos + aristas + background) con transform para pan -->
+      <g :transform="`translate(${panOffset.x}, ${panOffset.y})`">
+        <!-- Marcadores de Flechas para las Aristas -->
+        <defs>
+          <marker id="arrow-slate" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5"
+            orient="auto-start-reverse">
+            <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#94a3b8" />
+          </marker>
+          <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5"
+            orient="auto-start-reverse">
+            <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#6366f1" />
+          </marker>
+          <marker id="arrow-rose" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5"
+            orient="auto-start-reverse">
+            <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#ec4899" />
+          </marker>
+          <marker id="arrow-purple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5"
+            orient="auto-start-reverse">
+            <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#9333ea" />
+          </marker>
 
-            <marker id="arrow-critical" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5"
-              orient="auto">
-              <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#38d9ff" class="critical-arrow" />
-            </marker>
-          </defs>
+          <marker id="arrow-critical" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5"
+            orient="auto">
+            <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#38d9ff" class="critical-arrow" />
+          </marker>
 
-          <!-- Dibujo de las Aristas -->
-          <g v-for="edge in processedEdges" :key="edge.id" class="edge-group">
-            <!-- Arista Principal -->
-            <path :d="edge.path" fill="none" :stroke="edge.customColor || edge.color" stroke-width="3" class="edge-path"
-              :class="{ 'edge-highlight': hoveredEdgeId === edge.id }" :marker-end="`url(#${edge.markerId})`"
-              @mousedown.stop="onEdgeMouseDown(edge, $event)" @touchstart.stop.prevent="onEdgeTouchStart(edge, $event)"
-              @mouseenter="hoveredEdgeId = edge.id" @mouseleave="hoveredEdgeId = null" />
+          <!-- FLECHA DIJKSTRA -->
+          <marker id="arrow-dijkstra" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5"
+            orient="auto">
+            <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#34d399" />
+          </marker>
+        </defs>
 
-            <!-- Área sensible táctil más ancha para facilitar clicks -->
-            <path :d="edge.path" fill="none" stroke="transparent" stroke-width="40" class="edge-touch-area"
-              @mousedown.stop="onEdgeMouseDown(edge, $event)"
-              @touchstart.stop.prevent="onEdgeTouchStart(edge, $event)" />
+        <!-- Dibujo de las Aristas -->
+        <g v-for="edge in processedEdges" :key="edge.id" class="edge-group">
+          <!-- Arista Principal -->
+          <path :d="edge.path" fill="none" :stroke="edge.customColor || edge.color" stroke-width="3" class="edge-path"
+            :class="{ 'edge-highlight': hoveredEdgeId === edge.id }" :marker-end="`url(#${edge.markerId})`"
+            @mousedown.stop="onEdgeMouseDown(edge, $event)" @touchstart.stop.prevent="onEdgeTouchStart(edge, $event)"
+            @mouseenter="hoveredEdgeId = edge.id" @mouseleave="hoveredEdgeId = null" />
 
-            <!-- CAMINO CRÍTICO ANIMADO -->
-            <!-- CAMINO CRÍTICO - RESPLANDOR -->
-            <path v-if="visibleCriticalEdges.includes(edge.id)" :d="edge.path" fill="none" stroke="#4f7cff"
-              stroke-width="7" class="critical-edge-glow" />
+          <!-- Área sensible táctil más ancha para facilitar clicks -->
+          <path :d="edge.path" fill="none" stroke="transparent" stroke-width="40" class="edge-touch-area"
+            @mousedown.stop="onEdgeMouseDown(edge, $event)" @touchstart.stop.prevent="onEdgeTouchStart(edge, $event)" />
 
-            <!-- CAMINO CRÍTICO - LÍNEA ANIMADA -->
-            <path v-if="visibleCriticalEdges.includes(edge.id)" :d="edge.path" fill="none" stroke="#38d9ff"
-              stroke-width="4.5" class="critical-edge-path" marker-end="url(#arrow-critical)" />
+          <!-- CAMINO CRÍTICO ANIMADO -->
+          <!-- CAMINO CRÍTICO - RESPLANDOR -->
+          <path v-if="visibleCriticalEdges.includes(edge.id)" :d="edge.path" fill="none" stroke="#4f7cff"
+            stroke-width="7" class="critical-edge-glow" />
 
-            <!-- Burbuja de Peso de la Arista -->
-            <g :transform="`translate(${edge.labelX}, ${edge.labelY})`" class="edge-label-group"
-              @mousedown.stop="onEdgeMouseDown(edge, $event)" @touchstart.stop.prevent="onEdgeTouchStart(edge, $event)">
-              <text v-if="
-                johnsonActivo &&
-                tipoJohnson === 'maximizar' &&
-                getHolguraEdge(edge.id) !== null
-              " y="-22" class="edge-holgura">
-                H = {{ getHolguraEdge(edge.id) }}
-              </text>
-              <rect :x="-edge.rectW / 2" :y="-12" :width="edge.rectW" :height="24" rx="6" class="edge-rect"
-                :stroke="edge.customColor || edge.color" />
-              <text dy="5" class="edge-text" :fill="edge.customColor || edge.color">
-                {{ edge.weight }}
-              </text>
-            </g>
-          </g>
+          <!-- CAMINO CRÍTICO - LÍNEA ANIMADA -->
+          <path v-if="visibleCriticalEdges.includes(edge.id)" :d="edge.path" fill="none" stroke="#38d9ff"
+            stroke-width="4.5" class="critical-edge-path" marker-end="url(#arrow-critical)" />
 
-          <!-- Dibujo de los Nodos (Círculos Planos) -->
-          <g v-for="node in nodes" :key="node.id" :transform="`translate(${node.x}, ${node.y})`" class="node-group"
-            :class="{
-              'node-active': selectedNodeId === node.id,
-              'node-dragging': draggedNodeId === node.id,
-              'node-hover': hoveredNodeId === node.id,
-              'node-delete-mode': activeTool === 'delete'
-            }" @mousedown.stop="onNodeMouseDown(node, $event)"
-            @touchstart.stop.prevent="onNodeTouchStart(node, $event)" @mouseenter="hoveredNodeId = node.id"
-            @mouseleave="hoveredNodeId = null">
-            <template v-if="!johnsonActivo">
-              <!-- Círculo del Nodo -->
-              <circle r="28" class="node-circle" :style="{ '--node-color': node.color || '#94a3b8' }" />
+          <!-- ================================= -->
+          <!-- DIJKSTRA - CAMINO MÍNIMO -->
+          <!-- ================================= -->
 
-              <text dy="6" class="node-text">
-                {{ truncateLabel(node.label) }}
-              </text>
-            </template>
+          <!-- Resplandor -->
+          <path v-if="esDijkstra && visibleDijkstraEdges.includes(edge.id)" :d="edge.path" fill="none" stroke="#10b981"
+            stroke-width="8" class="dijkstra-edge-glow" />
 
-            <!-- NODO JOHNSON -->
-            <!-- NODO JOHNSON -->
-            <template v-else>
+          <!-- Línea animada -->
+          <path v-if="esDijkstra && visibleDijkstraEdges.includes(edge.id)" :d="edge.path" fill="none" stroke="#34d399"
+            stroke-width="4.5" class="dijkstra-edge-path" marker-end="url(#arrow-dijkstra)" />
 
-              <g class="johnson-node" :class="{
-                'johnson-node-critical': isCriticalNode(node.id)
-              }">
-
-                <!-- Círculo exterior -->
-                <circle r="38" class="johnson-circle" />
-
-                <!-- Arco izquierdo -->
-                <path d="M -27 -16 A 31 31 0 0 0 -27 17" class="johnson-arc johnson-arc-left" />
-
-                <!-- Arco derecho -->
-                <path d="M 27 -16 A 31 31 0 0 1 27 17" class="johnson-arc johnson-arc-right" />
-
-                <!-- Nombre -->
-                <text x="0" y="-13" class="johnson-name">
-                  {{ truncateLabel(node.label) }}
-                </text>
-
-                <!-- Línea vertical solo para Maximizar -->
-                <line v-if="tipoJohnson === 'maximizar'" x1="0" y1="-2" x2="0" y2="27" class="johnson-divider" />
-
-                <!-- ================================= -->
-                <!-- MAXIMIZAR -->
-                <!-- ================================= -->
-
-                <template v-if="tipoJohnson === 'maximizar'">
-
-                  <!-- VALOR IDA -->
-                  <text x="-15" y="10" class="johnson-value">
-                    {{ johnsonResult?.ida?.[node.id] }}
-                  </text>
-
-                  <!-- VALOR REGRESO -->
-                  <text x="15" y="10" class="johnson-value">
-                    {{ johnsonResult?.regreso?.[node.id] }}
-                  </text>
-
-                  <!-- IDA -->
-                  <text x="-15" y="25" class="johnson-label">
-                    IDA
-                  </text>
-
-                  <!-- REG -->
-                  <text x="15" y="25" class="johnson-label">
-                    REG
-                  </text>
-
-                </template>
-
-
-                <!-- ================================= -->
-                <!-- MINIMIZAR -->
-                <!-- ================================= -->
-
-                <template v-else>
-
-                  <text x="0" y="11" class="johnson-value">
-                    {{ johnsonResult?.ida?.[node.id] }}
-                  </text>
-
-                  <text x="0" y="26" class="johnson-label">
-                    MÍN
-                  </text>
-
-                </template>
-
-              </g>
-
-            </template>
+          <!-- Burbuja de Peso de la Arista -->
+          <g :transform="`translate(${edge.labelX}, ${edge.labelY})`" class="edge-label-group"
+            @mousedown.stop="onEdgeMouseDown(edge, $event)" @touchstart.stop.prevent="onEdgeTouchStart(edge, $event)">
+            <text v-if="
+              johnsonActivo &&
+              tipoJohnson === 'maximizar' &&
+              getHolguraEdge(edge.id) !== null
+            " y="-22" class="edge-holgura">
+              H = {{ getHolguraEdge(edge.id) }}
+            </text>
+            <rect :x="-edge.rectW / 2" :y="-12" :width="edge.rectW" :height="24" rx="6" class="edge-rect"
+              :stroke="edge.customColor || edge.color" />
+            <text dy="5" class="edge-text" :fill="edge.customColor || edge.color">
+              {{ edge.weight }}
+            </text>
           </g>
         </g>
-      </svg>
-    </div>
 
-    <!-- Pie del Lienzo / Leyendas Académicas -->
-    <div class="canvas-footer">
-      <div class="footer-tips">
-        <Info class="footer-info-icon" />
-        <span>{{ getFooterTip() }}</span>
-      </div>
-      <div class="legend-container">
-        <span class="legend-item">
-          <span class="legend-line line-slate"></span> Simple
-        </span>
-        <span class="legend-item">
-          <span class="legend-line line-indigo"></span> Ida
-        </span>
-        <span class="legend-item">
-          <span class="legend-line line-pink"></span> Retorno
-        </span>
-      </div>
+        <!-- Dibujo de los Nodos (Círculos Planos) -->
+        <g v-for="node in nodes" :key="node.id" :transform="`translate(${node.x}, ${node.y})`" class="node-group"
+          :class="{
+            'node-active': selectedNodeId === node.id,
+            'node-dragging': draggedNodeId === node.id,
+            'node-hover': hoveredNodeId === node.id,
+            'node-delete-mode': activeTool === 'delete'
+          }" @mousedown.stop="onNodeMouseDown(node, $event)"
+          @touchstart.stop.prevent="onNodeTouchStart(node, $event)" @mouseenter="hoveredNodeId = node.id"
+          @mouseleave="hoveredNodeId = null">
+          <template v-if="!johnsonActivo">
+            <!-- Círculo del Nodo -->
+            <circle r="28" class="node-circle" :class="{
+              'dijkstra-node-active': esDijkstra && isDijkstraNode(node.id)
+            }" :style="{
+                '--node-color': node.color || '#94a3b8'
+              }" />
+
+            <text dy="6" class="node-text">
+              {{ truncateLabel(node.label) }}
+            </text>
+          </template>
+
+          <!-- NODO JOHNSON -->
+          <!-- NODO JOHNSON -->
+          <template v-else>
+
+            <g class="johnson-node" :class="{
+              'johnson-node-critical': isCriticalNode(node.id)
+            }">
+
+              <!-- Círculo exterior -->
+              <circle r="38" class="johnson-circle" />
+
+              <!-- Arco izquierdo -->
+              <path d="M -27 -16 A 31 31 0 0 0 -27 17" class="johnson-arc johnson-arc-left" />
+
+              <!-- Arco derecho -->
+              <path d="M 27 -16 A 31 31 0 0 1 27 17" class="johnson-arc johnson-arc-right" />
+
+              <!-- Nombre -->
+              <text x="0" y="-13" class="johnson-name">
+                {{ truncateLabel(node.label) }}
+              </text>
+
+              <!-- Línea vertical solo para Maximizar -->
+              <line v-if="tipoJohnson === 'maximizar'" x1="0" y1="-2" x2="0" y2="27" class="johnson-divider" />
+
+              <!-- ================================= -->
+              <!-- MAXIMIZAR -->
+              <!-- ================================= -->
+
+              <template v-if="tipoJohnson === 'maximizar'">
+
+                <!-- VALOR IDA -->
+                <text x="-15" y="10" class="johnson-value">
+                  {{ johnsonResult?.ida?.[node.id] }}
+                </text>
+
+                <!-- VALOR REGRESO -->
+                <text x="15" y="10" class="johnson-value">
+                  {{ johnsonResult?.regreso?.[node.id] }}
+                </text>
+
+                <!-- IDA -->
+                <text x="-15" y="25" class="johnson-label">
+                  IDA
+                </text>
+
+                <!-- REG -->
+                <text x="15" y="25" class="johnson-label">
+                  REG
+                </text>
+
+              </template>
+
+
+              <!-- ================================= -->
+              <!-- MINIMIZAR -->
+              <!-- ================================= -->
+
+              <template v-else>
+
+                <text x="0" y="11" class="johnson-value">
+                  {{ johnsonResult?.ida?.[node.id] }}
+                </text>
+
+                <text x="0" y="26" class="johnson-label">
+                  MÍN
+                </text>
+
+              </template>
+
+            </g>
+
+          </template>
+        </g>
+      </g>
+    </svg>
+  </div>
+
+  <!-- Pie del Lienzo / Leyendas Académicas -->
+  <div class="canvas-footer">
+    <div class="footer-tips">
+      <Info class="footer-info-icon" />
+      <span>{{ getFooterTip() }}</span>
     </div>
+    <div class="legend-container">
+      <span class="legend-item">
+        <span class="legend-line line-slate"></span> Simple
+      </span>
+      <span class="legend-item">
+        <span class="legend-line line-indigo"></span> Ida
+      </span>
+      <span class="legend-item">
+        <span class="legend-line line-pink"></span> Retorno
+      </span>
+    </div>
+  </div>
   </div>
 </template>
 
@@ -432,6 +616,8 @@ import {
 } from '@lucide/vue'
 
 import { calcularJohnson } from './utils/johnson'
+import { calcularDijkstra } from './utils/dijkstra'
+import { calcularCaminoMaximo } from './utils/caminoMaximo'
 
 const props = defineProps({
   nodes: {
@@ -529,6 +715,130 @@ const cerrarAlerta = () => {
 const esJohnson = computed(() => {
   return props.mode === 'johnson'
 })
+
+// ======================================
+// IDENTIFICAR MODO DIJKSTRA
+// ======================================
+
+const esDijkstra = computed(() => {
+  return props.mode === 'dijkstra'
+})
+
+// ======================================
+// ESTADO DEL ALGORITMO DE DIJKSTRA
+// ======================================
+
+// Controla si Dijkstra está ejecutado
+const dijkstraActivo = ref(false)
+
+// Guarda el resultado del algoritmo
+const dijkstraResult = ref(null)
+
+// Nodo inicial seleccionado
+const dijkstraOrigen = ref('')
+
+// Nodo destino seleccionado
+const dijkstraDestino = ref('')
+
+// Controla la ventana de selección
+const mostrarSelectorDijkstra = ref(false)
+
+
+// ======================================
+// DIJKSTRA - TIPO DE OPERACIÓN
+// ======================================
+
+const mostrarTipoDijkstra = ref(false)
+
+const tipoDijkstra = ref('minimizar')
+
+const abrirTipoDijkstra = () => {
+  if (props.nodes.length < 2) {
+    mostrarAlerta(
+      'Nodos insuficientes',
+      'Debes crear al menos dos nodos.'
+    )
+    return
+  }
+
+  if (props.edges.length === 0) {
+    mostrarAlerta(
+      'Sin conexiones',
+      'Debes crear al menos una conexión.'
+    )
+    return
+  }
+
+  mostrarTipoDijkstra.value = true
+}
+
+const seleccionarTipoDijkstra = (tipo) => {
+  tipoDijkstra.value = tipo
+
+  mostrarTipoDijkstra.value = false
+
+  // Abrir el selector existente de origen y destino
+  mostrarSelectorDijkstra.value = true
+}
+// ======================================
+// DIJKSTRA - ANIMACIÓN DEL CAMINO MÍNIMO
+// ======================================
+
+const dijkstraPathEdges = ref([])
+const visibleDijkstraEdges = ref([])
+const animandoDijkstra = ref(false)
+
+let dijkstraTimer = null
+
+const isDijkstraNode = (nodeId) => {
+  if (!dijkstraActivo.value || !dijkstraResult.value) {
+    return false
+  }
+
+  return (dijkstraResult.value.camino || []).includes(nodeId)
+}
+
+// ======================================
+// ANIMAR CAMINO MÍNIMO DE DIJKSTRA
+// ======================================
+
+const animarCaminoDijkstra = () => {
+
+  if (dijkstraTimer) {
+    clearTimeout(dijkstraTimer)
+    dijkstraTimer = null
+  }
+
+  visibleDijkstraEdges.value = []
+
+  if (dijkstraPathEdges.value.length === 0) {
+    animandoDijkstra.value = false
+    return
+  }
+
+  animandoDijkstra.value = true
+
+  let indice = 0
+
+  const mostrarSiguiente = () => {
+
+    if (indice >= dijkstraPathEdges.value.length) {
+      animandoDijkstra.value = false
+      dijkstraTimer = null
+      return
+    }
+
+    const edge = dijkstraPathEdges.value[indice]
+
+    visibleDijkstraEdges.value.push(edge.id)
+
+    indice++
+
+    dijkstraTimer = setTimeout(mostrarSiguiente, 900)
+  }
+
+  mostrarSiguiente()
+}
 
 const johnsonActivo = ref(false)
 const johnsonResult = ref(null)
@@ -788,6 +1098,240 @@ const ejecutarJohnson = (tipo = 'maximizar') => {
       'danger'
     )
   }
+}
+
+// ======================================
+// EJECUTAR ALGORITMO DE DIJKSTRA
+// ======================================
+
+// ==========================================
+// EJECUTAR MINIMIZAR / MAXIMIZAR
+// ==========================================
+
+const ejecutarDijkstra = () => {
+  try {
+
+    // ======================================
+    // 1. VALIDACIONES
+    // ======================================
+
+    if (props.nodes.length === 0) {
+      mostrarAlerta(
+        'Lienzo vacío',
+        'Debes crear nodos antes de ejecutar el algoritmo.'
+      )
+      return
+    }
+
+    if (props.edges.length === 0) {
+      mostrarAlerta(
+        'Sin conexiones',
+        'Debes crear al menos una conexión.'
+      )
+      return
+    }
+
+    if (!props.nodes.some(n => n.id === dijkstraOrigen.value)) {
+      mostrarAlerta(
+        'Origen requerido',
+        'Selecciona un nodo de origen válido.'
+      )
+      return
+    }
+
+    if (!props.nodes.some(n => n.id === dijkstraDestino.value)) {
+      mostrarAlerta(
+        'Destino requerido',
+        'Selecciona un nodo de destino válido.'
+      )
+      return
+    }
+
+    // ======================================
+    // 2. SELECCIONAR ALGORITMO
+    // ======================================
+
+    if (tipoDijkstra.value === 'maximizar') {
+
+      // MAXIMIZAR: camino más largo en DAG
+      dijkstraResult.value = calcularCaminoMaximo(
+        props.nodes,
+        props.edges,
+        dijkstraOrigen.value,
+        dijkstraDestino.value
+      )
+
+    } else {
+
+      // MINIMIZAR: algoritmo de Dijkstra
+      dijkstraResult.value = calcularDijkstra(
+        props.nodes,
+        props.edges,
+        dijkstraOrigen.value,
+        dijkstraDestino.value
+      )
+
+    }
+
+    // ======================================
+    // 3. VERIFICAR SI EXISTE CAMINO
+    // ======================================
+
+    if (!dijkstraResult.value.alcanzable) {
+
+      detenerDijkstra()
+
+      mostrarAlerta(
+        'Camino no encontrado',
+        'No existe una ruta desde el origen hasta el destino.'
+      )
+
+      return
+    }
+
+    // ======================================
+    // 4. ACTIVAR RESULTADO
+    // ======================================
+
+    dijkstraActivo.value = true
+
+    // ======================================
+    // 5. OBTENER ARISTAS DEL CAMINO
+    // ======================================
+
+    const camino = dijkstraResult.value.camino || []
+
+    dijkstraPathEdges.value = []
+
+    // Maximizar devuelve los IDs exactos de las aristas.
+    // Esto también permite manejar aristas paralelas.
+    if (
+      tipoDijkstra.value === 'maximizar' &&
+      Array.isArray(dijkstraResult.value.aristasCamino)
+    ) {
+
+      dijkstraPathEdges.value =
+        dijkstraResult.value.aristasCamino
+          .map(id => props.edges.find(edge => edge.id === id))
+          .filter(Boolean)
+
+    } else {
+
+      // Reconstruir aristas para Dijkstra.
+      for (let i = 0; i < camino.length - 1; i++) {
+
+        const sourceId = camino[i]
+        const targetId = camino[i + 1]
+
+        const edge = props.edges.find(
+          e =>
+            e.sourceId === sourceId &&
+            e.targetId === targetId
+        )
+
+        if (edge) {
+          dijkstraPathEdges.value.push(edge)
+        }
+      }
+    }
+
+    // ======================================
+    // 6. CERRAR SELECTOR
+    // ======================================
+
+    mostrarSelectorDijkstra.value = false
+
+    // ======================================
+    // 7. ANIMAR CAMINO
+    // ======================================
+
+    animarCaminoDijkstra()
+
+  } catch (error) {
+
+    detenerDijkstra()
+
+    mostrarAlerta(
+      'Error al ejecutar el algoritmo',
+      error.message,
+      'danger'
+    )
+  }
+}
+
+// ======================================
+// DETENER DIJKSTRA
+// ======================================
+
+const detenerDijkstra = () => {
+
+  if (dijkstraTimer) {
+    clearTimeout(dijkstraTimer)
+    dijkstraTimer = null
+  }
+
+  dijkstraActivo.value = false
+  dijkstraResult.value = null
+
+  dijkstraPathEdges.value = []
+  visibleDijkstraEdges.value = []
+
+  animandoDijkstra.value = false
+  mostrarSelectorDijkstra.value = false
+}
+// Reiniciar Dijkstra si cambia el grafo
+watch(
+  () => [
+    props.nodes.map(node =>
+      `${node.id}:${node.label}:${node.x}:${node.y}`
+    ).join('|'),
+
+    props.edges.map(edge =>
+      `${edge.id}:${edge.sourceId}:${edge.targetId}:${edge.weight}`
+    ).join('|')
+  ],
+  () => {
+    detenerDijkstra()
+  }
+)
+
+// ======================================
+// ABRIR SELECTOR DIJKSTRA
+// ======================================
+
+const abrirSelectorDijkstra = () => {
+
+  if (props.nodes.length === 0) {
+    mostrarAlerta(
+      'Lienzo vacío',
+      'Primero crea los nodos.'
+    )
+    return
+  }
+
+  if (props.edges.length === 0) {
+    mostrarAlerta(
+      'Sin conexiones',
+      'Primero conecta los nodos.'
+    )
+    return
+  }
+
+  // Seleccionar automáticamente origen y destino
+  // si todavía no se eligieron
+  if (
+    !props.nodes.some(node => node.id === dijkstraOrigen.value)
+  ) {
+    dijkstraOrigen.value = props.nodes[0].id
+  }
+
+  if (
+    !props.nodes.some(node => node.id === dijkstraDestino.value)
+  ) {
+    dijkstraDestino.value = props.nodes[props.nodes.length - 1].id
+  }
+
+  mostrarSelectorDijkstra.value = true
 }
 
 const getHolguraEdge = (edgeId) => {
@@ -1199,12 +1743,12 @@ const handleConnectNode = (node) => {
 
 
   // ==========================================
-// JOHNSON - IMPEDIR CONEXIONES DE RETORNO
-// ==========================================
-if (!validarConexionJohnson(sourceId, targetId)) {
-  selectedNodeId.value = null
-  return
-}
+  // JOHNSON - IMPEDIR CONEXIONES DE RETORNO
+  // ==========================================
+  if (!validarConexionJohnson(sourceId, targetId)) {
+    selectedNodeId.value = null
+    return
+  }
 
   // ==========================================
   // REGLAS ESPECIALES PARA JOHNSON
@@ -1586,6 +2130,7 @@ const confirmClear = () => {
   flex-direction: column;
   flex: 1;
 }
+
 .header-title {
   font-size: 0.85rem;
   font-weight: 600;
@@ -2095,7 +2640,7 @@ const confirmClear = () => {
 
 .canvas-container {
   position: relative;
-  background-color: #ffffff;  
+  background-color: #ffffff;
   flex-grow: 1;
   min-height: 0;
   width: 100%;
@@ -2106,9 +2651,11 @@ const confirmClear = () => {
 }
 
 [data-theme='dark'] .canvas-container {
-  background-color: var(--bg-body);  /* oscuro normal */
+  background-color: var(--bg-body);
+  /* oscuro normal */
 }
-.canvas-container > :deep(.starry-background) {
+
+.canvas-container> :deep(.starry-background) {
   position: absolute;
   inset: 0;
   z-index: 0;
@@ -2169,15 +2716,13 @@ const confirmClear = () => {
 
   /* ✨ GLOW — modo oscuro (más suave y contenido) */
   filter:
-    drop-shadow(0 0 2px var(--node-color, #94a3b8))
-    drop-shadow(0 0 6px rgba(148, 163, 184, 0.35));
+    drop-shadow(0 0 2px var(--node-color, #94a3b8)) drop-shadow(0 0 6px rgba(148, 163, 184, 0.35));
 }
 
 /* ✨ GLOW — modo claro (muy sutil, sin saturar) */
 [data-theme='light'] .node-circle {
   filter:
-    drop-shadow(0 0 3px rgba(168, 85, 247, 0.20))
-    drop-shadow(0 0 6px rgba(168, 85, 247, 0.10));
+    drop-shadow(0 0 3px rgba(168, 85, 247, 0.20)) drop-shadow(0 0 6px rgba(168, 85, 247, 0.10));
 }
 
 .node-text {
@@ -2778,5 +3323,144 @@ const confirmClear = () => {
 .btn-stop .btn-icon {
   width: 16px;
   height: 16px;
+}
+
+/* ==========================================
+   SELECTOR DIJKSTRA
+========================================== */
+
+.dijkstra-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.dijkstra-field label {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.dijkstra-select {
+  width: 100%;
+  padding: 12px;
+  background: var(--bg-surface-2);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.dijkstra-select:focus {
+  outline: none;
+  border-color: #10b981;
+}
+
+.dijkstra-run-btn {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  padding: 13px;
+  margin-top: 10px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.dijkstra-run-btn:hover {
+  filter: brightness(1.1);
+}
+
+/* ==========================================
+   DIJKSTRA - CAMINO MÍNIMO
+========================================== */
+
+.dijkstra-edge-glow {
+  pointer-events: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+
+  opacity: 0.55;
+
+  filter:
+    drop-shadow(0 0 4px #10b981) drop-shadow(0 0 8px #34d399) drop-shadow(0 0 14px rgba(16, 185, 129, 0.65));
+
+  animation: dijkstra-glow 1s ease-in-out infinite alternate;
+}
+
+.dijkstra-edge-path {
+  pointer-events: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+
+  stroke-dasharray: 12 7;
+
+  animation: dijkstra-flow 0.7s linear infinite;
+
+  filter:
+    drop-shadow(0 0 3px #34d399) drop-shadow(0 0 7px #10b981);
+}
+
+@keyframes dijkstra-flow {
+  from {
+    stroke-dashoffset: 19;
+  }
+
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes dijkstra-glow {
+  from {
+    opacity: 0.35;
+  }
+
+  to {
+    opacity: 0.8;
+  }
+}
+
+/* NODOS DEL CAMINO MÍNIMO */
+
+.dijkstra-node-active {
+  stroke: #34d399 !important;
+  stroke-width: 4px !important;
+
+  filter:
+    drop-shadow(0 0 4px #34d399) drop-shadow(0 0 10px rgba(16, 185, 129, 0.8));
+
+  animation: dijkstra-node-pulse 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes dijkstra-node-pulse {
+  from {
+    stroke-width: 3px;
+  }
+
+  to {
+    stroke-width: 5px;
+  }
+}
+
+/* RESULTADO EN CABECERA */
+
+.stat-dijkstra {
+  background-color: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(52, 211, 153, 0.45);
+  color: #34d399;
+}
+
+.stat-dijkstra-number {
+  color: #34d399;
+  font-weight: 700;
 }
 </style>

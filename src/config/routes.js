@@ -53,6 +53,21 @@ export const ALGORITHMS = [
     comingSoon: false,
     showInTheory: true
   },
+
+  {
+  id: 'dijkstra',
+  title: 'Algoritmo de Dijkstra',
+  name: 'Dijkstra',
+  desc: 'Encuentra el camino de menor costo entre un nodo de origen y un nodo de destino en un grafo con pesos no negativos.',
+  icon: Network,
+  iconBg: 'linear-gradient(135deg, #10b981, #059669)',
+  image: '/img/dijkstra.png',
+  route: '/pizarra/dijkstra',
+  complexity: 'O(V² + E) de tiempo y O(V + E) de memoria',
+  comingSoon: false,
+  showInTheory: false
+},
+
   {
     id: 'arboles-binarios',
     title: 'Árboles Binarios de Búsqueda',
