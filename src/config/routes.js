@@ -1,4 +1,4 @@
-import { Network, ArrowDownUp, ListOrdered, Layers, GitMerge, GitFork } from '@lucide/vue'
+import { Network, ArrowDownUp, ListOrdered, Layers, GitMerge, GitFork, Share2 } from '@lucide/vue'
 
 export const VIEW_ROUTES = {
   home: '/',
@@ -78,6 +78,19 @@ export const ALGORITHMS = [
     image: '/img/arboles.png',
     route: '/pizarra/arboles-binarios',
     complexity: 'O(log n) promedio para búsqueda, inserción y eliminación',
+    comingSoon: false,
+    showInTheory: false
+  },
+  {
+    id: 'kruskal',
+    title: 'Algoritmo de Kruskal',
+    name: 'Kruskal',
+    desc: 'Encuentra un árbol de expansión mínimo o máximo en un grafo no dirigido con pesos.',
+    icon: Share2,
+    iconBg: 'linear-gradient(135deg, #10b981, #06b6d4)',
+    image: '/img/kruskal.png',
+    route: '/pizarra/kruskal',
+    complexity: 'O(E log E) de tiempo y O(V) de memoria',
     comingSoon: false,
     showInTheory: false
   },

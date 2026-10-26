@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="canvas-workspace">
 
     <!-- ================================= -->
@@ -209,7 +209,7 @@
         </button>
 
         <div class="header-info">
-          <<h2 class="header-title">
+          <h2 class="header-title">
             {{
               esJohnson
                 ? 'Pizarra de Johnson'
@@ -249,7 +249,7 @@
         <!-- RESULTADO DIJKSTRA -->
         <!-- ================================= -->
 
-        <<div v-if="esDijkstra && dijkstraActivo && dijkstraResult" class="stat-badge stat-dijkstra">
+        <div v-if="esDijkstra && dijkstraActivo && dijkstraResult" class="stat-badge stat-dijkstra">
           {{ tipoDijkstra === 'maximizar'
             ? 'Distancia máxima:'
             : 'Distancia mínima:'
@@ -416,10 +416,28 @@
         <!-- Dibujo de las Aristas -->
         <g v-for="edge in processedEdges" :key="edge.id" class="edge-group">
           <!-- Arista Principal -->
-          <path :d="edge.path" fill="none" :stroke="edge.customColor || edge.color" stroke-width="3" class="edge-path"
-            :class="{ 'edge-highlight': hoveredEdgeId === edge.id }" :marker-end="`url(#${edge.markerId})`"
-            @mousedown.stop="onEdgeMouseDown(edge, $event)" @touchstart.stop.prevent="onEdgeTouchStart(edge, $event)"
-            @mouseenter="hoveredEdgeId = edge.id" @mouseleave="hoveredEdgeId = null" />
+          <!-- Máscara que revela el recorrido poco a poco -->
+<mask v-if="highlightedEdgeIds.includes(edge.id)" :id="maskId(edge.id)"
+  maskUnits="userSpaceOnUse" x="-5000" y="-5000" width="10000" height="10000">
+  <path :d="edge.path" fill="none" stroke="#fff" stroke-width="14"
+    pathLength="1" class="reveal-path" />
+</mask>
+
+<!-- Arista base (se oculta si está resaltada) -->
+<path :d="edge.path" fill="none" :stroke="edge.customColor || edge.color"
+  stroke-width="3" class="edge-path"
+  :class="{ 'edge-highlight': hoveredEdgeId === edge.id, 'result-edge-highlight': highlightedEdgeIds.includes(edge.id) }"
+  :marker-end="`url(#${edge.markerId})`"
+  @mousedown.stop="onEdgeMouseDown(edge, $event)" @touchstart.stop.prevent="onEdgeTouchStart(edge, $event)"
+  @mouseenter="hoveredEdgeId = edge.id" @mouseleave="hoveredEdgeId = null" />
+
+<!-- Recorrido punteado rosa que se dibuja progresivamente -->
+<path v-if="highlightedEdgeIds.includes(edge.id)" :d="edge.path" fill="none"
+  stroke="#ec4899" stroke-width="5" stroke-dasharray="8 6" stroke-linecap="round"
+  class="result-edge-dash" pointer-events="none"
+  :mask="`url(#${maskId(edge.id)})`" />
+
+
 
           <!-- Área sensible táctil más ancha para facilitar clicks -->
           <path :d="edge.path" fill="none" stroke="transparent" stroke-width="40" class="edge-touch-area"
@@ -477,10 +495,9 @@
           <template v-if="!johnsonActivo">
             <!-- Círculo del Nodo -->
             <circle r="28" class="node-circle" :class="{
-              'dijkstra-node-active': esDijkstra && isDijkstraNode(node.id)
-            }" :style="{
-                '--node-color': node.color || '#94a3b8'
-              }" />
+  'dijkstra-node-active': esDijkstra && isDijkstraNode(node.id),
+  'node-result': highlightedNodeIds.has(node.id)
+}" :style="{ '--node-color': node.color || '#94a3b8' }" />
 
             <text dy="6" class="node-text">
               {{ truncateLabel(node.label) }}
@@ -620,6 +637,9 @@ import { calcularDijkstra } from './utils/dijkstra'
 import { calcularCaminoMaximo } from './utils/caminoMaximo'
 
 const props = defineProps({
+  title: { type: String, default: '' },
+highlightedEdgeIds: { type: Array, default: () => [] },
+nodeStrokeColor: { type: String, default: '' },
   nodes: {
     type: Array,
     required: true
@@ -632,6 +652,7 @@ const props = defineProps({
     type: String,
     default: 'normal'
   }
+  
 })
 
 const emit = defineEmits([
@@ -724,6 +745,22 @@ const esDijkstra = computed(() => {
   return props.mode === 'dijkstra'
 })
 
+// ======================================
+// NODOS Y ARISTAS DESTACADOS PARA KRUSKAL
+// ======================================
+const highlightedNodeIds = computed(() => {
+  const ids = new Set()
+  props.edges.forEach(edge => {
+    if (props.highlightedEdgeIds.includes(edge.id)) {
+      ids.add(edge.sourceId)
+      ids.add(edge.targetId)
+    }
+  })
+  return ids
+})
+
+// ID válido para la máscara de cada arista
+const maskId = (id) => `mask-${String(id).replace(/[^\w-]/g, '_')}`
 // ======================================
 // ESTADO DEL ALGORITMO DE DIJKSTRA
 // ======================================
@@ -3462,5 +3499,37 @@ const confirmClear = () => {
 .stat-dijkstra-number {
   color: #34d399;
   font-weight: 700;
+}
+
+
+
+.node-circle.node-result {
+  stroke: #ec4899 !important;
+  stroke-width: 3.5px;
+  fill: rgba(236, 72, 153, 0.15) !important;
+  filter: drop-shadow(0 0 3px #ec4899) drop-shadow(0 0 8px rgba(236, 72, 153, 0.6)) !important;
+}
+
+.result-edge-highlight {
+  stroke: transparent !important;
+  filter: none;
+}
+
+.result-edge-dash {
+  filter:
+    drop-shadow(0 0 3px #FF2D95)
+    drop-shadow(0 0 8px rgba(255, 45, 149, 0.85));
+}
+
+/* La línea se dibuja de un nodo al otro (sigue el sentido origen → destino) */
+.reveal-path {
+  stroke-dasharray: 1 1;
+  stroke-dashoffset: 1;
+  animation: reveal-edge 1s ease-in-out forwards;
+}
+
+@keyframes reveal-edge {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
 }
 </style>

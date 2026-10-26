@@ -33,6 +33,25 @@
       @create-node="handleCreateNodeRequest" @create-edge="handleCreateEdgeRequest" @edit-node="handleEditNodeRequest"
       @edit-edge="handleEditEdgeRequest" @delete-node="handleDeleteNodeRequest"
       @delete-edge="handleDeleteEdgeRequest" />
+
+    <!-- Algoritmo de Kruskal -->
+     <KruskalCanvas
+  v-else-if="currentView === 'canvas' && selectedAlgorithm === 'kruskal'"
+  :nodes="nodes"
+  :edges="edges"
+  @back="backToWelcome"
+  @show-instructions="showInstructionsModal"
+  @show-matrix="showMatrixModal"
+  @open-load="showSavedGraphs"
+  @save="handleSaveGraph"
+  @clear="confirmClearCanvas"
+  @create-node="handleCreateNodeRequest"
+  @create-edge="handleCreateEdgeRequest"
+  @edit-node="handleEditNodeRequest"
+  @edit-edge="handleEditEdgeRequest"
+  @delete-node="handleDeleteNodeRequest"
+  @delete-edge="handleDeleteEdgeRequest"
+/>
     <!-- Módulo Aislado del Algoritmo de Asignación -->
     <AssignmentCanvas v-else-if="currentView === 'canvas' && selectedAlgorithm === 'asignacion'" :nodes="nodes"
       :edges="edges" :optimal-edge-ids="optimalAssignmentEdges" algorithm-type="asignacion" @back="backToWelcome"
@@ -219,6 +238,7 @@ import TheoryView from './components/TheoryView.vue'
 import InteractiveView from './components/InteractiveView.vue'
 import AboutView from './components/AboutView.vue'
 import GraphCanvas from './components/GraphCanvas.vue'
+import KruskalCanvas from './components/KruskalCanvas.vue'
 import CustomModal from './components/CustomModal.vue'
 import MatrixModal from './components/MatrixModal.vue'
 import Footer from './components/Footer.vue'
@@ -381,7 +401,7 @@ onMounted(() => {
   } else if (route?.type === 'algorithm') {
     selectedAlgorithm.value = route.algorithm
     canvasMode.value =
-      ['johnson', 'dijkstra'].includes(route.algorithm)
+      ['johnson', 'dijkstra', 'kruskal'].includes(route.algorithm)
         ? route.algorithm
         : 'normal'
     currentView.value = 'canvas'
@@ -408,7 +428,7 @@ window.addEventListener('popstate', () => {
 
   selectedAlgorithm.value = route.algorithm
   canvasMode.value =
-    ['johnson', 'dijkstra'].includes(route.algorithm)
+    ['johnson', 'dijkstra', 'kruskal'].includes(route.algorithm)
       ? route.algorithm
       : 'normal'
   currentView.value = 'canvas'
@@ -880,6 +900,15 @@ const onSelectAlgorithm = (id) => {
     return
   }
 
+  if (id === 'kruskal') {
+  canvasMode.value = 'kruskal'
+  nodes.value = []
+  edges.value = []
+  currentGraphIndex.value = -1
+  loadSavedGraphsList()
+  showGraphSelector.value = true
+  return
+}
   if (id === 'northwest') {
     loadNorthwestList()
     showNorthwestSelector.value = true
@@ -1178,7 +1207,8 @@ const showInstructionsModal = (manual = 'grafos') => {
     insercion: '/Manual de Usuario - Graphix-11-12.pdf',
     shell: '/Manual de Usuario - Graphix-13-14.pdf',
     merge: '/Manual de Usuario - Graphix-15-16.pdf',
-    'arboles-binarios': '/Manual de Uso - Arboles Binarios.html.pdf'
+    'arboles-binarios': '/Manual de Uso - Arboles Binarios.html.pdf',
+    kruskal: '/Manual de Uso - Pizarra de Kruskal.pdf'
   }[manual] || '/Manual de Uso - Pizarra de Grafos.pdf'
 
   window.open(file, '_blank')
