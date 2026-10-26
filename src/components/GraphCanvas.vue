@@ -150,6 +150,7 @@
           <Grid3x3 class="btn-icon" />
           <span>Matriz</span>
         </button>
+        <!--RESOLVE RMATRIZ-->
 
         <button @click="$emit('show-instructions', esJohnson ? 'johnson' : 'grafos')" class="btn-text">
           <BookOpen class="btn-icon" />
