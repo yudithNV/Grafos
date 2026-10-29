@@ -226,7 +226,7 @@
   <SavedListModal :show="showBinaryTreeSelector" title="Cargar Árbol Binario"
     info="Guarda tus árboles binarios de búsqueda para continuar trabajando en ellos." item-label="Árbol"
     new-label="➕ Crear Nuevo Árbol" header-bg="linear-gradient(135deg, #06b6d4, #6366f1)" :items="binaryTreeItems"
-    :stats="(item) => [`${item.data.values.length} nodos`, 'Árbol de búsqueda']" @load="loadBinaryTree"
+    :stats="(item) => [`${item.data.values.length} nodos`, item.data.mode === 'general' ? 'Árbol general' : 'Árbol de búsqueda']" @load="loadBinaryTree"
     @create="createBinaryTree" @delete="deleteBinaryTree" @close="showBinaryTreeSelector = false" />
 </template>
 
@@ -746,6 +746,8 @@ const confirmClearCanvas = () => {
     callback: () => {
       nodes.value = []
       edges.value = []
+      // También se quita la solución de Asignación (insignia "Asignados")
+      optimalAssignmentEdges.value = []
     }
   })
 }
