@@ -746,6 +746,8 @@ const confirmClearCanvas = () => {
     callback: () => {
       nodes.value = []
       edges.value = []
+      // También se quita la solución de Asignación (insignia "Asignados")
+      optimalAssignmentEdges.value = []
     }
   })
 }

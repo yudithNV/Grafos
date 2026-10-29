@@ -262,7 +262,7 @@
 
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import {
   ArrowLeft,
   Trash2,
@@ -448,6 +448,42 @@ const executeSolver = (mode) => {
   solverMode.value = mode
   solverResult.value = solveAlgorithm(props.nodes, props.edges, mode)
 }
+
+// ============================================================
+// Quitar la solución cuando ya no corresponde al grafo
+// ============================================================
+const EMPTY_RESULT = () => ({
+  alpha: [], beta: [], costMatrix: [], rawCostMatrix: [],
+  rowReducedMatrix: [], finalMatrix: [], assignments: [],
+  optimalEdgeIds: [], totalCost: 0, mode: 'minimize',
+  maxWeight: 0, INF: Number.MAX_SAFE_INTEGER
+})
+
+const resetSolution = () => {
+  showFloatingSummary.value = false
+  isStepsModalOpen.value = false
+  solverResult.value = EMPTY_RESULT()
+  if (props.optimalEdgeIds && props.optimalEdgeIds.length > 0) emit('clear-optimal')
+}
+
+// Al limpiar, borrar o editar nodos y conexiones (o cargar otro grafo), la solución
+// anterior deja de ser válida. Mover nodos NO cambia la solución, por eso no se
+// consideran las posiciones.
+watch(
+  () => [
+    props.nodes.map((node) => `${node.id}:${node.label}`).join('|'),
+    props.edges.map((edge) => `${edge.id}:${edge.sourceId}:${edge.targetId}:${edge.weight}`).join('|')
+  ],
+  () => resetSolution()
+)
+
+// Si se quita la solución con la ✕ de "Asignados", también se cierra el resumen
+watch(
+  () => (props.optimalEdgeIds ? props.optimalEdgeIds.length : 0),
+  (length) => {
+    if (length === 0) showFloatingSummary.value = false
+  }
+)
 
 const applySolutionOnCanvas = () => {
   emit('solution-found', solverResult.value)
