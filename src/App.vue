@@ -565,7 +565,14 @@ const handleCreateNodeRequest = ({ x, y }) => {
 }
 
 const handleCreateEdgeRequest = ({ sourceId, targetId }) => {
-  const existingEdge = edges.value.find(e => e.sourceId === sourceId && e.targetId === targetId)
+  const existingEdge = edges.value.find(e =>
+    e.sourceId === sourceId &&
+    e.targetId === targetId
+  ) || (
+    selectedAlgorithm.value === 'kruskal'
+      ? edges.value.find(e => e.sourceId === targetId && e.targetId === sourceId)
+      : null
+  )
   if (existingEdge) {
     handleEditEdgeRequest(existingEdge)
     return
