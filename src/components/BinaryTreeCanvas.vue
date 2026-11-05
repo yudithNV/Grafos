@@ -172,8 +172,8 @@
             <ListOrdered :size="16" />
             <strong>Resultado {{ traversalResult.traversal }}:</strong>
             <code>[{{ traversalResult.sequence.join(', ') }}]</code>
-            <button class="copy-traversals-button" type="button" title="Copiar los tres recorridos"
-              aria-label="Copiar los tres recorridos" @click="copyTraversals">
+            <button class="copy-traversals-button" type="button" title="Copiar este recorrido"
+              aria-label="Copiar este recorrido" @click="copyTraversal">
               <Copy :size="16" />
             </button>
           </div>
@@ -522,19 +522,25 @@ function resolveTraversal() {
   traversalResult.value = tree.value.traverse(selectedTraversal.value)
   showSteps.value = true
 }
-async function copyTraversals() {
-  const traversals = [
-    `Preorder [${tree.value.traverse('preorder').sequence.join(',')}]`,
-    `Inorder [${tree.value.traverse('inorder').sequence.join(',')}]`,
-    `Postorder [${tree.value.traverse('postorder').sequence.join(',')}]`
-  ].join('\n')
+async function copyTraversal() {
+  const traversalNames = {
+    preorder: 'Preorder',
+    inorder: 'Inorder',
+    postorder: 'Postorder'
+  }
+  const traversalName = traversalNames[traversalResult.value.order]
+  if (!traversalName || !traversalResult.value.sequence?.length) {
+    showMessage('Primero resuelve un recorrido para poder copiarlo.', 'error')
+    return
+  }
+  const result = `${traversalName} [${traversalResult.value.sequence.join(',')}]`
 
   try {
     if (!navigator.clipboard?.writeText) {
       throw new Error('El navegador no permite copiar al portapapeles en este contexto.')
     }
-    await navigator.clipboard.writeText(traversals)
-    showMessage('Los tres recorridos se copiaron al portapapeles.')
+    await navigator.clipboard.writeText(result)
+    showMessage(`Recorrido ${traversalResult.value.traversal} copiado al portapapeles.`)
   } catch (error) {
     showMessage(error instanceof Error ? error.message : 'No se pudieron copiar los recorridos.', 'error')
   }
