@@ -427,7 +427,7 @@
 <path :d="edge.path" fill="none" :stroke="edge.customColor || edge.color"
   stroke-width="3" class="edge-path"
   :class="{ 'edge-highlight': hoveredEdgeId === edge.id, 'result-edge-highlight': highlightedEdgeIds.includes(edge.id) }"
-  :marker-end="`url(#${edge.markerId})`"
+  :marker-end="props.mode === 'undirected' ? undefined : `url(#${edge.markerId})`"
   @mousedown.stop="onEdgeMouseDown(edge, $event)" @touchstart.stop.prevent="onEdgeTouchStart(edge, $event)"
   @mouseenter="hoveredEdgeId = edge.id" @mouseleave="hoveredEdgeId = null" />
 
