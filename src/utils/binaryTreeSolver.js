@@ -279,3 +279,56 @@ export function construirDesdePostIn(postorder, inorder) {
   }
   return root
 }
+
+export function construirDesdePrePost(preorder, postorder) {
+  if (!Array.isArray(preorder) || !Array.isArray(postorder)) {
+    throw new TypeError('Los recorridos deben ser arreglos.')
+  }
+  if (preorder.length === 0 || preorder.length > 3000 || preorder.length !== postorder.length) {
+    throw new RangeError('Los recorridos deben tener la misma longitud entre 1 y 3000.')
+  }
+
+  const postorderIndexes = new Map()
+  postorder.forEach((value, index) => {
+    if (!Number.isInteger(value)) throw new TypeError('Los recorridos solo pueden contener números enteros.')
+    if (postorderIndexes.has(value)) throw new RangeError('Los recorridos no pueden contener valores duplicados.')
+    postorderIndexes.set(value, index)
+  })
+
+  const preorderValues = new Set()
+  preorder.forEach((value) => {
+    if (!Number.isInteger(value)) throw new TypeError('Los recorridos solo pueden contener números enteros.')
+    if (preorderValues.has(value)) throw new RangeError('Los recorridos no pueden contener valores duplicados.')
+    if (!postorderIndexes.has(value)) throw new RangeError('Los dos recorridos deben contener los mismos valores.')
+    preorderValues.add(value)
+  })
+
+  const root = { valor: preorder[0], izquierda: null, derecha: null }
+  const pending = [root]
+  let postorderIndex = 0
+
+  for (let index = 1; index < preorder.length; index += 1) {
+    while (pending.length && pending[pending.length - 1].valor === postorder[postorderIndex]) {
+      pending.pop()
+      postorderIndex += 1
+    }
+
+    const parent = pending[pending.length - 1]
+    if (!parent) throw new RangeError('Los recorridos no representan un árbol binario válido.')
+
+    const node = { valor: preorder[index], izquierda: null, derecha: null }
+    if (!parent.izquierda) parent.izquierda = node
+    else if (!parent.derecha) parent.derecha = node
+    else throw new RangeError('Los recorridos no representan un árbol binario válido.')
+    pending.push(node)
+  }
+
+  while (pending.length && pending[pending.length - 1].valor === postorder[postorderIndex]) {
+    pending.pop()
+    postorderIndex += 1
+  }
+  if (pending.length || postorderIndex !== postorder.length) {
+    throw new RangeError('Los recorridos no representan un árbol binario válido.')
+  }
+  return root
+}
