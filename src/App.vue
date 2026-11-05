@@ -67,6 +67,9 @@
       :initial-data="binaryTreeData" @back="backToWelcome" @save="handleSaveBinaryTree" @open-load="showBinaryTrees"
       @show-instructions="showInstructionsModal"
       @clear="showToast('Árbol limpiado', 'Se eliminaron todos los nodos del árbol.')" />
+    <FuzzyCanvas v-else-if="currentView === 'canvas' && selectedAlgorithm === 'difusa'"
+      :key="'fuzzy-' + fuzzyCanvasKey" :initial-data="fuzzyData" @back="backToWelcome" @save="handleSaveFuzzy"
+      @open-load="showFuzzySystems" @show-instructions="showInstructionsModal" />
     <SortingCanvas v-else-if="currentView === 'canvas' && isSortAlgorithm(selectedAlgorithm)"
       :key="'sort-' + sortCanvasKey" :algorithm="selectedAlgorithm" :initial-data="sortData" @back="backToWelcome"
       @save="handleSaveSort" @open-load="showSortArrays" @show-instructions="showInstructionsModal"
@@ -223,6 +226,13 @@
     :items="sortItems"
     :stats="(p) => [`${p.data.values.length} elementos`, p.data.order === 'desc' ? 'Descendente' : 'Ascendente']"
     @load="loadSort" @create="createSort" @delete="deleteSort" @close="showSortSelector = false" />
+  <!-- Selector de sistemas difusos -->
+  <SavedListModal :show="showFuzzySelector" title="Cargar Sistema Difuso"
+    info="Guarda tus sistemas difusos (variables, reglas y escenarios) para seguir trabajando o simularlos en MATLAB."
+    item-label="Sistema" new-label="➕ Crear Nuevo Sistema" header-bg="linear-gradient(135deg, #f97316, #ea580c)"
+    :items="fuzzyItems"
+    :stats="(item) => [`${item.data.system.inputs.length} entradas`, `${item.data.system.rules.length} reglas`]"
+    @load="loadFuzzy" @create="createFuzzy" @delete="deleteFuzzy" @close="showFuzzySelector = false" />
   <SavedListModal :show="showBinaryTreeSelector" title="Cargar Árbol Binario"
     info="Guarda tus árboles binarios de búsqueda para continuar trabajando en ellos." item-label="Árbol"
     new-label="➕ Crear Nuevo Árbol" header-bg="linear-gradient(135deg, #06b6d4, #6366f1)" :items="binaryTreeItems"
@@ -245,6 +255,7 @@ import Footer from './components/Footer.vue'
 import AssignmentCanvas from './components/AssignmentCanvas.vue'
 import NorthwestCanvas from './components/NorthwestCanvas.vue'
 import BinaryTreeCanvas from './components/BinaryTreeCanvas.vue'
+import FuzzyCanvas from './components/FuzzyCanvas.vue'
 import SortingCanvas from './components/SortingCanvas.vue'
 import { SORT_ALGORITHMS } from './utils/sorting'
 import SavedListModal from './components/SavedListModal.vue'
@@ -284,6 +295,19 @@ const {
 const showBinaryTreeSelector = ref(false)
 const binaryTreeData = ref(null)
 const binaryTreeIndex = ref(-1)
+
+// Lógica difusa: sistemas guardados (variables, reglas y escenarios)
+const {
+  items: fuzzyItems,
+  load: loadFuzzyList,
+  add: addFuzzy,
+  update: updateFuzzy,
+  remove: removeFuzzy
+} = useSavedList('savedFuzzySystems')
+const showFuzzySelector = ref(false)
+const fuzzyData = ref(null)
+const fuzzyIndex = ref(-1)
+const fuzzyCanvasKey = ref(0)
 
 // Ordenamiento (Selection / Insertion Sort): una lista de guardados por algoritmo
 const sortLists = {
@@ -930,6 +954,11 @@ const onSelectAlgorithm = (id) => {
     return
   }
 
+  if (id === 'difusa') {
+    showFuzzySystems()
+    return
+  }
+
   // Ordenamiento: igual que las demás pizarras, primero se elige
   // crear un arreglo nuevo o abrir uno guardado.
   if (isSortAlgorithm(id)) {
@@ -1218,7 +1247,8 @@ const showInstructionsModal = (manual = 'grafos') => {
     merge: '/Manual de Usuario - Graphix-15-16.pdf',
     'arboles-binarios': '/Manual de Uso - Arboles Binarios.html.pdf',
     kruskal: '/Manual de Uso - Pizarra de Kruskal.pdf',
-    dijkstra: '/Manual de Uso - Pizarra de Dijkstra.pdf'
+    dijkstra: '/Manual de Uso - Pizarra de Dijkstra.pdf',
+    difusa: '/Manual de Uso - Logica Difusa MATLAB.pdf'
   }[manual] || '/Manual de Uso - Pizarra de Grafos.pdf'
 
   window.open(file, '_blank')
@@ -1311,6 +1341,73 @@ const handleSaveBinaryTree = (data) => {
         binaryTreeIndex.value = binaryTreeItems.value.length - 1
       }
       showToast('Guardado Correctamente', `"${treeName}" guardado con ${data.values.length} nodos.`)
+    }
+  })
+}
+
+// ============ LÓGICA DIFUSA ============
+
+const showFuzzySystems = () => {
+  loadFuzzyList()
+  showFuzzySelector.value = true
+}
+
+const loadFuzzy = (index) => {
+  const saved = fuzzyItems.value[index]
+  if (!saved) return
+  fuzzyData.value = JSON.parse(JSON.stringify(saved.data))
+  fuzzyIndex.value = index
+  fuzzyCanvasKey.value++
+  showFuzzySelector.value = false
+  openCanvas()
+}
+
+const createFuzzy = () => {
+  fuzzyData.value = null
+  fuzzyIndex.value = -1
+  fuzzyCanvasKey.value++
+  showFuzzySelector.value = false
+  openCanvas()
+}
+
+const deleteFuzzy = (index) => {
+  const saved = fuzzyItems.value[index]
+  if (!saved) return
+  openModal({
+    title: 'Confirmar Eliminación',
+    message: `¿Eliminar "${saved.name}"? Esta acción no se puede deshacer.`,
+    type: 'confirm',
+    callback: () => {
+      removeFuzzy(index)
+      if (fuzzyIndex.value === index) fuzzyIndex.value = -1
+      else if (fuzzyIndex.value > index) fuzzyIndex.value--
+    }
+  })
+}
+
+const handleSaveFuzzy = (data) => {
+  const current = fuzzyItems.value[fuzzyIndex.value]
+  openModal({
+    title: 'Guardar Sistema Difuso',
+    iconName: 'save',
+    label: 'Nombre del sistema:',
+    placeholder: 'Ej. Control de temperatura...',
+    type: 'input',
+    initialValue: current?.name || data.system.name || 'Sistema difuso',
+    callback: (name) => {
+      const systemName = String(name).trim() || 'Sistema difuso'
+      const entry = {
+        name: systemName,
+        date: new Date().toLocaleString(),
+        data: JSON.parse(JSON.stringify(data))
+      }
+      if (fuzzyIndex.value >= 0) {
+        updateFuzzy(fuzzyIndex.value, entry)
+      } else {
+        addFuzzy(entry)
+        fuzzyIndex.value = fuzzyItems.value.length - 1
+      }
+      showToast('Guardado Correctamente', `"${systemName}" guardado correctamente.`)
     }
   })
 }

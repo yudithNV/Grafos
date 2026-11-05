@@ -1,4 +1,4 @@
-import { Network, ArrowDownUp, ListOrdered, Layers, GitMerge, GitFork, Share2 } from '@lucide/vue'
+import { Network, ArrowDownUp, ListOrdered, Layers, GitMerge, GitFork, Share2, Waves } from '@lucide/vue'
 
 export const VIEW_ROUTES = {
   home: '/',
@@ -152,6 +152,18 @@ export const ALGORITHMS = [
     iconBg: 'linear-gradient(135deg, #8b5cf6, #ec4899)',
     image: '/img/merge.png',
     route: '/pizarra/merge',
+    comingSoon: false,
+    showInTheory: false
+  },
+  {
+    id: 'difusa',
+    title: 'Lógica difusa (MATLAB)',
+    name: 'Lógica difusa',
+    desc: 'Diseña un sistema difuso Mamdani con sus reglas y simula tres escenarios en MATLAB.',
+    icon: Waves,
+    iconBg: 'linear-gradient(135deg, #f97316, #ea580c)',
+    image: '/img/difusa.png',
+    route: '/pizarra/difusa',
     comingSoon: false,
     showInTheory: false
   }
