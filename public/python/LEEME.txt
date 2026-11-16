@@ -1,0 +1,9 @@
+Motor de lógica difusa en Python para la pizarra de Lógica difusa (Graphix)
+
+- fuzzy_engine.py: simula los sistemas (Mamdani y Sugeno) y dibuja las gráficas.
+  La web lo ejecuta dentro del navegador con Pyodide (Python en WebAssembly),
+  así que no hay que instalar nada. Pyodide, numpy y matplotlib se descargan
+  de cdn.jsdelivr.net la primera vez.
+- scikit_fuzzy-0.5.0-py2.py3-none-any.whl: la librería scikit-fuzzy
+  (licencia BSD de 3 cláusulas, https://github.com/scikit-fuzzy/scikit-fuzzy),
+  incluida aquí para no depender de PyPI.

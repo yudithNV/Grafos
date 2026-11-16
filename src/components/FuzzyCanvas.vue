@@ -32,13 +32,18 @@
           <FolderOpen class="btn-icon" />
           <span>Cargar</span>
         </button>
-        <button @click="downloadFis" class="btn-text" :disabled="hasProblems" title="Archivo para el Fuzzy Logic Designer de MATLAB">
-          <FileDown class="btn-icon" />
-          <span>.fis</span>
+        <button type="button" class="sim-pill" :class="pyState.cls" :title="pyState.title" @click="showPyCard">
+          <span class="sim-dot"></span>
+          <span>{{ pyState.short }}</span>
         </button>
-        <button @click="downloadMatlab" class="btn-text btn-matlab" :disabled="hasProblems">
-          <Play class="btn-icon" />
-          <span>Simular en MATLAB</span>
+        <button @click="simulatePython" class="btn-text btn-python" :disabled="hasProblems || pyRunning" :title="pyButtonTitle">
+          <Loader2 v-if="pyRunning" class="btn-icon spin" />
+          <Play v-else class="btn-icon" />
+          <span>{{ pyRunning ? 'Simulando…' : 'Simular en Python' }}</span>
+        </button>
+        <button @click="downloadMatlab" class="btn-text btn-matlab" :disabled="hasProblems" title="Descargar el script .m para MATLAB">
+          <FileDown class="btn-icon" />
+          <span>.m</span>
         </button>
         <button @click="$emit('show-instructions', 'difusa')" class="btn-text" title="Abrir el manual de uso de esta pizarra">
           <BookOpen class="btn-icon" />
@@ -217,7 +222,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="(mf, m) in currentVar.mfs" :key="m">
+                <tr v-for="(mf, m) in currentVar.mfs" :key="m" :class="{ 'mf-active': activeMf === m }" @focusin="activeMf = m">
                   <td><span class="swatch" :style="{ background: mfColor(m) }"></span></td>
                   <td><input v-model="mf.name" class="mf-name" maxlength="20" :aria-label="`Nombre de la función ${m + 1}`" /></td>
                   <td>
@@ -249,7 +254,16 @@
 
           <!-- Gráfica de las funciones -->
           <div class="mf-plot">
-            <svg :viewBox="`0 0 ${PLOT.w} ${PLOT.h}`" role="img" :aria-label="`Funciones de pertenencia de ${currentVar.name}`">
+            <svg
+              ref="plotSvg"
+              class="mf-svg"
+              :class="{ dragging: mfDrag }"
+              :viewBox="`0 0 ${PLOT.w} ${PLOT.h}`"
+              :aria-label="`Funciones de pertenencia de ${currentVar.name}. Arrastra los puntos para cambiarlas.`"
+              @pointermove="onMfMove"
+              @pointerup="endMfDrag"
+              @pointercancel="endMfDrag"
+            >
               <line :x1="PLOT.l" :y1="PLOT.t" :x2="PLOT.l" :y2="PLOT.b" class="axis" />
               <line :x1="PLOT.l" :y1="PLOT.b" :x2="PLOT.r" :y2="PLOT.b" class="axis" />
               <text :x="PLOT.l - 6" :y="PLOT.t + 4" class="tick" text-anchor="end">1</text>
@@ -258,8 +272,28 @@
 
               <template v-if="sugenoOutput">
                 <g v-for="(st, m) in bigStems" :key="'st' + m">
-                  <line :x1="st.x" :y1="PLOT.b" :x2="st.x" :y2="PLOT.t + 6" class="big-curve" :style="{ stroke: mfColor(m) }" />
-                  <circle :cx="st.x" :cy="PLOT.t + 6" r="4" :style="{ fill: mfColor(m) }" />
+                  <line :x1="st.x" :y1="PLOT.b" :x2="st.x" :y2="PLOT.t + 6" class="big-curve" :class="{ active: activeMf === m }" :style="{ stroke: mfColor(m) }" />
+                  <line
+                    v-if="currentVar.mfs[m].type === 'constant'"
+                    :x1="st.x" :y1="PLOT.b" :x2="st.x" :y2="PLOT.t + 6"
+                    class="hit-line"
+                    @pointerdown="startMfDrag(m, { kind: 'const' }, $event)"
+                  />
+                  <circle
+                    :cx="st.x" :cy="PLOT.t + 6"
+                    :r="currentVar.mfs[m].type === 'constant' ? 6 : 4"
+                    class="mf-handle"
+                    :class="{ fixed: currentVar.mfs[m].type !== 'constant', active: activeMf === m }"
+                    :style="{ fill: mfColor(m) }"
+                    :tabindex="currentVar.mfs[m].type === 'constant' ? 0 : -1"
+                    role="slider"
+                    :aria-label="`${currentVar.mfs[m].name}: valor`"
+                    :aria-valuenow="currentVar.mfs[m].params[0]"
+                    @pointerdown="currentVar.mfs[m].type === 'constant' && startMfDrag(m, { kind: 'const' }, $event)"
+                    @keydown="nudgeMf(m, { kind: 'const' }, $event)"
+                  >
+                    <title>{{ currentVar.mfs[m].type === 'constant' ? 'Arrastra para cambiar el valor' : 'Las salidas lineales se editan con sus coeficientes' }}</title>
+                  </circle>
                   <text :x="st.labelX" :y="PLOT.t - 6" class="curve-label" :style="{ fill: mfColor(m) }" text-anchor="middle">{{ currentVar.mfs[m].name }}</text>
                 </g>
               </template>
@@ -269,8 +303,40 @@
                   :key="'c' + m"
                   :points="bigCurve(currentVar, mf)"
                   class="big-curve"
+                  :class="{ active: activeMf === m }"
                   :style="{ stroke: mfColor(m) }"
                 />
+                <!-- zona ancha e invisible para agarrar y mover toda la curva -->
+                <polyline
+                  v-for="(mf, m) in currentVar.mfs"
+                  :key="'h' + m"
+                  :points="bigCurve(currentVar, mf)"
+                  class="hit-line"
+                  @pointerdown="startMfDrag(m, { kind: 'move' }, $event)"
+                >
+                  <title>Arrastra para mover {{ mf.name }}</title>
+                </polyline>
+                <!-- puntos que se arrastran (la función activa va encima) -->
+                <template v-for="m in mfDrawOrder" :key="'p' + m">
+                  <circle
+                    v-for="(h, k) in mfHandles(currentVar, currentVar.mfs[m])"
+                    :key="k"
+                    :cx="h.x" :cy="h.y"
+                    :r="activeMf === m ? 6.5 : 4.5"
+                    class="mf-handle"
+                    :class="{ active: activeMf === m }"
+                    :style="{ fill: mfColor(m) }"
+                    tabindex="0"
+                    role="slider"
+                    :aria-label="`${currentVar.mfs[m].name}: ${h.label}`"
+                    :aria-valuenow="h.value"
+                    @pointerdown="startMfDrag(m, h, $event)"
+                    @keydown="nudgeMf(m, h, $event)"
+                    @focus="activeMf = m"
+                  >
+                    <title>{{ currentVar.mfs[m].name }} · {{ h.label }} = {{ formatNum(h.value) }}</title>
+                  </circle>
+                </template>
                 <text
                   v-for="(mf, m) in currentVar.mfs"
                   :key="'t' + m"
@@ -290,6 +356,7 @@
             <div class="plot-legend">
               <span v-for="(sc, k) in scenarios" :key="k"><i :style="{ background: SCENARIO_COLORS[k] }"></i>{{ sc.name }}</span>
               <small>{{ selected.kind === 'output' ? 'Líneas = resultado de cada escenario' : 'Líneas = valor de cada escenario' }}</small>
+              <small class="plot-note drag-note">✋ Arrastra los <strong>puntos</strong> para cambiar los límites, o la <strong>curva</strong> para moverla entera. Con el teclado: Tab y flechas.</small>
               <small v-if="sugenoOutput && hasLinear" class="plot-note">Las salidas lineales se dibujan con los valores de {{ scenarios[0]?.name || 'el escenario 1' }}.</small>
             </div>
           </div>
@@ -375,6 +442,9 @@
                 <th>Escenario</th>
                 <th v-for="(v, i) in system.inputs" :key="i">{{ v.name }} <small>[{{ v.range[0] }} – {{ v.range[1] }}]</small></th>
                 <th>Vista previa: {{ system.output.name }}</th>
+                <th v-if="pyRun?.ok" :class="{ stale: pyStale }">
+                  Python <small v-if="pyStale">(desactualizado)</small>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -413,10 +483,126 @@
                   </template>
                   <span v-else class="muted">—</span>
                 </td>
+                <td v-if="pyRun?.ok" class="py-cell" :class="{ stale: pyStale }">
+                  <template v-if="Number.isFinite(pyRun.resultados[k])">
+                    <strong>{{ formatNum(pyRun.resultados[k]) }}</strong>
+                    <span class="result-label">{{ pyRun.etiquetas[k] }}</span>
+                  </template>
+                  <span v-else class="muted">—</span>
+                </td>
               </tr>
             </tbody>
           </table>
         </div>
+      </section>
+
+      <!-- ===== Simulación en Python (scikit-fuzzy) ===== -->
+      <section ref="pyCard" class="board-card py-card">
+        <div class="card-head">
+          <div>
+            <h3 class="card-title">Simulación en Python</h3>
+            <p class="card-sub">Python (scikit-fuzzy) simula los escenarios y dibuja las gráficas. Corre dentro del navegador: no hay que instalar nada.</p>
+          </div>
+          <span class="sim-pill static" :class="pyState.cls">
+            <span class="sim-dot"></span>
+            <span>{{ pyState.long }}</span>
+          </span>
+        </div>
+
+        <p v-if="py.stage === 'idle'" class="step-main-note">
+          Presiona <strong>Simular en Python</strong>. La primera vez el navegador descarga Python, numpy, matplotlib y
+          scikit-fuzzy (unos 50 MB, necesita internet) y tarda un poco; después queda guardado y es rápido.
+        </p>
+        <p v-else-if="py.stage === 'loading'" class="step-main-note py-loading">
+          <Loader2 class="btn-icon spin" /> {{ py.detail }} <span class="muted">(solo la primera vez)</span>
+        </p>
+        <p v-else-if="py.stage === 'error'" class="py-result error py-result-title">
+          ✖ No se pudo cargar Python: {{ py.error }}. Revisa tu conexión a internet y vuelve a intentar.
+        </p>
+
+        <div class="matlab-actions">
+          <button @click="simulatePython" class="btn-text btn-python" :disabled="hasProblems || pyRunning">
+            <Loader2 v-if="pyRunning" class="btn-icon spin" />
+            <Play v-else class="btn-icon" />
+            <span>{{ pyRunning ? 'Simulando…' : 'Simular en Python' }}</span>
+          </button>
+        </div>
+
+        <div v-if="pyRun && !pyRun.ok" class="py-result error" role="alert">
+          <p class="py-result-title">✖ {{ pyRun.error }}</p>
+        </div>
+
+        <template v-if="pyRun?.ok">
+          <p class="py-result-title ok" role="status">
+            ✔ Simulado con {{ pyRun.motor }} <span class="muted">· {{ pyRun.segundos }} s</span>
+            <span v-if="pyStale" class="muted">· cambiaste el sistema, vuelve a simular</span>
+          </p>
+
+          <div class="py-tabs" role="tablist" aria-label="Gráficas de la simulación">
+            <button
+              v-for="tab in pyTabs"
+              :key="tab.id"
+              type="button"
+              role="tab"
+              :aria-selected="pyTab === tab.id"
+              :class="{ on: pyTab === tab.id }"
+              @click="pyTab = tab.id"
+            >{{ tab.label }}</button>
+          </div>
+
+          <div v-if="pyTab === 'reglas' || pyTab === 'superficie'" class="py-options">
+            <label>
+              {{ pyTab === 'reglas' ? 'Empezar desde' : 'Escenario' }}
+              <select v-model.number="pyOptions.scenario" @change="pyTab === 'superficie' && refreshSurface()" :disabled="pySurfaceBusy">
+                <option v-for="(sc, k) in pyRun.scenariosSnap" :key="k" :value="k">{{ sc.name }}</option>
+              </select>
+            </label>
+            <template v-if="pyTab === 'superficie'">
+              <label>
+                Eje X
+                <select v-model.number="pyOptions.surface[0]" @change="refreshSurface" :disabled="pySurfaceBusy">
+                  <option v-for="(v, i) in pyRun.systemSnap.inputs" :key="i" :value="i" :disabled="i === pyOptions.surface[1]">{{ v.name }}</option>
+                </select>
+              </label>
+              <label>
+                Eje Y
+                <select v-model.number="pyOptions.surface[1]" @change="refreshSurface" :disabled="pySurfaceBusy">
+                  <option v-for="(v, i) in pyRun.systemSnap.inputs" :key="i" :value="i" :disabled="i === pyOptions.surface[0]">{{ v.name }}</option>
+                </select>
+              </label>
+              <span class="muted small">Las demás entradas toman el valor del escenario elegido.</span>
+            </template>
+          </div>
+
+          <!-- Visor de reglas interactivo -->
+          <FuzzyRuleViewer
+            v-if="pyTab === 'reglas'"
+            :system="pyRun.systemSnap"
+            :start-values="pyRun.scenariosSnap[pyOptions.scenario]?.values || pyRun.scenariosSnap[0].values"
+          />
+
+          <!-- Superficie 3D interactiva -->
+          <FuzzySurface3D
+            v-else-if="pyTab === 'superficie'"
+            :data="pyRun.superficie"
+            :colors="SCENARIO_COLORS"
+            :class="{ busy: pySurfaceBusy }"
+          />
+
+          <!-- Imágenes de matplotlib -->
+          <figure v-else class="py-figure" :class="{ busy: pyRunning }">
+            <img
+              v-if="pyRun.graficas?.[pyTab]"
+              :src="pyRun.graficas[pyTab]"
+              :alt="pyTabs.find((t) => t.id === pyTab)?.label"
+            />
+          </figure>
+
+          <details class="py-output">
+            <summary>Ver la salida de Python</summary>
+            <pre>{{ pyRun.salida }}</pre>
+          </details>
+        </template>
       </section>
 
       <!-- ===== Cómo simular en MATLAB ===== -->
@@ -464,8 +650,11 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
-import { ArrowLeft, Save, FolderOpen, FileDown, Play, Trash2, Plus, Minus, X, BookOpen } from '@lucide/vue'
+import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ArrowLeft, Save, FolderOpen, FileDown, Play, Trash2, Plus, Minus, X, BookOpen, Loader2 } from '@lucide/vue'
+import { onPythonStatus, simulateInPython, surfaceInPython } from '../utils/pythonSimulator'
+import FuzzyRuleViewer from './FuzzyRuleViewer.vue'
+import FuzzySurface3D from './FuzzySurface3D.vue'
 import StarryBackground from './StarryBackground.vue'
 import {
   MF_TYPES,
@@ -673,6 +862,122 @@ const markers = computed(() => {
 })
 const mfColor = (m) => MF_COLORS[m % MF_COLORS.length]
 
+/* ---------------- Mover las funciones con el mouse (como una pizarra) ---------------- */
+const plotSvg = ref(null)
+const activeMf = ref(null)
+const mfDrag = ref(null) // { m, handle, startX, startParams }
+
+watch(() => [selected.value.kind, selected.value.index], () => { activeMf.value = null; mfDrag.value = null })
+
+// La función activa se dibuja al final para que sus puntos queden encima
+const mfDrawOrder = computed(() => {
+  const idx = currentVar.value.mfs.map((_, m) => m)
+  if (activeMf.value === null || activeMf.value >= idx.length) return idx
+  return [...idx.filter((m) => m !== activeMf.value), activeMf.value]
+})
+
+const plotYOf = (mu) => PLOT.b - mu * (PLOT.b - PLOT.t)
+// Puntos que se pueden arrastrar de cada tipo de función
+function mfHandles(variable, mf) {
+  const p = mf.params.map(Number)
+  if (p.some((n) => !Number.isFinite(n))) return []
+  if (mf.type === 'gaussmf') {
+    return [
+      { kind: 'center', label: 'centro c', value: p[1], x: plotX(variable, p[1]), y: plotYOf(1) },
+      { kind: 'sigma', label: 'ancho σ', value: p[0], x: plotX(variable, p[1] + p[0]), y: plotYOf(Math.exp(-0.5)) }
+    ]
+  }
+  const heights = mf.type === 'trimf' ? [0, 1, 0] : [0, 1, 1, 0]
+  const names = mf.type === 'trimf' ? ['a', 'b', 'c'] : ['a', 'b', 'c', 'd']
+  return p.map((v, idx) => ({ kind: 'p', idx, label: names[idx], value: v, x: plotX(variable, v), y: plotYOf(heights[idx]) }))
+}
+
+function dragStep(variable) {
+  const [lo, hi] = variable.range.map(Number)
+  const span = hi - lo
+  return span > 0 ? Math.pow(10, Math.floor(Math.log10(span / 100))) : 0.1
+}
+const roundTo = (v, step) => Number((Math.round(v / step) * step).toFixed(6))
+
+function pointerValue(evt) {
+  const svg = plotSvg.value
+  const pt = svg.createSVGPoint()
+  pt.x = evt.clientX
+  pt.y = evt.clientY
+  const sx = pt.matrixTransform(svg.getScreenCTM().inverse()).x
+  const [lo, hi] = rangeOf(currentVar.value)
+  return lo + ((sx - PLOT.l) / (PLOT.r - PLOT.l)) * (hi - lo)
+}
+
+// Aplica un nuevo valor x al punto arrastrado, sin romper el orden a ≤ b ≤ c ≤ d
+function applyHandle(mf, handle, xv, startParams) {
+  const v = currentVar.value
+  const [lo, hi] = v.range.map(Number)
+  const step = dragStep(v)
+  const p = [...startParams]
+  if (handle.kind === 'const') {
+    const [olo, ohi] = system.value.output.range.map(Number)
+    mf.params = [roundTo(Math.min(Math.max(xv, olo), ohi), step)]
+    return
+  }
+  if (handle.kind === 'center') {
+    p[1] = roundTo(Math.min(Math.max(xv, lo), hi), step)
+  } else if (handle.kind === 'sigma') {
+    p[0] = Math.max(roundTo(Math.abs(xv - p[1]), step), step)
+  } else if (handle.kind === 'p') {
+    const i = handle.idx
+    const min = i > 0 ? p[i - 1] : Math.min(lo, p[i])
+    const max = i < p.length - 1 ? p[i + 1] : Math.max(hi, p[i])
+    p[i] = roundTo(Math.min(Math.max(xv, min), max), step)
+  } else if (handle.kind === 'move') {
+    // mueve toda la curva; el pico no sale del rango
+    const peak = mf.type === 'gaussmf' ? p[1] : mf.type === 'trimf' ? p[1] : (p[1] + p[2]) / 2
+    const xIn = Math.min(Math.max(xv, lo), hi) // el puntero, dentro del rango
+    let shift = roundTo(xIn - handle.startX, step)
+    shift = Math.min(Math.max(shift, lo - peak), hi - peak)
+    if (mf.type === 'gaussmf') p[1] = roundTo(p[1] + shift, step)
+    else for (let i = 0; i < p.length; i++) p[i] = roundTo(p[i] + shift, step)
+  }
+  mf.params = p
+}
+
+function startMfDrag(m, handle, evt) {
+  if (evt.button !== undefined && evt.button !== 0) return
+  evt.preventDefault()
+  const mf = currentVar.value.mfs[m]
+  activeMf.value = m
+  const startX = pointerValue(evt)
+  mfDrag.value = { m, handle: { ...handle, startX }, startParams: mf.params.map(Number) }
+  plotSvg.value?.setPointerCapture?.(evt.pointerId)
+  if (handle.kind !== 'move') applyHandle(mf, mfDrag.value.handle, startX, mfDrag.value.startParams)
+}
+function onMfMove(evt) {
+  const d = mfDrag.value
+  if (!d) return
+  const mf = currentVar.value.mfs[d.m]
+  if (mf) applyHandle(mf, d.handle, pointerValue(evt), d.startParams)
+}
+function endMfDrag() {
+  mfDrag.value = null
+}
+// Teclado: flechas mueven el punto (Shift = 10 veces más)
+function nudgeMf(m, handle, evt) {
+  if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(evt.key)) return
+  evt.preventDefault()
+  const mf = currentVar.value.mfs[m]
+  if (handle.kind === 'const' && mf.type !== 'constant') return
+  const dir = evt.key === 'ArrowLeft' || evt.key === 'ArrowDown' ? -1 : 1
+  const step = dragStep(currentVar.value) * (evt.shiftKey ? 10 : 1) * dir
+  const p = mf.params.map(Number)
+  activeMf.value = m
+  let target
+  if (handle.kind === 'const') target = p[0] + step
+  else if (handle.kind === 'center') target = p[1] + step
+  else if (handle.kind === 'sigma') target = p[1] + p[0] + step
+  else if (handle.kind === 'p') target = p[handle.idx] + step
+  applyHandle(mf, handle, target, p)
+}
+
 /* ---------------- Mini gráfica de la vista previa ---------------- */
 function aggX(value) {
   const [lo, hi] = outputPlotRange.value
@@ -824,6 +1129,94 @@ function download(filename, content) {
   a.click()
   a.remove()
   setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
+/* ---------------- Simulador en Python (scikit-fuzzy en el navegador) ---------------- */
+const py = ref({ stage: 'idle', detail: '', info: null, error: '' })
+const pyRunning = ref(false)
+const pyRun = ref(null)
+const pyTab = ref('escenarios')
+const pyOptions = ref({ scenario: 0, surface: [0, 1] })
+const pyCard = ref(null)
+let offPy = null
+
+onMounted(() => {
+  offPy = onPythonStatus((st) => { py.value = { ...st } })
+})
+onBeforeUnmount(() => offPy?.())
+
+const pyState = computed(() => {
+  const st = py.value
+  if (st.stage === 'ready') {
+    return { cls: 'ok', short: 'Python listo', long: `Python ${st.info?.python} · scikit-fuzzy ${st.info?.skfuzzy}`, title: 'Python corre dentro del navegador (Pyodide)' }
+  }
+  if (st.stage === 'loading') return { cls: 'wait', short: 'Cargando Python…', long: st.detail || 'Cargando Python…', title: st.detail }
+  if (st.stage === 'error') return { cls: 'bad', short: 'Python: error', long: 'No se pudo cargar Python', title: st.error }
+  return { cls: 'off', short: 'Python', long: 'Python se carga al simular', title: 'Python corre dentro del navegador: no hay que instalar nada' }
+})
+const pyButtonTitle = computed(() =>
+  py.value.stage === 'ready'
+    ? 'Simular los escenarios con Python (scikit-fuzzy)'
+    : 'La primera vez descarga Python en el navegador (unos 50 MB)'
+)
+const pyTabs = computed(() => [
+  { id: 'escenarios', label: 'Escenarios' },
+  { id: 'funciones', label: 'Funciones de pertenencia' },
+  { id: 'reglas', label: 'Visor de reglas (interactivo)' },
+  ...(pyRun.value?.superficie ? [{ id: 'superficie', label: 'Superficie 3D (interactiva)' }] : [])
+])
+const pySurfaceBusy = ref(false)
+
+// Al cambiar los ejes o el escenario: Python recalcula solo la superficie (rápido)
+async function refreshSurface() {
+  const run = pyRun.value
+  if (!run?.ok || pySurfaceBusy.value) return
+  const n = run.systemSnap.inputs.length
+  const o = pyOptions.value
+  if (o.surface[0] === o.surface[1] && n > 1) o.surface[1] = (o.surface[0] + 1) % n
+  pySurfaceBusy.value = true
+  try {
+    const r = await surfaceInPython({ system: run.systemSnap, scenarios: run.scenariosSnap, options: clone(o) })
+    if (r.ok) run.superficie = r.superficie
+  } finally {
+    pySurfaceBusy.value = false
+  }
+}
+
+// Para saber si los resultados de Python corresponden al sistema actual
+const pySignature = computed(() => JSON.stringify({ s: system.value, e: scenarios.value }))
+const pyStale = computed(() => !!pyRun.value?.ok && pyRun.value.signature !== pySignature.value)
+
+function showPyCard() {
+  pyCard.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+async function simulatePython() {
+  if (hasProblems.value || pyRunning.value) return
+  if (py.value.stage !== 'ready') showPyCard()
+  // Opciones válidas para el sistema actual
+  const n = system.value.inputs.length
+  const o = pyOptions.value
+  o.scenario = Math.min(Math.max(o.scenario, 0), scenarios.value.length - 1)
+  o.surface = [Math.min(o.surface[0], n - 1), Math.min(o.surface[1], n - 1)]
+  if (o.surface[0] === o.surface[1] && n > 1) o.surface[1] = (o.surface[0] + 1) % n
+  if (pyTab.value === 'superficie' && n < 2) pyTab.value = 'escenarios'
+  if (!['escenarios', 'funciones', 'reglas', 'superficie'].includes(pyTab.value)) pyTab.value = 'escenarios'
+
+  pyRunning.value = true
+  const sig = pySignature.value
+  try {
+    const systemSnap = clone(system.value)
+    const scenariosSnap = clone(scenarios.value)
+    const r = await simulateInPython({ system: systemSnap, scenarios: scenariosSnap, options: clone(o) })
+    // Se guarda una copia del sistema simulado: el visor y la superficie trabajan sobre ella
+    pyRun.value = { ...r, signature: sig, systemSnap, scenariosSnap, resultados: r.resultados || [], etiquetas: r.etiquetas || [] }
+    if (r.ok && !pyCard.value?.contains(document.activeElement)) showPyCard()
+  } catch (e) {
+    pyRun.value = { ok: false, error: String(e?.message || e) }
+  } finally {
+    pyRunning.value = false
+  }
 }
 
 function downloadMatlab() {
@@ -1620,6 +2013,16 @@ function saveBoard() {
 .axis { stroke: var(--text-secondary); stroke-width: 1; opacity: 0.6; }
 .tick { font-size: 10px; fill: var(--text-secondary); }
 .big-curve { fill: none; stroke-width: 2.2; }
+.big-curve.active { stroke-width: 3.4; }
+.mf-svg { touch-action: none; user-select: none; }
+.mf-svg.dragging, .mf-svg.dragging * { cursor: grabbing !important; }
+.hit-line { fill: none; stroke: transparent; stroke-width: 14; cursor: grab; pointer-events: stroke; }
+.mf-handle { stroke: #fff; stroke-width: 1.6; cursor: ew-resize; transition: r 0.1s; }
+.mf-handle.active { stroke-width: 2.2; }
+.mf-handle.fixed { cursor: not-allowed; opacity: 0.6; }
+.mf-handle:focus-visible { outline: none; stroke: var(--text-primary); stroke-width: 3; }
+.mf-table tr.mf-active td { background: rgba(139, 92, 246, 0.08); }
+.drag-note { margin-top: 0.15rem; }
 .curve-label { font-size: 11px; font-weight: 600; }
 .marker { stroke-width: 2; stroke-dasharray: 5 3; }
 .plot-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.9rem; font-size: 0.72rem; color: var(--text-secondary); }
@@ -1657,11 +2060,65 @@ function saveBoard() {
 /* ----- MATLAB ----- */
 .matlab-card { border-color: rgba(234, 88, 12, 0.45); }
 .matlab-steps { margin: 0.4rem 0 0.6rem; padding-left: 1.3rem; list-style: decimal; font-size: 0.86rem; color: var(--text-primary); line-height: 1.6; }
-.matlab-card code {
+.matlab-card code, .py-card code {
   padding: 0.05rem 0.35rem;
   border-radius: 4px;
   background: var(--bg-surface-2, rgba(139, 92, 246, 0.1));
   font-size: 0.8rem;
 }
 .matlab-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; }
+
+/* ----- Python ----- */
+.btn-python { background: linear-gradient(135deg, #2563eb, #1d4ed8); border-color: #1d4ed8; color: #fff; font-weight: 600; }
+.btn-python:hover:not(:disabled) { filter: brightness(1.1); }
+.py-card { border-color: rgba(37, 99, 235, 0.45); }
+.sim-pill {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  padding: 0.3rem 0.7rem; border-radius: 999px;
+  border: 1px solid var(--border-color); background: var(--bg-surface-2, transparent);
+  color: var(--text-secondary); font: inherit; font-size: 0.75rem; font-weight: 600;
+  white-space: nowrap; cursor: pointer;
+}
+.sim-pill.static { cursor: default; }
+.sim-dot { width: 8px; height: 8px; border-radius: 50%; background: #94a3b8; flex: none; }
+.sim-pill.ok { color: #16a34a; border-color: rgba(22, 163, 74, 0.45); }
+.sim-pill.ok .sim-dot { background: #22c55e; box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2); }
+.sim-pill.wait { color: #d97706; border-color: rgba(217, 119, 6, 0.45); }
+.sim-pill.wait .sim-dot { background: #f59e0b; animation: fz-pulse 1s ease-in-out infinite; }
+.sim-pill.bad { color: #dc2626; border-color: rgba(220, 38, 38, 0.45); }
+.sim-pill.bad .sim-dot { background: #ef4444; }
+@keyframes fz-pulse { 50% { opacity: 0.3; } }
+.py-loading { display: flex; align-items: center; gap: 0.45rem; }
+.spin { animation: fz-spin 0.9s linear infinite; }
+@keyframes fz-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
+.py-cell { white-space: nowrap; }
+.py-cell strong { color: #2563eb; margin-right: 0.4rem; }
+.stale { opacity: 0.55; }
+.py-result-title { margin: 0.9rem 0 0; font-weight: 600; font-size: 0.88rem; color: var(--text-primary); }
+.py-result-title.ok { color: #16a34a; }
+.py-result.error { margin-top: 0.9rem; padding: 0.7rem 0.9rem; border-radius: 10px; border: 1px solid rgba(220, 38, 38, 0.45); background: rgba(239, 68, 68, 0.08); }
+.py-result.error .py-result-title { margin: 0; color: #dc2626; }
+.py-tabs { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.8rem; }
+.py-tabs button {
+  border: 1px solid var(--border-color); background: transparent; color: var(--text-secondary);
+  font: inherit; font-size: 0.8rem; font-weight: 600; padding: 0.35rem 0.85rem; border-radius: 999px; cursor: pointer;
+}
+.py-tabs button.on { background: linear-gradient(135deg, #2563eb, #1d4ed8); border-color: #1d4ed8; color: #fff; }
+.py-tabs button:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+.py-options { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; margin-top: 0.7rem; font-size: 0.8rem; color: var(--text-secondary); }
+.py-options label { display: inline-flex; align-items: center; gap: 0.4rem; }
+.py-options select { padding: 0.25rem 0.4rem; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-surface-2, transparent); color: var(--text-primary); font: inherit; }
+.small { font-size: 0.75rem; }
+.py-figure { margin: 0.75rem 0 0; padding: 0.5rem; border-radius: 12px; background: #fff; border: 1px solid var(--border-color); text-align: center; transition: opacity 0.2s; }
+.py-figure.busy, .busy { opacity: 0.5; transition: opacity 0.2s; }
+.py-figure img { display: block; max-width: 100%; max-height: 720px; width: auto; height: auto; margin: 0 auto; }
+.py-figure figcaption { padding: 1rem; color: #64748b; }
+.py-output { margin-top: 0.6rem; }
+.py-output summary { cursor: pointer; color: var(--text-secondary); font-size: 0.8rem; }
+.py-output pre {
+  margin: 0.4rem 0 0; padding: 0.6rem; max-height: 260px; overflow: auto;
+  border-radius: 8px; background: rgba(0, 0, 0, 0.35); color: #e2e8f0;
+  font-size: 0.75rem; line-height: 1.45; white-space: pre-wrap;
+}
 </style>
